@@ -22,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning={true}>
       {/* Apply font class to body (optional) */}
       <body className={inter.className}>
         {/* Use the Providers component to wrap children */}

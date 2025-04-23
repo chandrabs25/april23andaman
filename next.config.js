@@ -1,7 +1,7 @@
 const { initOpenNextCloudflareForDev } = require('@opennextjs/cloudflare')
 initOpenNextCloudflareForDev()
-/** @type {import('next').NextConfig} */
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
   eslint: {
@@ -22,10 +22,10 @@ const nextConfig = {
     domains: ['andamantravel.com', 'images.unsplash.com'],
     formats: ['image/avif', 'image/webp'],
     // Only disable optimization in production if needed
-    unoptimized: process.env.NODE_ENV === 'production',
+    unoptimized: true,
   },
-  // Add webpack configuration to handle missing modules
-  webpack: (config, { isServer, nextRuntime }) => {
+  // Add webpack configuration to handle missing modules and DefinePlugin
+  webpack: (config, { isServer, nextRuntime, webpack }) => {
     // For edge runtime, provide polyfills or empty modules
     if (nextRuntime === 'edge') {
       config.resolve.fallback = {
@@ -35,23 +35,28 @@ const nextConfig = {
         bcrypt: false,
         '@node-rs/bcrypt': false,
         '@node-rs/bcrypt-wasm32-wasi': false,
-      };
+      }
     }
-    
+
     // Add environment variables
     config.plugins.push(
-      new config.webpack.DefinePlugin({
-        'process.env.NEXT_PUBLIC_API_URL': JSON.stringify(process.env.NEXT_PUBLIC_API_URL || ''),
-        'process.env.NEXT_PUBLIC_SITE_URL': JSON.stringify(process.env.NEXT_PUBLIC_SITE_URL || ''),
+      new webpack.DefinePlugin({
+        'process.env.NEXT_PUBLIC_API_URL': JSON.stringify(
+          process.env.NEXT_PUBLIC_API_URL || ''
+        ),
+        'process.env.NEXT_PUBLIC_SITE_URL': JSON.stringify(
+          process.env.NEXT_PUBLIC_SITE_URL || ''
+        ),
       })
-    );
-    
-    return config;
+    )
+
+    return config
   },
   // Environment variables that should be available to the browser
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-  }
+  },
 }
 
+module.exports = nextConfig

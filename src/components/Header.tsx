@@ -217,8 +217,8 @@ const Header = () => { // Arrow function starts here
       </div>
     </header>
   );
-// --- FIX: Add the missing closing curly brace for the Header component function ---
+
 };
-// --- End of FIX ---
+
 
 export default Header;

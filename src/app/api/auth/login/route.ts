@@ -6,7 +6,7 @@ import { getDatabase } from '@/lib/database';
 // --- End of FIX ---
 import * as jose from 'jose';
 import * as bcrypt from 'bcryptjs';
-// Removed runtime = 'edge' to allow Node.js dependencies
+
 
 // Define an interface for expected request body
 interface LoginRequestBody {
