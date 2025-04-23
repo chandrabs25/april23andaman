@@ -1,0 +1,39 @@
+# wrangler.toml
+
+name = "andaman-travel-worker"
+
+
+compatibility_date = "2024-12-30"
+compatibility_flags = [ "nodejs_compat" ] 
+
+
+main = ".open-next/worker.js"
+
+# Configuration for serving static assets via the Worker
+[assets]
+binding = "ASSETS" 
+directory = ".open-next/assets" 
+
+
+[[d1_databases]]
+binding = "DB" 
+database_name = "database" 
+database_id = "46a2aacd-0b18-403f-8aa7-91506b4b312a" 
+
+
+[vars]
+JWT_SECRET = "my-jwt-secret"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "andaman-travel-worker"
+
+[[r2_buckets]]
+binding = "NEXT_INC_CACHE_R2_BUCKET"
+bucket_name = "r2cache"
+preview_bucket_name = "r2cache"
