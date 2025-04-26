@@ -20,9 +20,9 @@ interface Package {
   max_people: number | null;
   created_by: number;
   is_active: number;
-  itinerary: string | null; // Raw JSON string
-  included_services: string | null; // Raw JSON string or comma-separated
-  images: string | null; // Comma-separated string or single URL
+  itinerary: string | null; 
+  included_services: string | null; 
+  images: string | null; 
 }
 
 // Island data structure from /api/destinations

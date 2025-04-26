@@ -1,49 +1,92 @@
 // src/components/Header.tsx
 'use client';
 
-import { useState } from 'react'; // Import useState
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation'; // Import usePathname
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { Menu, X, User, Search, ShoppingCart, LogOut, ChevronDown,  } from 'lucide-react'; // ShoppingCart might be unused, consider removing later
+import { useFetch } from '@/hooks/useFetch'; // Assuming useFetch is in this path
+import { Menu, X, User, Search, ShoppingCart, LogOut, ChevronDown } from 'lucide-react'; // Keep ShoppingCart if used elsewhere
 
-const Header = () => { // Arrow function starts here
-  // --- Add missing state and hooks ---
+// --- Interfaces ---
+interface Destination {
+  id: number;
+  name: string;
+  // Add other fields if needed
+}
+
+interface Activity {
+  id: number;
+  name: string;
+  // Add other fields if needed
+}
+
+interface PackageData { // Renamed from Package to avoid conflict if Package interface exists globally
+  id: number;
+  name: string;
+  // Add other relevant package fields if needed
+}
+
+// Define the expected API response structure for packages
+interface GetPackagesApiResponse {
+  packages: PackageData[]; // Expecting an object with a 'packages' array
+  pagination?: any;      // Optional pagination info
+  success?: boolean;     // Optional success flag
+  message?: string;      // Optional message
+}
+// --- End Interfaces ---
+
+const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const { isAuthenticated, user, isLoading, logout } = useAuth();
-  // --- End of missing state and hooks ---
   const [mobileDropdowns, setMobileDropdowns] = useState({
     destinations: false,
-    activities: false
+    activities: false,
+    packages: false
   });
-  // --- Add missing handlers and data ---
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-  
+
+  // --- Fetch Data for Dropdowns ---
+  const {
+    data: destinationsResponse,
+  } = useFetch<Destination[]>('/api/destinations'); // Assuming this returns array directly
+  const destinationsData = destinationsResponse || [];
+
+  const {
+    data: activitiesResponse,
+  } = useFetch<Activity[]>('/api/activities'); // Assuming this returns array directly
+  const activitiesData = activitiesResponse || [];
+
+  // Fetch Packages using the correct logic
+  const {
+    data: packagesApiResponse, // Renamed variable for clarity
+  } = useFetch<GetPackagesApiResponse>('/api/packages'); // Expect GetPackagesApiResponse structure
+  // Extract the 'packages' array from the response object
+  const packagesData = packagesApiResponse?.packages || [];
+  // --- End Fetch Data ---
+
+
+  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   const closeMenu = () => {
     setIsMenuOpen(false);
+    // Close all mobile dropdowns when main mobile menu closes
+    setMobileDropdowns({ destinations: false, activities: false, packages: false });
   };
 
   const handleLogout = () => {
-    logout(); // Call the logout function from the hook
-    closeMenu(); // Close mobile menu if open
+    logout();
+    closeMenu();
   };
 
+  // Base nav links (excluding dropdown ones handled separately)
   const navLinks = [
     { name: 'Home', href: '/' },
-    { name: 'Destinations', href: '/destinations' },
-    { name: 'Packages', href: '/packages' },
-    { name: 'Activities', href: '/activities' },
     { name: 'About', href: '/about' },
     { name: 'Contact', href: '/contact' },
   ];
-  // --- End of missing handlers and data ---
 
-  // The return statement for the component's JSX
   return (
     <header className="bg-white shadow-xl sticky top-0 z-50 border-b border-gray-100">
       <div className="container mx-auto px-4 py-3 md:py-4">
@@ -64,7 +107,7 @@ const Header = () => { // Arrow function starts here
           </div>
 
           {/* Desktop Navigation with Dropdowns */}
-          <nav className="hidden md:flex space-x-6 lg:space-x-8">
+          <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
             {/* Home Link */}
             <Link
               href="/"
@@ -76,26 +119,64 @@ const Header = () => { // Arrow function starts here
 
             {/* Destinations Dropdown */}
             <div className="relative group">
-              <button
-                className={`text-sm lg:text-base font-medium text-gray-600 hover:text-blue-600 transition-colors flex items-center ${pathname.startsWith("/destinations") ? 'text-blue-600 border-b-2 border-blue-600' : ''
-                  }`}
-              >
+              {/* Make the main Destinations text a link */}
+              <Link href="/destinations" className={`text-sm lg:text-base font-medium text-gray-600 hover:text-blue-600 transition-colors flex items-center ${pathname.startsWith("/destinations") ? 'text-blue-600 border-b-2 border-blue-600' : ''
+                }`}>
                 Destinations
                 <ChevronDown size={16} className="ml-1 group-hover:rotate-180 transition-transform duration-200" />
-              </button>
+              </Link>
+              {/* Ensure visibility/opacity classes are correct */}
               <div className="absolute left-0 mt-2 w-56 rounded-2xl bg-white shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left">
                 <div className="py-2 px-1">
-                  <Link href="/destinations/havelock-island" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl">
-                    Havelock Island
+                  {/* Dynamic Destination Links */}
+                  {destinationsData.length > 0 ? (
+                    destinationsData.slice(0, 5).map((dest) => ( // Limit dropdown items if needed
+                      <Link
+                        key={dest.id}
+                        href={`/destinations/${dest.id}`}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl"
+                      >
+                        {dest.name}
+                      </Link>
+                    ))
+                  ) : (
+                    <span className="block px-4 py-2.5 text-sm text-gray-400">Loading...</span>
+                  )}
+                  <Link href="/destinations" className="block px-4 py-2.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-xl mt-1 border-t border-gray-100">
+                    View All
                   </Link>
-                  <Link href="/destinations/neil-island" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl">
-                    Neil Island
-                  </Link>
-                  <Link href="/destinations/port-blair" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl">
-                    Port Blair
-                  </Link>
-                  <Link href="/destinations/baratang" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl">
-                    Baratang Island
+                </div>
+              </div>
+            </div>
+
+            {/* Packages Dropdown */}
+            <div className="relative group">
+              {/* Make the main Packages text a link */}
+              <Link href="/packages" className={`text-sm lg:text-base font-medium text-gray-600 hover:text-blue-600 transition-colors flex items-center ${pathname.startsWith("/packages") ? 'text-blue-600 border-b-2 border-blue-600' : ''
+                }`}>
+                Packages
+                <ChevronDown size={16} className="ml-1 group-hover:rotate-180 transition-transform duration-200" />
+              </Link>
+              {/* Ensure visibility/opacity classes are correct */}
+              <div className="absolute left-0 mt-2 w-56 rounded-2xl bg-white shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left">
+                <div className="py-2 px-1">
+                  {/* Dynamic Package Links */}
+                  {/* Now correctly checks the length of the extracted array */}
+                  {packagesData.length > 0 ? (
+                    packagesData.slice(0, 5).map((pkg) => ( // Limit dropdown items if needed
+                      <Link
+                        key={pkg.id}
+                        href={`/packages/${pkg.id}`}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl"
+                      >
+                        {pkg.name}
+                      </Link>
+                    ))
+                  ) : (
+                    <span className="block px-4 py-2.5 text-sm text-gray-400">Loading...</span>
+                  )}
+                  <Link href="/packages" className="block px-4 py-2.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-xl mt-1 border-t border-gray-100">
+                    View All
                   </Link>
                 </div>
               </div>
@@ -103,33 +184,38 @@ const Header = () => { // Arrow function starts here
 
             {/* Activities Dropdown */}
             <div className="relative group">
-              <button
-                className={`text-sm lg:text-base font-medium text-gray-600 hover:text-blue-600 transition-colors flex items-center ${pathname.startsWith("/activities") ? 'text-blue-600 border-b-2 border-blue-600' : ''
-                  }`}
-              >
+              {/* Make the main Activities text a link */}
+              <Link href="/activities" className={`text-sm lg:text-base font-medium text-gray-600 hover:text-blue-600 transition-colors flex items-center ${pathname.startsWith("/activities") ? 'text-blue-600 border-b-2 border-blue-600' : ''
+                }`}>
                 Activities
                 <ChevronDown size={16} className="ml-1 group-hover:rotate-180 transition-transform duration-200" />
-              </button>
+              </Link>
+              {/* Ensure visibility/opacity classes are correct */}
               <div className="absolute left-0 mt-2 w-56 rounded-2xl bg-white shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-left">
                 <div className="py-2 px-1">
-                  <Link href="/activities/scuba-diving" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl">
-                    Scuba Diving
-                  </Link>
-                  <Link href="/activities/snorkeling" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl">
-                    Snorkeling
-                  </Link>
-                  <Link href="/activities/sea-walking" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl">
-                    Sea Walking
-                  </Link>
-                  <Link href="/activities/island-hopping" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl">
-                    Island Hopping
+                  {/* Dynamic Activity Links */}
+                  {activitiesData.length > 0 ? (
+                    activitiesData.slice(0, 5).map((act) => ( // Limit dropdown items if needed
+                      <Link
+                        key={act.id}
+                        href={`/activities/${act.id}`}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl"
+                      >
+                        {act.name}
+                      </Link>
+                    ))
+                  ) : (
+                    <span className="block px-4 py-2.5 text-sm text-gray-400">Loading...</span>
+                  )}
+                  <Link href="/activities" className="block px-4 py-2.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-xl mt-1 border-t border-gray-100">
+                    View All
                   </Link>
                 </div>
               </div>
             </div>
 
             {/* Other Navigation Links */}
-            {navLinks.filter(link => !['Home', 'Destinations', 'Activities'].includes(link.name)).map((link) => (
+            {navLinks.filter(link => link.name !== 'Home').map((link) => ( // Filter out Home as it's handled above
               <Link
                 key={link.name}
                 href={link.href}
@@ -155,18 +241,15 @@ const Header = () => { // Arrow function starts here
                 <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
               ) : isAuthenticated ? (
                 <div className="flex items-center space-x-4">
-                  {/* Check if user exists and their role_id corresponds to 'vendor' (ID 3) */}
                   {user?.role_id === 3 && (
                     <Link href="/vendor/dashboard" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
                       Vendor Area
                     </Link>
                   )}
-                  {/* Consolidated User/Bookings Link */}
                   <Link href="/user/dashboard" className="flex items-center text-gray-600 hover:text-blue-600 p-1.5 hover:bg-blue-50 rounded-full transition-colors" title="My Account">
                     <User size={20} />
                     <span className="sr-only">Profile</span>
                   </Link>
-                  {/* Logout Button */}
                   <button onClick={handleLogout} className="text-sm text-gray-600 hover:text-red-600 transition-colors flex items-center p-1.5 hover:bg-red-50 rounded-full" title="Logout">
                     <LogOut size={18} />
                     <span className="hidden lg:inline ml-1">Logout</span>
@@ -202,14 +285,14 @@ const Header = () => { // Arrow function starts here
 
         {/* Mobile Navigation Menu with Dropdowns */}
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-lg border-t border-gray-200 z-40">
-            <nav className="flex flex-col px-4 py-4 space-y-2">
+          <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-lg border-t border-gray-200 z-40 max-h-[calc(100vh-60px)] overflow-y-auto"> {/* Added max-height and overflow */}
+            <nav className="flex flex-col px-4 py-4 space-y-1"> {/* Reduced space-y */}
               {/* Home Link */}
               <Link
                 href="/"
-                className={`block px-3 py-2 rounded-xl text-base font-medium ${pathname === "/"
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                className={`block px-3 py-2.5 rounded-xl text-base font-medium ${pathname === "/"
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 onClick={closeMenu}
               >
@@ -219,10 +302,10 @@ const Header = () => { // Arrow function starts here
               {/* Mobile Destinations Dropdown */}
               <div className="space-y-1">
                 <button
-                  onClick={() => setMobileDropdowns(prev => ({ ...prev, destinations: !prev.destinations }))}
-                  className={`flex justify-between items-center w-full px-3 py-2 rounded-xl text-base font-medium ${pathname.startsWith("/destinations")
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                  onClick={() => setMobileDropdowns(prev => ({ ...prev, destinations: !prev.destinations, activities: false, packages: false }))} // Close others on open
+                  className={`flex justify-between items-center w-full px-3 py-2.5 rounded-xl text-base font-medium ${pathname.startsWith("/destinations") || mobileDropdowns.destinations
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                 >
                   <span>Destinations</span>
@@ -233,46 +316,84 @@ const Header = () => { // Arrow function starts here
                 </button>
 
                 {mobileDropdowns.destinations && (
-                  <div className="pl-4 space-y-1 mt-1">
+                  <div className="pl-4 space-y-0.5 mt-1 border-l-2 border-blue-100 ml-1"> {/* Indent style */}
+                    {/* Add link to main destinations page */}
                     <Link
-                      href="/destinations/havelock-island"
-                      className="block px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                      href="/destinations"
+                      className="block px-3 py-2 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                       onClick={closeMenu}
                     >
-                      Havelock Island
+                      All Destinations
                     </Link>
-                    <Link
-                      href="/destinations/neil-island"
-                      className="block px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                      onClick={closeMenu}
-                    >
-                      Neil Island
-                    </Link>
-                    <Link
-                      href="/destinations/port-blair"
-                      className="block px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                      onClick={closeMenu}
-                    >
-                      Port Blair
-                    </Link>
-                    <Link
-                      href="/destinations/baratang"
-                      className="block px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                      onClick={closeMenu}
-                    >
-                      Baratang Island
-                    </Link>
+                    {/* Dynamic Links */}
+                    {destinationsData.length > 0 ? (
+                      destinationsData.slice(0, 5).map((dest) => ( // Limit items
+                        <Link
+                          key={dest.id}
+                          href={`/destinations/${dest.id}`}
+                          className="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                          onClick={closeMenu}
+                        >
+                          {dest.name}
+                        </Link>
+                      ))
+                    ) : (
+                      <span className="block px-3 py-2 text-sm text-gray-400">Loading...</span>
+                    )}
                   </div>
                 )}
               </div>
 
+              {/* Mobile Packages Dropdown */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => setMobileDropdowns(prev => ({ ...prev, packages: !prev.packages, destinations: false, activities: false }))} // Close others
+                  className={`flex justify-between items-center w-full px-3 py-2.5 rounded-xl text-base font-medium ${pathname.startsWith("/packages") || mobileDropdowns.packages
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                >
+                  <span>Packages</span>
+                  <ChevronDown
+                    size={18}
+                    className={`transition-transform duration-200 ${mobileDropdowns.packages ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {mobileDropdowns.packages && (
+                  <div className="pl-4 space-y-0.5 mt-1 border-l-2 border-blue-100 ml-1">
+                    <Link
+                      href="/packages"
+                      className="block px-3 py-2 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                      onClick={closeMenu}
+                    >
+                      All Packages
+                    </Link>
+                    {packagesData.length > 0 ? (
+                      packagesData.slice(0, 5).map((pkg) => ( // Limit items
+                        <Link
+                          key={pkg.id}
+                          href={`/packages/${pkg.id}`}
+                          className="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                          onClick={closeMenu}
+                        >
+                          {pkg.name}
+                        </Link>
+                      ))
+                    ) : (
+                      <span className="block px-3 py-2 text-sm text-gray-400">Loading...</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+
               {/* Mobile Activities Dropdown */}
               <div className="space-y-1">
                 <button
-                  onClick={() => setMobileDropdowns(prev => ({ ...prev, activities: !prev.activities }))}
-                  className={`flex justify-between items-center w-full px-3 py-2 rounded-xl text-base font-medium ${pathname.startsWith("/activities")
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                  onClick={() => setMobileDropdowns(prev => ({ ...prev, activities: !prev.activities, destinations: false, packages: false }))} // Close others
+                  className={`flex justify-between items-center w-full px-3 py-2.5 rounded-xl text-base font-medium ${pathname.startsWith("/activities") || mobileDropdowns.activities
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                 >
                   <span>Activities</span>
@@ -283,47 +404,40 @@ const Header = () => { // Arrow function starts here
                 </button>
 
                 {mobileDropdowns.activities && (
-                  <div className="pl-4 space-y-1 mt-1">
+                  <div className="pl-4 space-y-0.5 mt-1 border-l-2 border-blue-100 ml-1">
                     <Link
-                      href="/activities/scuba-diving"
-                      className="block px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                      href="/activities"
+                      className="block px-3 py-2 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                       onClick={closeMenu}
                     >
-                      Scuba Diving
+                      All Activities
                     </Link>
-                    <Link
-                      href="/activities/snorkeling"
-                      className="block px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                      onClick={closeMenu}
-                    >
-                      Snorkeling
-                    </Link>
-                    <Link
-                      href="/activities/sea-walking"
-                      className="block px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                      onClick={closeMenu}
-                    >
-                      Sea Walking
-                    </Link>
-                    <Link
-                      href="/activities/island-hopping"
-                      className="block px-3 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-                      onClick={closeMenu}
-                    >
-                      Island Hopping
-                    </Link>
+                    {activitiesData.length > 0 ? (
+                      activitiesData.slice(0, 5).map((act) => ( // Limit items
+                        <Link
+                          key={act.id}
+                          href={`/activities/${act.id}`}
+                          className="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                          onClick={closeMenu}
+                        >
+                          {act.name}
+                        </Link>
+                      ))
+                    ) : (
+                      <span className="block px-3 py-2 text-sm text-gray-400">Loading...</span>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* Other Mobile Navigation Links */}
-              {navLinks.filter(link => !['Home', 'Destinations', 'Activities'].includes(link.name)).map((link) => (
+              {navLinks.filter(link => link.name !== 'Home').map((link) => ( // Filter out Home
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`block px-3 py-2 rounded-xl text-base font-medium ${pathname === link.href
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                  className={`block px-3 py-2.5 rounded-xl text-base font-medium ${pathname === link.href
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   onClick={closeMenu}
                 >
@@ -331,6 +445,7 @@ const Header = () => { // Arrow function starts here
                 </Link>
               ))}
 
+              {/* --- Mobile User Actions --- */}
               <div className="pt-4 pb-2 border-t border-gray-200">
                 {isLoading ? (
                   <div className="flex justify-center py-2">
@@ -338,13 +453,11 @@ const Header = () => { // Arrow function starts here
                   </div>
                 ) : isAuthenticated ? (
                   <div className="space-y-1">
-                    {/* Display user's first name or email */}
                     <p className="px-3 py-2 text-sm font-medium text-gray-500">Welcome, {user?.first_name || user?.email}</p>
-                    {/* Check role_id for vendor */}
                     {user?.role_id === 3 && (
                       <Link
                         href="/vendor/dashboard"
-                        className="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                        className="block px-3 py-2.5 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                         onClick={closeMenu}
                       >
                         Vendor Dashboard
@@ -352,21 +465,21 @@ const Header = () => { // Arrow function starts here
                     )}
                     <Link
                       href="/user/dashboard"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      className="block px-3 py-2.5 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       onClick={closeMenu}
                     >
                       My Account
                     </Link>
                     <Link
                       href="/user/bookings"
-                      className="block px-3 py-2 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      className="block px-3 py-2.5 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       onClick={closeMenu}
                     >
                       My Bookings
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-3 py-2 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
+                      className="block w-full text-left px-3 py-2.5 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
                     >
                       Logout
                     </button>
@@ -390,15 +503,13 @@ const Header = () => { // Arrow function starts here
                   </div>
                 )}
               </div>
+              {/* --- End Mobile User Actions --- */}
             </nav>
           </div>
         )}
       </div>
     </header>
-
   );
-
 };
-
 
 export default Header;
