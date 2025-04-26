@@ -22,7 +22,7 @@ export async function GET() {
   try {
     const dbService = new DatabaseService();
     const { results } = await dbService.getAllIslands();
-
+    
     return NextResponse.json({
       success: true,
       message: 'Destinations retrieved successfully',

@@ -1,96 +1,133 @@
 // Path: .\src\app\activities\page.tsx
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react'; // Import React & Suspense
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Loader2, AlertTriangle } from 'lucide-react'; // Import icons
-import { useFetch } from '@/hooks/useFetch'; // Import useFetch
+import { Loader2, AlertTriangle, MapPin, Clock, Star, Filter, Search, Compass, Camera, Anchor, Umbrella, Award, MessageSquare, HelpCircle } from 'lucide-react';
+import { useFetch } from '@/hooks/useFetch';
 
 // --- Define interfaces (consistent with API response) ---
 interface Activity {
-  id: number; // service id
-  name: string; // service name
+  id: number;
+  name: string;
   description: string | null;
-  type: string; // Should be 'activity' or similar
+  type: string;
   provider_id: number;
   island_id: number;
-  price: string; // Keep as string from DB, parse for display if needed
+  price: string;
   availability: string | null;
-  images: string | null; // Comma-separated or single URL
+  images: string | null;
   amenities: string | null;
   cancellation_policy: string | null;
-  island_name: string; // Joined from islands table
-  // Add derived/formatted fields if needed
+  island_name: string;
   image_url?: string;
-  duration?: string; // Placeholder - needs to be added to API/DB if needed
-  rating?: number;   // Placeholder - needs to be added via reviews/API
+  duration?: string;
+  rating?: number;
 }
 
-// Define the overall API response structure for GET /api/activities
 interface GetActivitiesApiResponse {
   success: boolean;
-  data: Activity[]; // Expect an array of activities
+  data: Activity[];
   message?: string;
 }
 // --- End Interfaces ---
 
-// --- LoadingSpinner Component ---
+// --- LoadingSpinner Component with enhanced styling ---
 const LoadingSpinner = () => (
-  <div className="flex justify-center items-center py-20">
-    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-    <span className="ml-2 text-lg">Loading activities...</span>
+  <div className="flex flex-col justify-center items-center py-20">
+    <Loader2 className="h-10 w-10 animate-spin text-green-600 mb-4" />
+    <span className="text-lg font-medium text-gray-700">Loading exciting activities...</span>
+    <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
   </div>
 );
 // --- End LoadingSpinner ---
 
-// --- ActivityCard Component ---
+// --- ActivityCard Component with enhanced styling ---
 interface ActivityCardProps {
-    activity: Activity;
+  activity: Activity;
 }
 const ActivityCard = ({ activity }: ActivityCardProps) => {
-    // --- Process data for display ---
-    const imageUrl = activity.images?.split(',')[0]?.trim() || '/images/placeholder.jpg';
-    // Placeholder for duration (needs to be added to schema/API)
-    const durationDisplay = activity.duration || 'Approx. 2-3 hours';
-    // Parse price string to number for formatting
-    const priceNum = parseFloat(activity.price);
+  // --- Process data for display ---
+  const imageUrl = activity.images?.split(',')[0]?.trim() || '/images/placeholder.jpg';
+  const durationDisplay = activity.duration || 'Approx. 2-3 hours';
+  const priceNum = parseFloat(activity.price);
+  const rating = activity.rating || 4.5; // Default rating if not available
 
-    return (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col transition-transform duration-300 hover:scale-105">
-          {/* Image */}
-          <div className="h-48 w-full relative flex-shrink-0">
-            <Image
-              src={imageUrl}
-              alt={activity.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              onError={(e)=>(e.currentTarget.src='/images/placeholder.jpg')} // Fallback
-            />
-          </div>
-          {/* Content */}
-          <div className="p-4 flex flex-col flex-grow">
-            <h2 className="text-lg md:text-xl font-semibold mb-1 leading-tight">{activity.name}</h2>
-            <p className="text-xs text-gray-500 mb-2">Location: {activity.island_name}</p>
-            <p className="text-sm text-gray-700 mb-3 line-clamp-3 flex-grow">
-                {activity.description || 'No description available.'}
-            </p>
-            <div className="flex justify-between items-center text-sm mb-3 mt-auto pt-3 border-t border-gray-100">
-              <span className="text-green-700 font-semibold">
-                  {!isNaN(priceNum) ? `₹${priceNum.toLocaleString('en-IN')}` : activity.price} {/* Format if number */}
-              </span>
-              <span className="text-gray-600">{durationDisplay}</span> {/* Use placeholder duration */}
-            </div>
-            <Link
-              href={`/activities/${activity.id}`} // Link to activity detail page (needs creation)
-              className="block w-full text-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm"
-            >
-              Learn More & Book
-            </Link>
+  return (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100">
+      {/* Image with overlay gradient and price badge */}
+      <div className="h-52 w-full relative flex-shrink-0">
+        <Image
+          src={imageUrl}
+          alt={activity.name}
+          fill
+          className="object-cover"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          onError={(e) => (e.currentTarget.src = '/images/placeholder.jpg')}
+        />
+        {/* Gradient overlay for better text visibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+
+        {/* Price badge */}
+        <div className="absolute top-3 right-3 bg-green-600 text-white text-sm font-bold py-1.5 px-3 rounded-full shadow-md">
+          {!isNaN(priceNum) ? `₹${priceNum.toLocaleString('en-IN')}` : activity.price}
+        </div>
+
+        {/* Duration badge */}
+        <div className="absolute bottom-3 left-3 bg-white/90 text-green-600 text-xs font-medium py-1 px-2 rounded-full flex items-center">
+          <Clock size={12} className="mr-1" />
+          {durationDisplay}
+        </div>
+      </div>
+
+      {/* Content with enhanced styling */}
+      <div className="p-5 flex flex-col flex-grow">
+        <div className="flex justify-between items-start mb-2">
+          <h2 className="text-lg font-semibold leading-tight flex-1 mr-2 text-gray-800">{activity.name}</h2>
+          <div className="flex items-center text-yellow-400 flex-shrink-0">
+            <Star size={16} fill="currentColor" />
+            <span className="ml-1 text-xs font-medium">{rating.toFixed(1)}</span>
           </div>
         </div>
-    );
+
+        <div className="flex items-start mb-3 text-sm text-gray-600">
+          <MapPin size={14} className="mr-1 mt-0.5 flex-shrink-0 text-green-500" />
+          <span>{activity.island_name}</span>
+        </div>
+
+        <p className="text-gray-600 text-sm mb-4 line-clamp-3 flex-grow">
+          {activity.description || 'No description available.'}
+        </p>
+
+        {/* Amenities tags - assuming amenities is a comma-separated string */}
+        {activity.amenities && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {activity.amenities.split(',').slice(0, 3).map((amenity, index) => (
+              <span key={index} className="bg-green-50 text-green-600 text-xs px-2 py-1 rounded-full flex items-center">
+                <Camera size={10} className="mr-1" />
+                {amenity.trim()}
+              </span>
+            ))}
+            {activity.amenities.split(',').length > 3 && (
+              <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+                +{activity.amenities.split(',').length - 3} more
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-auto pt-4 border-t border-gray-100">
+          <Link
+            href={`/activities/${activity.id}`}
+            className="block w-full text-center bg-green-600 text-white px-4 py-3 rounded-full hover:bg-green-700 transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-1"
+          >
+            Learn More & Book
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 };
 // --- End ActivityCard Component ---
 
@@ -98,51 +135,462 @@ const ActivityCard = ({ activity }: ActivityCardProps) => {
 // --- Main Component Logic ---
 function ActivitiesContent() {
   // Fetch data using the hook
-  const { data: apiResponse, error, status } = useFetch<GetActivitiesApiResponse>('/api/activities');
+  const { data: apiResponse, error, status } = useFetch<Activity[]>('/api/activities');
+
+  // State for activity filters
+  const [filters, setFilters] = useState({
+    search: '',
+    island: '',
+    priceRange: '',
+    activityType: ''
+  });
+
+  // State for showing/hiding filters on mobile
+  const [showFilters, setShowFilters] = useState(false);
 
   // Extract activities from the response, default to empty array
-  const activities = apiResponse?.data || [];
+  const activities = apiResponse || [];
+
+  // Filter activities based on user selections
+  const filteredActivities = activities.filter(activity => {
+    // Search filter
+    if (filters.search && !activity.name.toLowerCase().includes(filters.search.toLowerCase()) &&
+      !activity.description?.toLowerCase().includes(filters.search.toLowerCase())) {
+      return false;
+    }
+
+    // Island filter
+    if (filters.island && activity.island_name !== filters.island) {
+      return false;
+    }
+
+    // Price range filter
+    if (filters.priceRange) {
+      const price = parseFloat(activity.price);
+      const [min, max] = filters.priceRange.split('-').map(p => parseInt(p));
+
+      if (min && max && (price < min || price > max)) {
+        return false;
+      } else if (min && !max && price < min) {
+        return false;
+      }
+    }
+
+    // Activity type filter (assuming activity.type contains this info)
+    if (filters.activityType && activity.type !== filters.activityType) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Handle filter changes
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setFilters({
+      search: '',
+      island: '',
+      priceRange: '',
+      activityType: ''
+    });
+  };
 
   return (
     <>
-      {/* --- Hero Section (remains the same) --- */}
-      <div className="relative bg-green-900 h-64 md:h-80">
-        <div className="absolute inset-0 bg-gradient-to-r from-green-900/80 to-green-700/70 z-10"></div>
+      {/* --- Hero Section with enhanced styling --- */}
+      <div className="relative bg-green-900 h-72 md:h-96">
+        {/* Enhanced overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-green-900/90 to-green-700/80 z-10"></div>
+
         <div className="absolute inset-0 z-0">
           <Image src="/images/activities-hero.jpg" alt="Andaman Activities - Desktop" fill className="object-cover hidden md:block" priority />
           <Image src="/images/activities-hero-mobile.jpg" alt="Andaman Activities - Mobile" fill className="object-cover block md:hidden" priority />
         </div>
+
         <div className="container mx-auto px-4 h-full flex flex-col justify-center items-center relative z-20">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white text-center mb-3 md:mb-4"> Exciting Andaman Activities </h1>
-          <p className="text-lg sm:text-xl text-white text-center max-w-2xl opacity-90"> Experience thrilling adventures and create unforgettable memories </p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white text-center mb-3 md:mb-5 drop-shadow-lg">
+            Exciting Andaman Activities
+          </h1>
+          <p className="text-lg sm:text-xl text-white text-center max-w-2xl opacity-95 drop-shadow-md">
+            Experience thrilling adventures and create unforgettable memories
+          </p>
+          {/* Added CTA button */}
+          <button className="mt-6 bg-white text-green-700 hover:bg-green-50 font-semibold py-3 px-8 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+            Explore Activities
+          </button>
+        </div>
+
+        {/* Added decorative wave element */}
+        <div className="absolute bottom-0 left-0 right-0 h-12 md:h-16 overflow-hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="absolute bottom-0 w-full h-auto">
+            <path fill="#f9fafb" fillOpacity="1" d="M0,224L48,213.3C96,203,192,181,288,181.3C384,181,480,203,576,224C672,245,768,267,864,261.3C960,256,1056,224,1152,197.3C1248,171,1344,149,1392,138.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+          </svg>
         </div>
       </div>
 
-      {/* --- Activities List --- */}
-      <div className="container mx-auto px-4 py-10 md:py-16">
-        {status === 'loading' ? (
-          <LoadingSpinner />
-        ) : status === 'error' ? (
-          <div className="text-center py-10 px-4 bg-red-50 border border-red-200 rounded-md">
-            <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-3"/>
-            <p className="text-red-700 font-medium">Could not load activities.</p>
-            <p className="text-red-600 text-sm mt-1">{error?.message || "An unknown error occurred."}</p>
-            {/* Optional: Add a retry button */}
+      {/* --- Activities Content with enhanced styling --- */}
+      <div className="bg-gray-50 py-12 md:py-20">
+        <div className="container mx-auto px-4">
+          {/* Added section header with icon */}
+          <div className="flex items-center justify-center mb-10 md:mb-14">
+            <Compass className="text-green-600 mr-3 flex-shrink-0" size={24} />
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Find Your Perfect Activity</h2>
           </div>
-        ) : (
-          activities.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {activities.map((activity) => (
-                 <ActivityCard key={activity.id} activity={activity} />
-              ))}
+
+          {/* Added filters section */}
+          <div className="mb-10">
+            {/* Mobile filter toggle */}
+            <div className="md:hidden mb-6 text-center">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="inline-flex items-center px-5 py-2.5 border border-green-300 rounded-full shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300"
+              >
+                <Filter size={16} className="mr-2" /> {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </button>
             </div>
-           ) : (
-            <div className="text-center py-16 bg-white rounded-lg shadow">
-              <h2 className="text-xl md:text-2xl font-semibold mb-4">No Activities Found</h2>
-              <p className="text-gray-600">Check back later or explore our travel packages!</p>
+
+            {/* Filters */}
+            <div className={`bg-white rounded-2xl shadow-lg p-6 md:p-8 border border-gray-100 ${showFilters ? 'block' : 'hidden'} md:block`}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg md:text-xl font-semibold text-gray-800 flex items-center">
+                  <Filter className="text-green-600 mr-2" size={20} />
+                  Filter Activities
+                </h3>
+                <button
+                  onClick={() => handleClearFilters()}
+                  className="text-sm text-gray-600 hover:text-green-600 flex items-center transition-colors"
+                >
+                  Clear All
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {/* Search filter */}
+                <div className="md:col-span-4">
+                  <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Search Activities
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      id="search"
+                      name="search"
+                      value={filters.search}
+                      onChange={handleFilterChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-base"
+                      placeholder="Search by activity name or description"
+                    />
+                  </div>
+                </div>
+
+                {/* Island filter */}
+                <div>
+                  <label htmlFor="island" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Island
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <MapPin className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <select
+                      id="island"
+                      name="island"
+                      value={filters.island}
+                      onChange={handleFilterChange}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-base appearance-none"
+                    >
+                      <option value="">All Islands</option>
+                      <option value="Havelock">Havelock</option>
+                      <option value="Neil Island">Neil Island</option>
+                      <option value="Port Blair">Port Blair</option>
+                      <option value="Baratang">Baratang</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Price range filter */}
+                <div>
+                  <label htmlFor="priceRange" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Price Range
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="priceRange"
+                      name="priceRange"
+                      value={filters.priceRange}
+                      onChange={handleFilterChange}
+                      className="w-full pl-3 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-base appearance-none"
+                    >
+                      <option value="">Any Price</option>
+                      <option value="0-1000">Under ₹1,000</option>
+                      <option value="1000-3000">₹1,000 - ₹3,000</option>
+                      <option value="3000-5000">₹3,000 - ₹5,000</option>
+                      <option value="5000">₹5,000+</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Activity type filter */}
+                <div>
+                  <label htmlFor="activityType" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Activity Type
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="activityType"
+                      name="activityType"
+                      value={filters.activityType}
+                      onChange={handleFilterChange}
+                      className="w-full pl-3 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-base appearance-none"
+                    >
+                      <option value="">All Types</option>
+                      <option value="water">Water Activities</option>
+                      <option value="adventure">Adventure</option>
+                      <option value="nature">Nature & Wildlife</option>
+                      <option value="cultural">Cultural</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
-           )
-        )}
+          </div>
+
+          {/* Activities list with enhanced states */}
+          {status === 'loading' ? (
+            <LoadingSpinner />
+          ) : status === 'error' ? (
+            <div className="text-center py-12 px-6 bg-red-50 border border-red-200 rounded-2xl shadow-md">
+              <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-3" />
+              <p className="text-red-700 font-medium">Could not load activities.</p>
+              <p className="text-red-600 text-sm mt-1">{error?.message || "An unknown error occurred."}</p>
+              {/* Added retry button */}
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 px-5 py-2 bg-white text-red-600 border border-red-300 rounded-full hover:bg-red-50 transition-colors shadow-sm"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : (
+            filteredActivities.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                {filteredActivities.map((activity) => (
+                  <ActivityCard key={activity.id} activity={activity} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-white rounded-2xl shadow-lg border border-gray-100">
+                <Image
+                  src="/images/no-results.svg"
+                  alt="No activities found"
+                  width={150}
+                  height={150}
+                  className="mx-auto mb-6 opacity-80"
+                />
+                <h2 className="text-xl md:text-2xl font-semibold mb-2 text-gray-800">No Activities Found</h2>
+                <p className="text-gray-600 mb-6">Try adjusting your filters or check back later for new activities.</p>
+                <button
+                  onClick={() => handleClearFilters()}
+                  className="inline-block bg-green-600 hover:bg-green-700 text-white py-2.5 px-6 rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            )
+          )}
+
+          {/* Added Featured Activities section */}
+          <div className="mt-16 md:mt-20">
+            <div className="flex items-center justify-center mb-10">
+              <Award className="text-green-600 mr-3 flex-shrink-0" size={24} />
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Popular Activities</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Featured Activity 1 */}
+              <div className="bg-white p-6 rounded-2xl shadow-lg text-center border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                  <Anchor className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg md:text-xl font-semibold mb-3 text-gray-800">Scuba Diving</h3>
+                <p className="text-gray-600 mb-5">
+                  Explore vibrant coral reefs and encounter exotic marine life in the crystal-clear waters of the Andaman Sea.
+                </p>
+                <Link href="/activities/scuba-diving" className="text-green-600 hover:text-green-800 font-medium inline-flex items-center">
+                  Learn More
+                  <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">→</span>
+                </Link>
+              </div>
+
+              {/* Featured Activity 2 */}
+              <div className="bg-white p-6 rounded-2xl shadow-lg text-center border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                  <Umbrella className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg md:text-xl font-semibold mb-3 text-gray-800">Beach Hopping</h3>
+                <p className="text-gray-600 mb-5">
+                  Visit the most beautiful beaches in Andaman, from the famous Radhanagar Beach to hidden gems only locals know about.
+                </p>
+                <Link href="/activities/beach-hopping" className="text-green-600 hover:text-green-800 font-medium inline-flex items-center">
+                  Learn More
+                  <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">→</span>
+                </Link>
+              </div>
+
+              {/* Featured Activity 3 */}
+              <div className="bg-white p-6 rounded-2xl shadow-lg text-center border border-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                  <Camera className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg md:text-xl font-semibold mb-3 text-gray-800">Island Tours</h3>
+                <p className="text-gray-600 mb-5">
+                  Discover the unique culture, history, and natural wonders of the Andaman Islands with guided tours led by local experts.
+                </p>
+                <Link href="/activities/island-tours" className="text-green-600 hover:text-green-800 font-medium inline-flex items-center">
+                  Learn More
+                  <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">→</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Added Testimonials section */}
+          <div className="mt-16 md:mt-20">
+            <div className="flex items-center justify-center mb-10">
+              <MessageSquare className="text-green-600 mr-3 flex-shrink-0" size={24} />
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">What Travelers Say</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+              {/* Testimonial 1 */}
+              <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <div className="flex items-center mb-4">
+                  <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
+                    <span className="text-green-600 font-bold">AK</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Amit Kumar</h4>
+                    <div className="flex text-yellow-400">
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600 italic">"The scuba diving experience was incredible! The instructors were professional and made me feel safe throughout the dive. Saw amazing coral and colorful fish!"</p>
+              </div>
+
+              {/* Testimonial 2 */}
+              <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <div className="flex items-center mb-4">
+                  <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
+                    <span className="text-green-600 font-bold">PG</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Priya Gupta</h4>
+                    <div className="flex text-yellow-400">
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current opacity-30" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600 italic">"The sea walking activity was a unique experience. It's perfect for those who want to explore underwater without diving certification. The guides were very helpful."</p>
+              </div>
+
+              {/* Testimonial 3 */}
+              <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <div className="flex items-center mb-4">
+                  <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
+                    <span className="text-green-600 font-bold">RS</span>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Rahul Singh</h4>
+                    <div className="flex text-yellow-400">
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                      <Star size={16} className="fill-current" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600 italic">"The island tour was well organized and our guide was knowledgeable about the history and culture. We visited places we wouldn't have found on our own."</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Added FAQ section */}
+          <div className="mt-16 md:mt-20">
+            <div className="flex items-center justify-center mb-10">
+              <HelpCircle className="text-green-600 mr-3 flex-shrink-0" size={24} />
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Frequently Asked Questions</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* FAQ Item 1 */}
+              <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Do I need to know swimming for water activities?</h3>
+                <p className="text-gray-600">For activities like scuba diving and snorkeling, basic swimming skills are recommended. However, for sea walking and glass-bottom boat rides, swimming knowledge is not required.</p>
+              </div>
+
+              {/* FAQ Item 2 */}
+              <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">What should I bring for activities?</h3>
+                <p className="text-gray-600">For most activities, bring comfortable clothing, sunscreen, a hat, and a water bottle. For water activities, bring a change of clothes and a towel. Specific requirements will be provided upon booking.</p>
+              </div>
+
+              {/* FAQ Item 3 */}
+              <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Can children participate in these activities?</h3>
+                <p className="text-gray-600">Many activities have age restrictions. Scuba diving typically requires participants to be at least 10 years old, while activities like glass-bottom boat rides are suitable for all ages.</p>
+              </div>
+
+              {/* FAQ Item 4 */}
+              <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">What is the cancellation policy?</h3>
+                <p className="text-gray-600">Cancellation policies vary by activity. Generally, full refunds are available if cancelled 24-48 hours before the scheduled time. Please check the specific policy for each activity.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Added Call to Action section */}
+          <div className="mt-16 md:mt-20 bg-gradient-to-r from-green-600 to-green-800 rounded-2xl p-8 md:p-10 text-center relative overflow-hidden shadow-lg">
+            {/* Background pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-white"></div>
+              <div className="absolute -left-20 -bottom-20 w-64 h-64 rounded-full bg-white"></div>
+            </div>
+
+            <div className="relative z-10">
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Ready for an Adventure?</h2>
+              <p className="text-green-100 mb-6 max-w-2xl mx-auto">
+                Book your activities now and create unforgettable memories in the beautiful Andaman Islands.
+                Our team is ready to help you plan the perfect experience!
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button className="bg-white text-green-700 hover:bg-green-50 font-semibold py-3 px-8 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                  Book an Activity
+                </button>
+                <button className="bg-transparent text-white border-2 border-white hover:bg-white/10 font-semibold py-3 px-8 rounded-full transition-all duration-300">
+                  Contact Us
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -150,9 +598,9 @@ function ActivitiesContent() {
 
 // Wrap the main content component with Suspense
 export default function ActivitiesPage() {
-    return (
-        <Suspense fallback={<LoadingSpinner />}>
-            <ActivitiesContent />
-        </Suspense>
-    );
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <ActivitiesContent />
+    </Suspense>
+  );
 }

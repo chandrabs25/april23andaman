@@ -1,84 +1,73 @@
 // Path: src/app/api/packages/[id]/route.ts
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database'; // Import the function to get DB instance
+// --- FIX: Import DatabaseService instead of getDatabase ---
+import { DatabaseService } from '@/lib/database';
 
-// --- FIX: Remove Edge Runtime if present (Database access requires Node.js runtime) ---
-// export const runtime = 'edge'; // Remove or comment out this line
-
-// --- FIX: Define the Package interface (align with your DB schema) ---
+// --- Keep the Package interface (matches DB schema and expected data) ---
 interface Package {
   id: number;
   name: string;
   description: string | null;
   duration: string;
-  base_price: number; // Should be REAL in DB, maps to number
-  max_people: number | null; // INTEGER
-  created_by: number; // INTEGER, Foreign Key to users(id)
-  is_active: number; // Assuming 0 or 1 from SQLite BOOLEAN
-  itinerary: string | null; // TEXT, consider JSON parsing if stored as JSON
-  included_services: string | null; // TEXT, consider JSON parsing
-  images: string | null; // TEXT, consider JSON parsing
-  created_at: string; // DATETIME string
-  updated_at: string; // DATETIME string
+  base_price: number;
+  max_people: number | null;
+  created_by: number;
+  is_active: number; // 0 or 1
+  itinerary: string | null; // Raw TEXT/JSON string from DB
+  included_services: string | null; // Raw TEXT/JSON string from DB
+  images: string | null; // Raw TEXT/JSON string from DB
+  created_at: string;
+  updated_at: string;
 }
-// --- End of FIX ---
+// --- End Interface ---
 
 
-// --- FIX: Implement GET handler for specific Package ID ---
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } } // Destructure 'id' from params
 ) {
-  try {
-    const db = await getDatabase(); // Get the database instance
-    const packageId = params.id;
+  // --- FIX: Instantiate DatabaseService ---
+  const dbService = new DatabaseService();
+  const packageId = params.id;
 
+  try {
     // --- Validate ID ---
     const idAsNumber = parseInt(packageId, 10);
     if (isNaN(idAsNumber)) {
-        return NextResponse.json(
-            { success: false, message: 'Invalid package ID format. Must be a number.' },
-            { status: 400 } // Bad Request
-        );
+      return NextResponse.json(
+        { success: false, message: 'Invalid package ID format. Must be a number.' },
+        { status: 400 } // Bad Request
+      );
     }
     // --- End Validation ---
 
-    // Fetch the specific package from the database using the ID
-    // Fetch only active packages unless specifically needed otherwise
-    const pkg = await db.prepare(
-        'SELECT * FROM packages WHERE id = ? AND is_active = 1' // Fetch active package by ID
-      )
-      .bind(idAsNumber) // Use the numeric ID
-      .first<Package>(); // Specify the expected row type
+    // --- FIX: Use the service method to fetch the package ---
+    // The service method already handles fetching by ID and checking is_active = 1
+    // Assuming getPackageById returns the package object or null/undefined
+    const pkg = await dbService.getPackageById(idAsNumber);
 
-
+    // --- Check if package was found ---
     if (!pkg) {
-      // If no active package is found with that ID, return 404 Not Found
+      // If the service method returns null/undefined, the package wasn't found or isn't active
       return NextResponse.json(
         { success: false, message: `Active package with ID ${idAsNumber} not found.` },
-        { status: 404 }
+        { status: 404 } // Not Found
       );
     }
-
-    // Package found, return its data
-    // Optionally parse JSON fields (itinerary, included_services, images) here if needed
-    // try {
-    //     if (pkg.itinerary) pkg.itinerary = JSON.parse(pkg.itinerary);
-    //     // ... parse others
-    // } catch (parseError) {
-    //     console.error(`Failed to parse JSON fields for package ${idAsNumber}:`, parseError);
-    //     // Decide how to handle: return error, return unparsed, return with warning?
-    // }
-
+    console.log(`Package found in api: ${JSON.stringify(pkg)}`);
+    // --- Package found, return its data ---
+    // The page.tsx component handles parsing JSON fields (itinerary, included_services)
+    // So, we return the raw data from the database here.
     return NextResponse.json({
       success: true,
-      message: `Package details for ID: ${idAsNumber}`,
-      data: pkg // Return the single package object
+      message: `Package details retrieved successfully for ID: ${idAsNumber}`,
+      // Cast the result if needed, though the service method might already return the correct type implicitly
+      data: pkg as Package // Explicit cast can add type safety
     });
 
   } catch (err) {
-    console.error(`Error fetching package with ID ${params.id}:`, err);
+    console.error(`Error fetching package with ID ${packageId}:`, err);
     const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
     return NextResponse.json(
       {
@@ -87,25 +76,21 @@ export async function GET(
         error: errorMessage,
         data: null
       },
-      { status: 500 }
+      { status: 500 } // Internal Server Error
     );
   }
 }
-// --- End of FIX ---
 
-
-// --- FIX: Update PUT/DELETE placeholders ---
+// --- PUT/DELETE placeholders remain the same ---
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-   // Placeholder - Needs implementation for updating a package
-   // Requires authentication/authorization (Admin or Vendor owner)
   console.warn(`PUT /api/packages/${params.id} is not fully implemented.`);
   return NextResponse.json({
-      success: false,
-      message: `PUT method for package ID ${params.id} not implemented yet.`,
-      data: null
+    success: false,
+    message: `PUT method for package ID ${params.id} not implemented yet.`,
+    data: null
   }, { status: 501 }); // Not Implemented
 }
 
@@ -113,13 +98,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-   // Placeholder - Needs implementation for deleting (or deactivating) a package
-   // Requires authentication/authorization (Admin or Vendor owner)
-   // Consider soft delete (setting is_active = 0) instead of hard delete
   console.warn(`DELETE /api/packages/${params.id} is not fully implemented.`);
   return NextResponse.json({
-      success: false,
-      message: `DELETE method for package ID ${params.id} not implemented yet.`
+    success: false,
+    message: `DELETE method for package ID ${params.id} not implemented yet.`
   }, { status: 501 }); // Not Implemented
 }
-// --- End of FIX ---

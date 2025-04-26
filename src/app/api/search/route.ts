@@ -1,207 +1,168 @@
-// src/app/api/search/route.ts
-export const dynamic = 'force-dynamic'
+/* ------------------------------------------------------------------
+   src/app/api/search/route.ts
+-------------------------------------------------------------------*/
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database';
+import { getDatabase, DatabaseService } from '@/lib/database';
 
-// Removed runtime = 'edge' to allow proper D1 database access
+/* ---------- Row helpers ---------- */
+interface Island { id: number; name: string; description?: string | null; images?: string | null }
+interface Package { id: number; name: string; description?: string | null; base_price: number; duration: string }
+interface Activity { id: number; name: string; description?: string | null; island_id: number; island_name: string }
 
-// --- Define Interfaces for DB Results and Search Results ---
-interface Island {
-  id: number;
-  name: string;
-  description?: string | null;
-  // Add other island fields if needed
+/* ---------- Utility ---------- */
+const like = (t: string) => `%${t}%`;
+
+async function performSearch(
+  {
+    q, destinationId, type,
+  }: { q?: string; destinationId?: string | null; type: string }
+) {
+  console.log(`[performSearch] Starting search with q='${q}', destinationId='${destinationId}', type='${type}'`);
+  /* use the same D1 binding every other API gets via getDatabase() */
+  const db = await getDatabase();
+  console.log('[performSearch] Database connection obtained.');
+
+  const destinations: Island[] = [];
+  const packages: Package[] = [];
+  const activities: Activity[] = [];
+
+  /* ----- Destinations / Islands ----- */
+  if (type === 'all' || type === 'destinations') {
+    console.log('[performSearch] Searching destinations...');
+    let sql = 'SELECT id, name, description, images FROM islands';
+    const arg: (string | number)[] = [];
+
+    if (q) {
+      sql += ' WHERE name LIKE ?1 OR description LIKE ?1';
+      arg.push(like(q));
+      console.log(`[performSearch] Destination query (q): ${sql}, Args: ${JSON.stringify(arg)}`);
+    }
+    else if (destinationId) {
+      sql += ' WHERE id = ?1';
+      arg.push(destinationId);
+      console.log(`[performSearch] Destination query (id): ${sql}, Args: ${JSON.stringify(arg)}`);
+    } else {
+      console.log(`[performSearch] Destination query (all - no filter): ${sql}`);
+      // Handle case where no q or destinationId is provided but type is 'destinations' or 'all'
+      // This branch might not be hit due to validation in responder, but logging it defensively.
+    }
+
+    // Only execute if there's a condition or if we intend to fetch all when type is 'destinations'/'all' without q/id
+    // The original code only executed if arg.length > 0, let's stick to that for now.
+    if (arg.length) {
+      const res = await db.prepare(sql).bind(...arg).all<Island>();
+      console.log(`[performSearch] Destination results count: ${res.results?.length ?? 0}`);
+      destinations.push(...(res.results ?? []));
+    } else {
+      console.log('[performSearch] No query arguments for destinations, skipping DB query.');
+    }
+  }
+
+  /* ----- Packages ----- */
+  if ((type === 'all' || type === 'packages') && q) {
+    console.log('[performSearch] Searching packages...');
+    const packageSql = `SELECT id, name, description, base_price, duration
+           FROM packages
+          WHERE is_active = 1
+            AND (name LIKE ?1 OR description LIKE ?1)`;
+    const packageArg = like(q);
+    console.log(`[performSearch] Package query: ${packageSql}, Args: ["${packageArg}"]`);
+    const res = await db
+      .prepare(packageSql)
+      .bind(packageArg)
+      .all<Package>();
+    console.log(`[performSearch] Package results count: ${res.results?.length ?? 0}`);
+    packages.push(...(res.results ?? []));
+  } else if (type === 'all' || type === 'packages') {
+    console.log('[performSearch] Skipping package search (no query term q).');
+  }
+
+
+  /* ----- Activities / Services ----- */
+  if ((type === 'all' || type === 'activities' || type === 'services') && q) {
+    console.log('[performSearch] Searching activities/services...');
+    const activitySql = `SELECT s.id, s.name, s.description, s.island_id, i.name AS island_name
+           FROM services s
+           JOIN islands i ON s.island_id = i.id
+          WHERE s.name LIKE ?1 OR s.description LIKE ?1`;
+    const activityArg = like(q);
+    console.log(`[performSearch] Activity query: ${activitySql}, Args: ["${activityArg}"]`);
+    const res = await db
+      .prepare(activitySql)
+      .bind(activityArg)
+      .all<Activity>();
+    console.log(`[performSearch] Activity results count: ${res.results?.length ?? 0}`);
+    activities.push(...(res.results ?? []));
+  } else if (type === 'all' || type === 'activities' || type === 'services') {
+    console.log('[performSearch] Skipping activity search (no query term q).');
+  }
+
+
+  console.log(`[performSearch] Finished search. Found ${destinations.length} destinations, ${packages.length} packages, ${activities.length} activities.`);
+  return { destinations, packages, activities };
 }
 
-interface Package {
-  id: number;
-  name: string;
-  description?: string | null;
-  base_price: number;
-  duration: string;
-  is_active: number;
-  // Add other package fields if needed
+/* ---------- shared responder ---------- */
+async function responder(
+  request: NextRequest,
+  body?: { q?: string; type?: string; destination?: string | null }
+) {
+  const s = request.nextUrl.searchParams;
+  console.log(`[responder] Received request: ${request.method} ${request.nextUrl.pathname}${request.nextUrl.search}`);
+
+  const q = body?.q ?? s.get('q')?.trim() ?? undefined;
+  const type = body?.type ?? s.get('type') ?? 'all';
+  const destination = body?.destination ?? s.get('destination');
+
+  console.log(`[responder] Parsed parameters - q: '${q}', type: '${type}', destination: '${destination}'`);
+
+  if (!q && !destination) {
+    console.log('[responder] Validation failed: Missing q and destination parameters.');
+    return NextResponse.json(
+      { success: false, message: 'Provide a keyword (q) or destination id', data: { destinations: [], packages: [], activities: [] } },
+      { status: 400 }
+    );
+  }
+
+  /* touch DatabaseService so the binding path mirrors /api/destinations */
+  new DatabaseService();      // constructor side-effect ensures binding exists
+  console.log('[responder] DatabaseService initialized (side-effect for binding).');
+
+  const data = await performSearch({ q, destinationId: destination, type });
+  console.log(`[responder] Search completed. Returning data: ${JSON.stringify(data).substring(0, 200)}...`); // Log snippet of data
+
+  return NextResponse.json({ success: true, message: 'Search results', data });
 }
 
-interface Service {
-  id: number;
-  name: string;
-  description?: string | null;
-  island_id: number;
-  island_name: string; // From JOIN
-  // Add other service fields if needed
-}
-
-type SearchResultItem = Island | Package | Service;
-
-interface SearchResultGroup {
-  type: 'destinations' | 'packages' | 'services';
-  items: SearchResultItem[];
-}
-
-// --- Define Interface for POST Request Body ---
-interface SearchPayload {
-    query: string;
-    type?: 'all' | 'destinations' | 'packages' | 'services';
-}
-
-// --- GET Handler ---
+/* ---------- GET ---------- */
 export async function GET(request: NextRequest) {
+  console.log('[GET /api/search] Handling GET request.');
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get('q')?.trim(); // Trim whitespace
-    const type = searchParams.get('type') || 'all';
-
-    if (!query) {
-      return NextResponse.json({
-        success: false,
-        message: 'Search query (q parameter) is required',
-        data: []
-      }, { status: 400 });
-    }
-
-    // Adjust DB initialization if needed for standard Node runtime
-    const db = await getDatabase();
-
-    const results: SearchResultGroup[] = [];
-    const searchQuery = `%${query}%`; // Prepare search term once
-
-    // Search destinations/islands
-    if (type === 'all' || type === 'destinations') {
-      const destinationsResult = await db
-        .prepare('SELECT id, name, description FROM islands WHERE name LIKE ?1 OR description LIKE ?1') // Use named or indexed parameters
-        .bind(searchQuery)
-        .all<Island>(); // Specify expected row type
-
-      if (destinationsResult.results && destinationsResult.results.length > 0) {
-        results.push({
-          type: 'destinations',
-          items: destinationsResult.results
-        });
-      }
-    }
-
-    // Search packages
-    if (type === 'all' || type === 'packages') {
-       // Corrected SQL: AND should apply to the WHERE clause, not OR
-      const packagesResult = await db
-        .prepare('SELECT id, name, description, base_price, duration FROM packages WHERE (name LIKE ?1 OR description LIKE ?1) AND is_active = 1')
-        .bind(searchQuery)
-        .all<Package>(); // Specify expected row type (adjust selected fields as needed)
-
-      if (packagesResult.results && packagesResult.results.length > 0) {
-        results.push({
-          type: 'packages',
-          items: packagesResult.results
-        });
-      }
-    }
-
-    // Search services
-    if (type === 'all' || type === 'services') {
-      const servicesResult = await db
-        .prepare('SELECT s.id, s.name, s.description, s.island_id, i.name as island_name FROM services s JOIN islands i ON s.island_id = i.id WHERE s.name LIKE ?1 OR s.description LIKE ?1')
-        .bind(searchQuery)
-        .all<Service>(); // Specify expected row type
-
-      if (servicesResult.results && servicesResult.results.length > 0) {
-        results.push({
-          type: 'services',
-          items: servicesResult.results
-        });
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Search results retrieved successfully',
-      data: results
-    });
-  } catch (error) {
-    console.error('Search error (GET):', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({
-      success: false,
-      message: 'Error performing search',
-      error: errorMessage,
-      data: []
-    }, { status: 500 });
+    return await responder(request);
+  }
+  catch (err) {
+    console.error('[GET /api/search] Search error (GET)', err); // Keep existing error log
+    return NextResponse.json(
+      { success: false, message: 'Internal error', error: String(err), data: { destinations: [], packages: [], activities: [] } },
+      { status: 500 }
+    );
   }
 }
 
-// --- POST Handler ---
+/* ---------- POST ---------- */
 export async function POST(request: NextRequest) {
+  console.log('[POST /api/search] Handling POST request.');
   try {
-    // --- FIX: Assert the type of the JSON body ---
-    const body = await request.json() as SearchPayload;
-    const { query: rawQuery, type = 'all' } = body;
-    // --- End of FIX ---
-
-    const query = rawQuery?.trim(); // Trim whitespace
-
-    if (!query) {
-      return NextResponse.json({
-        success: false,
-        message: 'Search query is required in the request body',
-        data: []
-      }, { status: 400 });
-    }
-
-    // Adjust DB initialization if needed
-    const db = await getDatabase();
-
-    const results: SearchResultGroup[] = [];
-    const searchQuery = `%${query}%`; // Prepare search term once
-
-    // Search destinations/islands
-    if (type === 'all' || type === 'destinations') {
-        const destinationsResult = await db
-          .prepare('SELECT id, name, description FROM islands WHERE name LIKE ?1 OR description LIKE ?1')
-          .bind(searchQuery)
-          .all<Island>();
-
-        if (destinationsResult.results && destinationsResult.results.length > 0) {
-          results.push({ type: 'destinations', items: destinationsResult.results });
-        }
-      }
-
-      // Search packages
-      if (type === 'all' || type === 'packages') {
-        const packagesResult = await db
-          .prepare('SELECT id, name, description, base_price, duration FROM packages WHERE (name LIKE ?1 OR description LIKE ?1) AND is_active = 1')
-          .bind(searchQuery)
-          .all<Package>();
-
-        if (packagesResult.results && packagesResult.results.length > 0) {
-          results.push({ type: 'packages', items: packagesResult.results });
-        }
-      }
-
-      // Search services
-      if (type === 'all' || type === 'services') {
-        const servicesResult = await db
-          .prepare('SELECT s.id, s.name, s.description, s.island_id, i.name as island_name FROM services s JOIN islands i ON s.island_id = i.id WHERE s.name LIKE ?1 OR s.description LIKE ?1')
-          .bind(searchQuery)
-          .all<Service>();
-
-        if (servicesResult.results && servicesResult.results.length > 0) {
-          results.push({ type: 'services', items: servicesResult.results });
-        }
-      }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Search results retrieved successfully',
-      data: results
-    });
-  } catch (error) {
-    console.error('Search error (POST):', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({
-      success: false,
-      message: 'Error performing search',
-      error: errorMessage,
-      data: []
-    }, { status: 500 });
+    const body = (await request.json()) as { q?: string; type?: string; destination?: string | null };
+    console.log('[POST /api/search] Request body parsed:', body);
+    return await responder(request, body);
+  } catch (err) {
+    console.error('[POST /api/search] Search error (POST)', err); // Keep existing error log
+    return NextResponse.json(
+      { success: false, message: 'Invalid JSON body', error: String(err), data: { destinations: [], packages: [], activities: [] } },
+      { status: 400 }
+    );
   }
 }

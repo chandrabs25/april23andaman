@@ -21,7 +21,9 @@ interface Activity {
 
 export async function GET(request: Request) {
   try {
-    const db = await getDatabase()  // await the D1Database instance
+    const db = await getDatabase()
+    // await the D1Database instance
+    
     const { searchParams } = new URL(request.url)
 
     const islandIdParam = searchParams.get('islandId')
@@ -62,6 +64,8 @@ export async function GET(request: Request) {
     }
 
     const activitiesData = results ?? []
+    console.log('API Results under acitivitiesdata:', activitiesData)
+
 
     return NextResponse.json({
       success: true,

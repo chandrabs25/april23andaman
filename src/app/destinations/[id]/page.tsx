@@ -44,8 +44,8 @@ function DestinationDetailContent() {
   const destinationId = params.id as string;
   const apiUrl = destinationId ? `/api/destinations/${destinationId}` : null;
 
-  const { data: apiResponse, error, status } = useFetch<GetDestinationApiResponse>(apiUrl);
-  const destination = apiResponse?.data;
+  const { data: apiResponse, error, status } = useFetch<DestinationData>(apiUrl);
+  const destination = apiResponse
 
   // Data Processing Logic
   const imageUrl = destination?.images?.split(',')[0]?.trim() || '/images/placeholder.jpg';
