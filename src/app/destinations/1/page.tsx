@@ -1,339 +1,558 @@
-// Path: src/app/destinations/1/page.tsx
-'use client'; // Needed because we use useState for the toggle
+// Path: src/app/destinations/port-blair/page.tsx // Renamed for clarity
+// Theme: Neutral with Contextual Background Colors (Applied based on Baratang sample)
 
-import { useState } from 'react'; // Import useState for the toggle
+'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Check, Info } from 'lucide-react'; // Import any needed icons
+import {
+    MapPin,
+    Check,
+    Info,
+    Calendar,
+    Clock,
+    Bed,
+    Utensils,
+    Compass,
+    Users,
+    Shield,
+    Leaf,
+    ChevronRight,
+    Star,
+    Navigation, // Use Navigation instead of Route for consistency
+    ArrowRight,
+    MessageCircle,
+    Camera,
+    Plane,      // Added for Port Blair context
+    Ship,       // Added for Port Blair context
+    Landmark,   // Added for Port Blair context
+    Waves,      // Added for Port Blair context (Corbyn's Cove)
+    LifeBuoy    // Added for Port Blair context (Safety)
+} from 'lucide-react';
 
-// Assuming you have Header and Footer components imported via a layout typically
-// import Header from '@/components/Header';
-// import Footer from '@/components/Footer';
+// --- Define Common Styles (Copied from Baratang Sample - Neutral Theme with Contextual Colors) ---
+const primaryButtonBg = 'bg-gray-800';
+const primaryButtonHoverBg = 'hover:bg-gray-900';
+const primaryButtonText = 'text-white';
 
-export default function Destination1Page() {
-    // State to manage the toggle switch
+const secondaryButtonBg = 'bg-white/20 backdrop-blur-sm';
+const secondaryButtonHoverBg = 'hover:bg-white/30';
+const secondaryButtonText = 'text-white';
+const secondaryButtonBorder = 'border border-white/40';
+
+const infoBg = 'bg-blue-50';
+const infoBorder = 'border-blue-100';
+const infoText = 'text-blue-800';
+const infoIconColor = 'text-blue-600';
+
+const successBg = 'bg-green-50';
+const successBorder = 'border-green-100';
+const successText = 'text-green-800';
+const successIconColor = 'text-green-600';
+
+const warningBg = 'bg-orange-50';
+const warningBorder = 'border-orange-100';
+const warningText = 'text-orange-800';
+const warningIconColor = 'text-orange-600';
+
+const tipBg = 'bg-yellow-50';
+const tipBorder = 'border-yellow-100';
+const tipText = 'text-yellow-800';
+const tipIconColor = 'text-yellow-700';
+
+const errorBg = 'bg-red-50';
+const errorBorder = 'border-red-200';
+const errorText = 'text-red-700';
+const errorIconColor = 'text-red-500';
+
+const neutralBgLight = 'bg-gray-50';
+const neutralBorderLight = 'border-gray-100';
+const neutralBg = 'bg-gray-100';
+const neutralBorder = 'border-gray-200';
+const neutralText = 'text-gray-800';
+const neutralTextLight = 'text-gray-600';
+const neutralIconColor = 'text-gray-600';
+
+const sectionPadding = "py-10 md:py-12"; // Consistent padding
+const sectionHeadingStyle = `text-2xl font-bold ${neutralText} mb-6 flex items-center`;
+const cardBaseStyle = `bg-white rounded-2xl shadow-sm border ${neutralBorderLight} p-6 transition-shadow hover:shadow-md`;
+const buttonPrimaryStyle = `inline-flex items-center justify-center ${primaryButtonBg} ${primaryButtonHoverBg} ${primaryButtonText} px-6 py-3 rounded-full font-medium transition-all duration-300 shadow-md`;
+const buttonSecondaryStyleHero = `inline-flex items-center justify-center ${secondaryButtonBg} ${secondaryButtonHoverBg} ${secondaryButtonText} ${secondaryButtonBorder} px-6 py-3 rounded-full font-medium transition-all duration-300`;
+// --- End Common Styles ---
+
+export default function PortBlairPage() {
     const [showComprehensive, setShowComprehensive] = useState(false);
+    const [activeImage, setActiveImage] = useState(0);
 
     const handleToggle = () => {
         setShowComprehensive(!showComprehensive);
     };
 
+    // Gallery images specific to Port Blair
+    const galleryImages = [
+        {
+            src: "/images/portblair/cellular-jail-day.jpg", // Use specific paths
+            alt: "Cellular Jail National Memorial, Port Blair",
+            caption: "The imposing structure of the Cellular Jail"
+        },
+        {
+            src: "/images/portblair/ross-island-ruins.jpg", // Use specific paths
+            alt: "Ruins on Ross Island (Netaji Subhas Chandra Bose Dweep)",
+            caption: "Historical ruins reclaimed by nature on Ross Island"
+        },
+        {
+            src: "/images/portblair/corbyns-cove.jpg", // Use specific paths
+            alt: "Corbyn's Cove Beach",
+            caption: "Palm-fringed Corbyn's Cove beach near Port Blair"
+        },
+        {
+            src: "/images/portblair/harbor-view.jpg", // Use specific paths
+            alt: "Port Blair Harbor View",
+            caption: "A panoramic view of the busy Port Blair harbor"
+        },
+        {
+            src: "/images/portblair/samudrika-museum.jpg", // Use specific paths
+            alt: "Samudrika Naval Marine Museum",
+            caption: "Exhibits inside the Samudrika Museum"
+        }
+    ];
+
     return (
-        // Removed <html>, <head>, <body> - Next.js handles this.
-        // Assumes Header/Footer are handled by a layout file (e.g., src/app/layout.tsx)
-        // If not using a layout, you'd import and render Header/Footer here.
-
-        // Apply base body styles via globals.css or layout, not directly here usually.
-        // The `bg-gray-50 text-gray-700` would typically be on the <body> tag in layout.tsx
-        <main className="container mx-auto px-4 py-8 md:py-12">
-
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center md:text-left">
-                Baratang Island Travel Guide
-            </h1>
-
-            {/* Toggle Switch */}
-            <div className="flex items-center justify-center md:justify-start mb-8">
-                <label htmlFor="guide-toggle" className="mr-3 text-sm font-medium text-gray-600">Brief Guide</label>
-                <label className="switch">
-                    <input
-                        type="checkbox"
-                        id="guide-toggle"
-                        checked={showComprehensive}
-                        onChange={handleToggle} // Use React's onChange
-                    />
-                    <span className="slider round"></span>
-                </label>
-                <label htmlFor="guide-toggle" className="ml-3 text-sm font-medium text-gray-600">Comprehensive Guide</label>
+        <main className={`bg-white ${neutralText}`}>
+            {/* Hero Section - Matches Baratang Structure */}
+            <div className="relative h-[70vh] w-full">
+                <Image
+                    src="/images/portblair/hero.jpg" // Use specific Port Blair hero image
+                    alt="Aerial view of Port Blair harbor and Cellular Jail"
+                    fill
+                    priority
+                    style={{ objectFit: 'cover' }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 text-white">
+                    <div className="container mx-auto">
+                        <nav className="text-sm text-white/80 mb-2" aria-label="Breadcrumb">
+                            <ol className="list-none p-0 inline-flex">
+                                <li className="flex items-center">
+                                    <Link href="/" className="hover:text-white">Home</Link>
+                                    <ChevronRight size={14} className="mx-1" />
+                                </li>
+                                <li className="flex items-center">
+                                    <Link href="/destinations" className="hover:text-white">Destinations</Link>
+                                    <ChevronRight size={14} className="mx-1" />
+                                </li>
+                                <li className="flex items-center">
+                                    <span className="text-white font-medium">Port Blair</span>
+                                </li>
+                            </ol>
+                        </nav>
+                        <h1 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-md">Port Blair</h1>
+                        <p className="text-xl md:text-2xl max-w-3xl mb-6 text-white/90">The vibrant capital and gateway to the Andaman Islands, rich in history and natural beauty.</p>
+                        <div className="flex flex-wrap gap-4 items-center">
+                            <button className={buttonPrimaryStyle}>
+                                Explore Port Blair <ArrowRight size={18} className="ml-2" />
+                            </button>
+                            {/* Placeholder for a specific gallery link/modal trigger if needed */}
+                            <button className={buttonSecondaryStyleHero}>
+                                <Camera size={18} className="mr-2" /> View Gallery
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Conditional Rendering based on state */}
-            {!showComprehensive && (
-                // Brief Guide Content (id no longer needed for JS)
-                <div>
-                    <h2 className="text-2xl font-semibold text-blue-700 mt-8 mb-4">Baratang Island: Brief Guide</h2>
+            {/* Main Content Container */}
+            <div className={`container mx-auto px-4 ${sectionPadding}`}>
 
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Overview</h3>
-                        <p className="text-base leading-relaxed mb-4">
-                            Offbeat, jungle-lined Baratang is famed for its mangrove creeks, limestone caves and unique mud volcanoes. It’s visited almost exclusively as a day-trip from Port Blair via a government convoy through the Jarawa tribal reserve.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Getting There & Around</h3>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4">
-                            <li><strong>Road Convoy (6 AM start, 3–4 hr):</strong> Port Blair → Jirkatang (check-in) → vehicle ferry → Baratang jetty.</li>
-                            <li><strong>Ferry (2½ hr govt):</strong> Port Blair → Nilambur Jetty (infrequent; no same-day return).</li>
-                            <li><strong>On-island transport:</strong> No scooters. Hire private jeep (₹400) or use sparse govt bus between jetty, mud volcano & Baludera Beach.</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Best Time to Visit</h3>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4">
-                            <li><strong>Nov–Feb:</strong> Dry, cool, easy cave trek.</li>
-                            <li><strong>Mar–May:</strong> Hotter but doable.</li>
-                            <li><strong>Jun–Sep:</strong> Monsoon—muddy trails, occasional closures.</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Accommodation</h3>
-                        <p className="text-base leading-relaxed mb-4">
-                            None for tourists except rarely bookable govt guesthouses (apply months ahead).
-                        </p>
-                        <p className="text-base leading-relaxed font-medium text-blue-600">
-                            Recommendation: Stay Port Blair; treat Baratang as a day trip.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Food & Dining</h3>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4">
-                            <li><strong>Jetty area dhabas:</strong> South Indian, Bengali thalis (₹150), occasional fresh seafood.</li>
-                            <li>Pack snacks—few stalls beyond jetty.</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Key Attractions</h3>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4">
-                            <li><strong>Limestone Caves:</strong> Mangrove boat (30 min) + 1.2 km trek → stalactites/stalagmites.</li>
-                            <li><strong>Mud Volcano:</strong> 160 m walk to bubbling craters.</li>
-                            <li><strong>Parrot Island (overnight only):</strong> Sunset roost of thousands of parrots.</li>
-                            <li><strong>Baludera Beach:</strong> Secluded sandy bay—take own snorkel gear.</li>
-                        </ul>
-                    </section>
-
-                    {/* Styled Table Card */}
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Activities by Traveler Type</h3>
-                        {/* Using Tailwind classes directly as in original code - assumes they are configured */}
-                        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6 p-6">
-                            <div className="overflow-x-auto"> {/* Wrapper for responsiveness */}
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-gray-100 text-gray-600 font-semibold uppercase border-b border-gray-300">
-                                        <tr>
-                                            <th scope="col" className="px-4 py-3">Traveler</th>
-                                            <th scope="col" className="px-4 py-3">Highlights</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                        <tr>
-                                            <td className="px-4 py-3 font-medium">Backpackers</td>
-                                            <td className="px-4 py-3">Early convoy, hammock camping, parrot-island boat trip</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-4 py-3 font-medium">Families</td>
-                                            <td className="px-4 py-3">Mangrove cruise, cave walk, mud volcano boardwalk, packaged snacks</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-4 py-3 font-medium">Adventure Seekers</td>
-                                            <td className="px-4 py-3">Guided off-trail cave extensions, jungle hikes, kayaking in creeks (arrange locally)</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-4 py-3 font-medium">Luxury Travelers</td>
-                                            <td className="px-4 py-3">Private SUV + speedboat to caves, curated picnic at Baludera, exclusive guesthouse booking + candlelight dinner</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-4 py-3 font-medium">Nature Buffs</td>
-                                            <td className="px-4 py-3">Birding (kingfishers, hornbills), stargazing, tidal-pool explorations</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                {/* Quick Facts Card - Contextual Color (Informational Blue) */}
+                <div className={`${infoBg} rounded-2xl p-6 mb-12 shadow-sm border ${infoBorder}`}>
+                    <h2 className={`text-xl font-semibold ${infoText} mb-4 flex items-center`}>
+                        <Info className={`mr-2 ${infoIconColor}`} size={20} />
+                        Quick Facts About Port Blair
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="flex items-start">
+                            <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
+                                <MapPin className={infoIconColor} size={18} />
+                            </div>
+                            <div>
+                                <h3 className={`font-medium ${neutralText}`}>Location</h3>
+                                <p className={`text-sm ${neutralTextLight}`}>Capital city, located on South Andaman Island</p>
                             </div>
                         </div>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Cultural & Etiquette</h3>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4">
-                            <li><strong>Jarawa Reserve:</strong> No photos, no stops, no feeding.</li>
-                            <li>Greet locals with “Namaste,” dress modestly in villages, remove shoes at small temples.</li>
-                            <li>Respect mangroves and wildlife; no littering.</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Safety & Health</h3>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4">
-                            <li>Follow convoy rules; take motion-sickness meds.</li>
-                            <li>Wear sturdy, non-slip footwear for caves.</li>
-                            <li>Carry water, sun protection, insect repellent.</li>
-                        </ul>
-                    </section>
-
-                    <section>
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Sustainability</h3>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4">
-                            <li>Pack out all trash; avoid single-use plastics.</li>
-                            <li>Don’t touch corals or cave formations.</li>
-                            <li>Support local eateries.</li>
-                        </ul>
-                    </section>
-                </div>
-            )}
-
-            {showComprehensive && (
-                // Comprehensive Guide Content (id no longer needed for JS)
-                <div>
-                    <h2 className="text-2xl font-semibold text-blue-700 mt-8 mb-4">Baratang Island: Comprehensive Guide</h2>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Overview</h3>
-                        <p className="text-base leading-relaxed mb-4">
-                            Baratang is a wild, nature-rich island about 100 km north of Port Blair. It’s a gateway to Middle Andamans and known for its mangrove creeks, limestone caves, and the unique mud volcanoes. A trip here offers a mix of adventure and pristine scenery, often done as a long day trip from Port Blair. Tourism infrastructure is minimal – which means Baratang retains an offbeat charm. Expect bumpy convoy rides through jungles, tranquil beaches with hardly a soul, and glimpses of indigenous culture along the way.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Getting There & Getting Around</h3>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong>Getting There:</strong> The most common way to reach Baratang is by road from Port Blair via the Andaman Trunk Road (ATR). This 3-4 hour journey includes driving in a government-regulated convoy (to ensure safety while passing through tribal reserve areas) and a short vehicle ferry crossing at Middle Strait. Two-wheelers are not allowed beyond Jirkatang checkpoint, so travelers must go by car, bus, or jeep. Government and private buses depart early morning from Port Blair (STS bus terminal or tour operators) – an affordable option for backpackers. Private taxis can also be hired for the day. An alternative is the government ferry from Port Blair to Baratang (via Nilambur Jetty), which is inexpensive and takes ~2.5 hours, but it runs infrequently and typically does not return the same day (that ferry usually continues onward to Havelock). Due to these constraints, most visitors opt for the road convoy in the morning, which allows a return by evening.
-                        </p>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong>Getting Around:</strong> Baratang is small and sites are spread out from the jetty. There is no public transport once you’re on the island except a very limited bus service and some shared jeeps. Most day-tour visitors will have their hired vehicle take them around. If you arrive by ferry or independent of a tour, you can hire Private Jeeps at the Nilambur jetty to reach places like the mud volcano or limestone cave trailhead (fares around ₹400 per jeep). A government bus shuttles a few times a day between the jetty, mud volcano and Baludera Beach – check timing at the jetty if you plan to use it. Auto-rickshaws are not available and no scooter rentals exist here. Essentially, arrange transportation in advance (a car with driver for the day is most convenient).
-                        </p>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong>Convoy & Tribal Reserve:</strong> The ATR road passes through the Jarawa Tribal Reserve. Vehicles move in convoys at scheduled times with police escort. Stopping midway is prohibited, and interaction with the Jarawa tribe is strictly banned by law. You may see a few Jarawa by the roadside as you drive through, but do not photograph or feed them (penalties are severe for any violation). Treat this unique cultural zone with respect – think of it as passing through someone’s home uninvited, so no attempts to disturb.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Best Time to Visit</h3>
-                        <p className="text-base leading-relaxed mb-4">
-                            Baratang can be visited year-round, but winter and early spring offer the best experience. The dry season from <strong>November to February</strong> is ideal, with calmer seas and cooler temperatures perfect for the boat ride through mangroves and jungle trekking. These months have minimal rain, so the limestone cave path (and the mud volcano site) will be less muddy and more accessible. <strong>March to May</strong> is also decent, though temperatures and humidity rise – carry water and sun protection if visiting in these months. The <strong>monsoon season (June to September)</strong> brings heavy rains which can cause road conditions to deteriorate and occasional flooding of paths (the limestone cave trek might be slushy or closed during extreme rain). Additionally, convoys may run less frequently or boats to limestone caves might pause on very stormy days. Therefore, it’s advisable to avoid the peak monsoon for Baratang, or plan a buffer day in Port Blair in case your trip needs to shift. If you do visit in monsoon, you’ll still find the forests lush and green – just come prepared with rain gear and expect minor delays or reroutes.
-                        </p>
-                        <p className="text-base leading-relaxed font-medium text-blue-600 mb-4">
-                            Travel Tip: Start from Port Blair by the first convoy (around 6AM) to beat the crowds and noon heat. This early start also increases the chances of completing all sights (caves, mud volcano, etc.) comfortably and returning before late evening.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Accommodation (Budget to Luxury)</h3>
-                        <p className="text-base leading-relaxed mb-4">
-                            Staying overnight in Baratang is uncommon but possible. Infrastructure is very limited – think basic government rest houses rather than resorts. There are no luxury hotels or resorts here (those are concentrated on Havelock/Port Blair). Baratang has three government guest houses near the jetty (Forest, APWD, and Panchayat guest houses), but they are mostly meant for officials and local needs. It is sometimes possible for tourists to book a room by applying through the authorities in Port Blair, but you must do so months in advance and have flexibility. Walk-in bookings are generally not accepted, and those who show up without prior arrangement are usually out of luck.
-                        </p>
-                        <p className="text-base leading-relaxed mb-4">
-                            For budget travelers, unless you’re on a mission to see the evening parrot spectacle (more on that under attractions), it’s recommended to treat Baratang as a day trip and stay in Port Blair or Rangat. If you do secure a guesthouse spot, expect very basic amenities (clean bed and bath, but no frills). There used to be one private hotel (Dew Dale Resort) en route to Baratang, but it has now shut down. Homestays are nearly non-existent for tourists.
-                        </p>
-                        <p className="text-base leading-relaxed mb-4">
-                            In summary, accommodation ranges from spartan to none – plan to return to base. Those determined to stay overnight should coordinate with a local tour operator or the Andaman tourism office well ahead of time. The reward for overnighting is experiencing Baratang’s raw nature in solitude once the day-trippers leave.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Food & Dining</h3>
-                        <p className="text-base leading-relaxed mb-4">
-                            Dining options in Baratang are limited but will cover your basic needs. Near Nilambur Jetty (the hub where road and ferries converge) you’ll find a handful of small eateries and food shacks. These family-run dhabas serve simple South Indian and Bengali dishes – think rice plates, dal, fish curry, dosa, samosas, and snacks. The food is homely, tasty and very affordable (a veg Thali meal for ₹150 or so). Don’t expect ambiance – these are simple bamboo or tin shacks with plastic chairs, but the service comes with a smile. <strong>Seafood:</strong> If available, try the fresh catch of the day (sometimes they’ll have fish fry or curry) – it’s likely caught that morning by local fishermen.
-                        </p>
-                        <p className="text-base leading-relaxed mb-4">
-                            There are no upscale restaurants or bars in Baratang. It’s wise to carry some packed snacks, fruits, and sufficient water, especially if you have specific diet preferences. Near popular sites like the Limestone Caves entrance and mud volcano, there might be a lone tea stall or two selling coconuts, biscuits, and bottled drinks – but not always, so having your own supplies is handy.
-                        </p>
-                        <p className="text-base leading-relaxed font-medium text-blue-600 mb-4">
-                            Pro tip: Pick up some bakery items or fruit from Port Blair the day before, so you have something to munch if local eateries are closed or unappealing to you. And definitely grab a cup of chai at the jetty; sipping hot tea with a view of Baratang’s mangrove-lined waters is part of the experience.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Key Attractions</h3>
-                        <p className="text-base leading-relaxed mb-2"><strong>Limestone Caves:</strong></p>
-                        <p className="text-base leading-relaxed mb-4">
-                            The highlight of Baratang is undoubtedly its limestone caves, accessed via an adventurous journey. From Baratang’s Nilambur Jetty, hop on a small motorboat through picturesque mangrove creeks for about 30-40 minutes. The ride itself is magical – at one point the creek narrows and forms a green tunnel of arching mangrove roots. The boat drops you at a wooden jetty, and from there it’s a 1.2 km trek through tropical forest (15-30 minutes) to the caves. Inside, find stunning stalactite and stalagmite formations. Guides can be hired (work for tips). Carry a flashlight. Please do not touch or damage the formations. The entire visit takes around 2–3 hours.
-                        </p>
-                        <p className="text-base leading-relaxed mb-2"><strong>Mud Volcano:</strong></p>
-                        <p className="text-base leading-relaxed mb-4">
-                            Baratang hosts India’s only known mud volcanoes. Expect small muddy craters periodically gurgling mud and gases. It's a 15-20 minute drive from the jetty + 160 m walk. It's a geologically fascinating phenomenon, though visually underwhelming for some. Wear closed footwear.
-                        </p>
-                        <p className="text-base leading-relaxed mb-2"><strong>Parrot Island:</strong></p>
-                        <p className="text-base leading-relaxed mb-4">
-                            A tiny uninhabited island famed for thousands of parrots roosting at sunset. Requires staying overnight in Baratang as trips depart late afternoon (around 4:30 PM). Local boat owners organize trips from the jetty. An unforgettable spectacle for bird lovers.
-                        </p>
-                        <p className="text-base leading-relaxed mb-2"><strong>Baludera Beach:</strong></p>
-                        <p className="text-base leading-relaxed mb-4">
-                            An offbeat, usually deserted sandy beach about 9 km from the jetty. Calm, shallow waters suitable for swimming (no lifeguard). Great for solitude. Low tide reveals tidal pools. Bring your own snorkel gear if interested; beware of sandflies (use repellent/coconut oil).
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Activities & Experiences (By Traveler Type)</h3>
-                        <div className="space-y-6">
-                            <div>
-                                <h4 className="text-lg font-semibold text-gray-700 mb-2">Backpackers</h4>
-                                <p className="text-base leading-relaxed">Take the govt bus, embrace the bumpy ride. Bring a hammock for potential overnight stays (with permission). Trek around, explore mud volcano area, try Parrot Island trip. Stock snacks.</p>
+                        <div className="flex items-start">
+                            <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
+                                <Star className={infoIconColor} size={18} />
                             </div>
                             <div>
-                                <h4 className="text-lg font-semibold text-gray-700 mb-2">Families</h4>
-                                <p className="text-base leading-relaxed">Enjoy the mangrove boat ride (like a jungle cruise!). Use caves and mud volcano for fun science lessons. Hire an AC car for comfort. Pack snacks/water. Use facilities at checkpoints/cave entrance.</p>
-                            </div>
-                            <div>
-                                <h4 className="text-lg font-semibold text-gray-700 mb-2">Adventure Seekers</h4>
-                                <p className="text-base leading-relaxed">Ask locals about kayaking in creeks. Seek guided treks to further cave systems. Hike forest trails. Combine with a road trip to Rangat/Mayabunder. Carry first aid.</p>
-                            </div>
-                            <div>
-                                <h4 className="text-lg font-semibold text-gray-700 mb-2">Luxury Travelers</h4>
-                                <p className="text-base leading-relaxed">Hire premium SUV & guide. Request private speedboat for cave trip. Arrange a curated picnic at Baludera Beach (via hotel/operator). Book entire guesthouse for exclusivity (basic amenities only). Focus on bespoke experiences.</p>
-                            </div>
-                            <div>
-                                <h4 className="text-lg font-semibold text-gray-700 mb-2">Nature & Wildlife Buffs</h4>
-                                <p className="text-base leading-relaxed">Bring binoculars for birdwatching (kingfishers, hornbills, parrots). Observe mangrove ecosystem during boat ride. Explore tidal pools at Baludera. Enjoy stargazing. Carry waterproof camera gear.</p>
+                                <h3 className={`font-medium ${neutralText}`}>Known For</h3>
+                                <p className={`text-sm ${neutralTextLight}`}>Cellular Jail, Museums, Ross Island, Corbyn's Cove, Ferry Hub</p>
                             </div>
                         </div>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Cultural Insights & Local Etiquette</h3>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong>Indigenous Presence (Jarawa Reserve):</strong> Crucial to respect autonomy. NO photos, NO feeding, NO interaction. Follow convoy rules strictly.
-                        </p>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong>Local Life:</strong> Settlements are mainly Bengali/Tamil. Life is simple. People are friendly but shy. Greet with "Namaste." Dress modestly in villages.
-                        </p>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong>Language:</strong> Hindi is common, some Bengali. Basic polite phrases appreciated. English is limited.
-                        </p>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong>Etiquette:</strong> Be patient ("island time"). Be humble. Ask before taking photos of people. Remove shoes at temples. Respect local environment – no littering.
-                        </p>
-                    </section>
-
-                    <section className="mb-8">
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Safety Tips & Health Advice</h3>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4">
-                            <li><strong>Convoy Safety:</strong> Stay in vehicle, follow rules, be punctual for return.</li>
-                            <li><strong>Motion Sickness:</strong> Take meds for bumpy road/boat.</li>
-                            <li><strong>Heat & Hydration:</strong> Drink plenty of water, use hat/sunscreen.</li>
-                            <li><strong>Insects:</strong> Use repellent (mosquitoes/sandflies). Check for ticks after treks.</li>
-                            <li><strong>Footwear:</strong> Sturdy shoes with grip for caves/treks.</li>
-                            <li><strong>First Aid:</strong> Carry basic kit. Health center is very basic.</li>
-                            <li><strong>Swimming:</strong> No lifeguards at Baludera. Swim in daylight, clear areas, not alone. Be aware of remote possibility of crocodiles in mangrove areas (not typical on tourist beaches).</li>
-                            <li><strong>Jarawa Encounters:</strong> If approached, stay calm, remain in vehicle, let authorities handle.</li>
-                            <li><strong>Night Travel:</strong> Very limited light. Stick to accommodation area after dark. Bring flashlight.</li>
-                            <li><strong>Emergency Contacts:</strong> Save important numbers (hotel, operator, local police). Cell signal is spotty.</li>
-                        </ul>
-                    </section>
-
-                    <section>
-                        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Sustainability Tips</h3>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4">
-                            <li><strong>No Littering, Pack It Out:</strong> Carry all trash back to Port Blair.</li>
-                            <li><strong>Plastic Ban:</strong> Avoid single-use plastics. Use reusable bags/bottles.</li>
-                            <li><strong>Mangrove Respect:</strong> Don't break branches or disturb wildlife from boat.</li>
-                            <li><strong>Coral and Marine Life:</strong> Don't touch/stand on coral. Don't collect shells.</li>
-                            <li><strong>Stay on Marked Trails:</strong> Avoid damaging vegetation or getting lost.</li>
-                            <li><strong>Wildlife Disturbance:</strong> Use zoom lenses. Never feed wildlife (including Jarawa or monkeys - it's illegal and harmful).</li>
-                            <li><strong>Energy & Water:</strong> Conserve resources if staying overnight.</li>
-                            <li><strong>Support Local Economy:</strong> Buy from local stalls, hire local guides.</li>
-                            <li><strong>Educate Fellow Travelers:</strong> Gently encourage responsible behaviour.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed mt-4 font-medium">
-                            Tread lightly – Baratang's ecosystem and culture are precious.
-                        </p>
-                    </section>
+                        <div className="flex items-start">
+                            <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
+                                <Plane className={infoIconColor} size={18} /> {/* More relevant than Clock */}
+                            </div>
+                            <div>
+                                <h3 className={`font-medium ${neutralText}`}>Gateway</h3>
+                                <p className={`text-sm ${neutralTextLight}`}>Primary entry point via Veer Savarkar Int'l Airport (IXZ)</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            )}
 
-            {/* Removed the <script> block - logic is handled by React state */}
+                {/* Toggle Switch - Neutral Theme */}
+                <div className="flex flex-col items-center mb-10">
+                    <h2 className={`text-2xl font-bold ${neutralText} mb-4`}>Choose Your Guide Style</h2>
+                    <p className={`${neutralTextLight} mb-6 text-center max-w-2xl`}>Select between a quick overview or an in-depth exploration of Port Blair.</p>
+                    <div className={`${neutralBg} p-1 rounded-full inline-flex border ${neutralBorder}`}>
+                        <button
+                            onClick={() => setShowComprehensive(false)}
+                            className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${!showComprehensive ? `${primaryButtonBg} ${primaryButtonText} shadow-sm` : `bg-transparent text-gray-700 hover:${neutralBg}`}`}
+                        >
+                            Brief Guide
+                        </button>
+                        <button
+                            onClick={() => setShowComprehensive(true)}
+                            className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${showComprehensive ? `${primaryButtonBg} ${primaryButtonText} shadow-sm` : `bg-transparent text-gray-700 hover:${neutralBg}`}`}
+                        >
+                            Comprehensive Guide
+                        </button>
+                    </div>
+                </div>
+
+                {/* Image Gallery - Neutral Theme */}
+                <div className="mb-16">
+                    <div className={`relative h-[50vh] w-full rounded-2xl overflow-hidden shadow-lg mb-4 border ${neutralBorderLight}`}>
+                        <Image src={galleryImages[activeImage].src} alt={galleryImages[activeImage].alt} fill style={{ objectFit: 'cover' }} />
+                        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/70 to-transparent">
+                            <p className="text-white text-lg drop-shadow">{galleryImages[activeImage].caption}</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                        {galleryImages.map((image, index) => (
+                            <div
+                                key={index}
+                                className={`relative h-20 w-32 rounded-lg overflow-hidden cursor-pointer transition-all ${activeImage === index ? `ring-4 ${primaryButtonBg}` : 'opacity-70 hover:opacity-100'}`}
+                                onClick={() => setActiveImage(index)}
+                            >
+                                <Image src={image.src} alt={image.alt} fill style={{ objectFit: 'cover' }} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Content Based on Toggle */}
+                {!showComprehensive ? (
+                    // Brief Guide Content - Neutral Theme with Contextual Colors
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-10">
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Info className={`mr-3 ${neutralIconColor}`} size={24} /> Overview
+                                </h2>
+                                <div className={cardBaseStyle}>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}>Port Blair, the capital and entry point to the Andaman Islands, blends colonial history (Cellular Jail), diverse museums, and serves as the main hub for ferries to popular islands like Havelock and Neil. Explore nearby beaches, markets, and historical sites.</p>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Navigation className={`mr-3 ${neutralIconColor}`} size={24} /> Getting There & Around
+                                </h2>
+                                <div className={cardBaseStyle}>
+                                    <ul className="space-y-4">
+                                        <li className="flex items-start">
+                                            <div className={`${neutralBg} p-2 rounded-full mr-3 mt-1 border ${neutralBorder}`}><Plane className={neutralIconColor} size={16} /></div>
+                                            <div><span className={`font-medium ${neutralText}`}>Air:</span><span className={neutralTextLight}> Veer Savarkar Int’l Airport (IXZ) connects major Indian cities.</span></div>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <div className={`${neutralBg} p-2 rounded-full mr-3 mt-1 border ${neutralBorder}`}><Ship className={neutralIconColor} size={16} /></div>
+                                            <div><span className={`font-medium ${neutralText}`}>Sea:</span><span className={neutralTextLight}> Long ferry journeys (~3 days) from Chennai/Kolkata (less common).</span></div>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <div className={`${neutralBg} p-2 rounded-full mr-3 mt-1 border ${neutralBorder}`}><Check className={neutralIconColor} size={16} /></div>
+                                            <div><span className={`font-medium ${neutralText}`}>Local Transport:</span><span className={neutralTextLight}> Autos (₹50–150), taxis, local buses, scooter rentals (₹400–500/day).</span></div>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <div className={`${neutralBg} p-2 rounded-full mr-3 mt-1 border ${neutralBorder}`}><Ship className={neutralIconColor} size={16} /></div>
+                                            <div><span className={`font-medium ${neutralText}`}>Ferries:</span><span className={neutralTextLight}> To Havelock/Neil (Phoenix Bay), Ross/North Bay (Aberdeen Jetty).</span></div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Calendar className={`mr-3 ${neutralIconColor}`} size={24} /> Best Time to Visit
+                                </h2>
+                                <div className={cardBaseStyle}>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {/* Contextual seasonal cards */}
+                                        <div className={`${infoBg} rounded-xl p-4 border ${infoBorder}`}>
+                                            <h3 className={`font-semibold ${infoText} mb-2`}>Nov–Feb</h3>
+                                            <p className={`text-sm ${neutralTextLight}`}>Pleasant, dry, peak season.</p>
+                                        </div>
+                                        <div className={`${warningBg} rounded-xl p-4 border ${warningBorder}`}>
+                                            <h3 className={`font-semibold ${warningText} mb-2`}>Mar–May</h3>
+                                            <p className={`text-sm ${neutralTextLight}`}>Hotter, good sea visibility.</p>
+                                        </div>
+                                        <div className={`${successBg} rounded-xl p-4 border ${successBorder}`}>
+                                            <h3 className={`font-semibold ${successText} mb-2`}>Jun–Sep</h3>
+                                            <p className={`text-sm ${neutralTextLight}`}>Monsoon, lush greenery, fewer crowds.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Landmark className={`mr-3 ${neutralIconColor}`} size={24} /> Key Attractions
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Attraction Cards - Remain Neutral */}
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Cellular Jail</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Historic prison, now a National Memorial. Don't miss the Light & Sound Show.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Ross Island</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Former British HQ with scenic ruins, deer, peacocks. Short boat ride.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Corbyn's Cove</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Popular city beach for swimming and light water sports.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Museums</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Samudrika (Naval Marine) & Anthropological museums offer cultural insights.</p>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* Sidebar - Contextual Colors */}
+                        <aside className="lg:col-span-1 space-y-8">
+                            {/* Accommodation Brief */}
+                            <div className={cardBaseStyle}>
+                                <h3 className={`text-lg font-semibold ${neutralText} mb-4 flex items-center`}>
+                                    <Bed className={`mr-2 ${neutralIconColor}`} size={20} /> Accommodation
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${neutralIconColor} flex-shrink-0`} size={16} /><span>Wide range: Budget guesthouses to mid-range hotels (Sinclairs, Fortune) & limited luxury options.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${neutralIconColor} flex-shrink-0`} size={16} /><span>Book first/last nights in advance.</span></li>
+                                </ul>
+                            </div>
+                            {/* Food Brief */}
+                            <div className={cardBaseStyle}>
+                                <h3 className={`text-lg font-semibold ${neutralText} mb-4 flex items-center`}>
+                                    <Utensils className={`mr-2 ${neutralIconColor}`} size={20} /> Food Highlights
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${neutralIconColor} flex-shrink-0`} size={16} /><span>Fresh seafood (New Lighthouse), diverse Indian cuisine (Annapurna, Icy Spicy), cafes & rooftop bars.</span></li>
+                                </ul>
+                            </div>
+
+                            {/* Safety & Health - Warning Orange */}
+                            <div className={`${warningBg} rounded-2xl p-6 shadow-sm border ${warningBorder}`}>
+                                <h3 className={`text-lg font-semibold ${warningText} mb-4 flex items-center`}>
+                                    <Shield className={`mr-2 ${warningIconColor}`} size={20} /> Safety & Health
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Generally safe; exercise basic caution.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Use mosquito repellent. Drink bottled/filtered water.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Helmets mandatory on two-wheelers.</span></li>
+                                </ul>
+                            </div>
+
+                            {/* Eco-Tourism - Success Green */}
+                            <div className={`${successBg} rounded-2xl p-6 shadow-sm border ${successBorder}`}>
+                                <h3 className={`text-lg font-semibold ${successText} mb-4 flex items-center`}>
+                                    <Leaf className={`mr-2 ${successIconColor}`} size={20} /> Sustainability Tips
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Avoid single-use plastics; carry reusable bottles.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Respect wildlife and marine life; no touching coral.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Dispose of waste responsibly.</span></li>
+                                </ul>
+                            </div>
+                        </aside>
+                    </div>
+                ) : (
+                    // Comprehensive Guide Content - Neutral Theme with Contextual Colors
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-12">
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Info className={`mr-3 ${neutralIconColor}`} size={24} /> Detailed Overview
+                                </h2>
+                                <div className={`${cardBaseStyle} space-y-4`}>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}>Port Blair, the bustling capital of the Andaman and Nicobar Islands, serves as the primary entry point and administrative center for the archipelago. Far more than just a transit hub, it's a city with a complex past, vividly captured by the imposing Cellular Jail, a symbol of India's freedom struggle. The city offers a blend of urban amenities, diverse cultural influences from mainland settlers, and easy access to surrounding natural and historical attractions.</p>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}>Visitors can explore poignant museums detailing the islands' unique ecology and tribal heritage, relax at Corbyn's Cove beach, wander through the lively Aberdeen Bazaar, or take short ferry trips to discover the ruins of Ross Island or the underwater wonders near North Bay. Port Blair provides essential infrastructure like hotels, restaurants, and transport links, making it the logical base for exploring the wider Andaman region while offering its own distinct points of interest.</p>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Navigation className={`mr-3 ${neutralIconColor}`} size={24} /> Comprehensive Travel Guide
+                                </h2>
+                                <div className={`${cardBaseStyle} space-y-6`}>
+                                    <div>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Reaching Port Blair:</h3>
+                                        <ul className="space-y-3 pl-4 list-disc list-outside marker:text-gray-400">
+                                            <li className={neutralTextLight}><strong className={neutralText}>By Air (Primary):</strong> Veer Savarkar International Airport (IXZ) is well-connected with direct flights from Chennai, Kolkata, Delhi, Bengaluru, Hyderabad, and other major Indian cities. The airport is located about 4-5 km south of the main city center (Aberdeen Bazaar). Pre-paid taxis and auto-rickshaws are available.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>By Sea:</strong> Government-run passenger ships operate from Chennai, Kolkata, and Visakhapatnam. The journey takes approximately 60-70 hours (3 days). This is a budget-friendly but time-consuming option, suitable for those seeking an adventurous sea voyage. Schedules are limited and booking well in advance is essential. Ships dock at Haddo Wharf.</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Getting Around Port Blair:</h3>
+                                        <ul className="space-y-3 pl-4 list-disc list-outside marker:text-gray-400">
+                                            <li className={neutralTextLight}><strong className={neutralText}>Auto-Rickshaws:</strong> The most common mode for short to medium distances within the city. Fares are negotiable (typically ₹50-₹150 for most city rides). Agree on the price before starting the journey.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Taxis:</strong> Tourist taxis (usually cars/SUVs) can be hired for point-to-point transfers or full-day/half-day sightseeing tours (approx. ₹2000-₹3000 for a full day). Available at the airport, jetties, and major hotels.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Two-Wheeler Rentals:</strong> Scooters and motorcycles are available for rent (approx. ₹400-600 per day). Ideal for independent exploration but requires an Indian driving license and cautious driving on hilly roads. Helmets are mandatory.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Local Buses:</strong> State Transport Service (STS) buses connect various parts of the city and nearby areas like Wandoor, Chidiya Tapu, and Corbyn's Cove. Very economical but can be crowded. Main bus terminal is at Mohanpura.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Ferries/Boats:</strong> Essential for island hopping. Private ferries (Makruzz, Green Ocean, etc.) and government ferries operate from Phoenix Bay Jetty to Havelock (Swaraj Dweep) and Neil (Shaheed Dweep). Boats to Ross Island and North Bay depart from Aberdeen Jetty (Rajiv Gandhi Water Sports Complex).</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Landmark className={`mr-3 ${neutralIconColor}`} size={24} /> Exploring the Attractions
+                                </h2>
+                                <div className="space-y-6">
+                                    {/* Attraction Cards - Remain Neutral */}
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Cellular Jail National Memorial</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>A must-visit historical site. Explore the grim cells, central tower, gallows, and museum documenting the lives of freedom fighters imprisoned here ('Kala Pani'). The poignant Light and Sound show held every evening narrates its history. Closed on Mondays and national holidays.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Ross Island (Netaji Subhas Chandra Bose Dweep)</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>The former administrative headquarters of the British. Now features atmospheric ruins (church, bakery, commissioner's bungalow) entwined with massive tree roots. Home to friendly deer and peacocks. Accessible via a short boat ride from Aberdeen Jetty. Features a sound and light show in the evenings. Closed on Wednesdays.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Corbyn's Cove Beach</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>The closest beach to Port Blair city (approx. 7 km). A crescent-shaped, coconut palm-fringed beach suitable for swimming and relaxing. Offers water sports like jet skiing and speed boat rides. Several snack bars and changing rooms are available. Can get crowded, especially on weekends.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Samudrika Naval Marine Museum</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Managed by the Indian Navy, this museum provides an excellent overview of the Andaman's geography, marine life, tribal communities, and ecosystems. Includes displays of corals, shells, and a small aquarium. Located near the Teal House. Closed on Mondays.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Anthropological Museum</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Focuses on the indigenous tribes of the Andaman and Nicobar Islands, including the Jarawas, Sentinelese, Onges, and Nicobarese. Displays artifacts, tools, clothing, and models depicting their traditional way of life. Provides valuable insight into the islands' original inhabitants. Located in Phoenix Bay. Closed on Mondays.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Chatham Saw Mill</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>One of the oldest and largest sawmills in Asia, established by the British in 1883. Connected to Port Blair by a bridge. Visitors can take a guided tour to see the wood processing operations. A Forest Museum within the complex showcases local timber varieties and woodcrafts. Closed on Sundays.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Other Attractions</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}><strong>Rajiv Gandhi Water Sports Complex (Aberdeen Jetty):</strong> Hub for boat trips to Ross/North Bay, offers some water activities. <strong>Marina Park and Aquarium:</strong> Adjacent to the water sports complex, features gardens, memorials, and a small aquarium (check operational status). <strong>Sagarika Government Emporium:</strong> For authentic local handicrafts, shell jewelry, and souvenirs. <strong>Mount Harriet National Park (Mount Manipur):</strong> Offers panoramic views (visible on the ₹20 note), trekking trails, and bird watching (requires a ferry and road journey). <strong>Chidiya Tapu (Sunset Point & Biological Park):</strong> Famous for sunsets, bird watching, and a small zoo (approx. 25 km south).</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Bed className={`mr-3 ${neutralIconColor}`} size={24} /> Accommodation & Food
+                                </h2>
+                                <div className={`${cardBaseStyle} space-y-4`}>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}><strong>Accommodation:</strong> Port Blair boasts the widest range of stays in the Andamans. Budget options (₹1000-3000) are concentrated around Aberdeen Bazaar and Phoenix Bay. Mid-range hotels (₹3000-8000) like Sinclairs Bayview, Peerless Sarovar Portico (at Corbyn's Cove), Fortune Resort Bay Island (Welcomhotel), and various TSG properties offer comfortable rooms, restaurants, and often pools or sea views. Luxury is limited but includes suites at Welcomhotel and boutique options like SeaShell Port Blair. Government guesthouses (APWD, Hornbill Nest) offer basic, affordable rooms (book in advance).</p>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}><strong>Food:</strong> Culinary options are diverse. Seafood is a highlight – try New Lighthouse Restaurant or Mandalay (at Fortune). For authentic South Indian/Vegetarian, Annapurna Cafeteria and Icy Spicy are popular. North Indian, Bengali, and local Andamanese dishes are available in various restaurants. Aberdeen Bazaar has numerous eateries and street food stalls. Cafes like Ripple Coffee offer modern ambiance. Rooftop bars like Amaya (SeaShell) and Nico Bar (Fortune) provide drinks with views.</p>
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* Sidebar - Contextual Colors */}
+                        <aside className="lg:col-span-1 space-y-8">
+                            {/* Best Time to Visit - Contextual */}
+                            <div className={cardBaseStyle}>
+                                <h3 className={`text-lg font-semibold ${neutralText} mb-4 flex items-center`}>
+                                    <Calendar className={`mr-2 ${neutralIconColor}`} size={20} /> Best Time to Visit
+                                </h3>
+                                <div className="space-y-3">
+                                    <div className={`${infoBg} rounded-lg p-3 border ${infoBorder}`}>
+                                        <h4 className={`font-medium ${infoText} text-sm`}>Oct–May (Dry Season)</h4>
+                                        <p className={`text-xs ${neutralTextLight}`}>Best weather (esp. Nov-Feb). Ideal for all activities, island hopping. Peak tourist season.</p>
+                                    </div>
+                                    <div className={`${warningBg} rounded-lg p-3 border ${warningBorder}`}>
+                                        <h4 className={`font-medium ${warningText} text-sm`}>Mar–May (Shoulder)</h4>
+                                        <p className={`text-xs ${neutralTextLight}`}>Hotter and more humid, but good for water activities due to visibility.</p>
+                                    </div>
+                                    <div className={`${successBg} rounded-lg p-3 border ${successBorder}`}>
+                                        <h4 className={`font-medium ${successText} text-sm`}>Jun–Sep (Monsoon)</h4>
+                                        <p className={`text-xs ${neutralTextLight}`}>Heavy rainfall, potential ferry disruptions. Lush scenery, fewer crowds, off-season rates. Focus on indoor attractions.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Safety & Health - Warning Orange */}
+                            <div className={`${warningBg} rounded-2xl p-6 shadow-sm border ${warningBorder}`}>
+                                <h3 className={`text-lg font-semibold ${warningText} mb-4 flex items-center`}>
+                                    <LifeBuoy className={`mr-2 ${warningIconColor}`} size={20} /> Safety & Health
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Port Blair is generally safe with low crime rates. Standard precautions apply.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Roads can be narrow and winding; drive/ride cautiously. Helmets compulsory.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Drink only bottled or filtered water. Be mindful of street food hygiene.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Use mosquito repellent, especially during dawn and dusk, to prevent Dengue.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Good medical facilities available (GB Pant Hospital, private clinics). Carry personal medications.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Adhere to safety guidelines during water sports and boat trips.</span></li>
+                                </ul>
+                            </div>
+
+                            {/* Responsible Tourism - Success Green */}
+                            <div className={`${successBg} rounded-2xl p-6 shadow-sm border ${successBorder}`}>
+                                <h3 className={`text-lg font-semibold ${successText} mb-4 flex items-center`}>
+                                    <Leaf className={`mr-2 ${successIconColor}`} size={20} /> Responsible Tourism
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Minimize plastic use: Carry reusable water bottles and bags.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Dispose of litter properly. Do not leave waste at beaches or natural sites.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Respect marine life: Avoid touching corals or feeding fish during snorkeling/diving.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Conserve water and electricity in accommodations.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Respect local culture and traditions. Dress modestly when visiting non-beach areas.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Do NOT attempt to interact with or photograph protected Jarawa tribe members.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Support local economy by buying authentic handicrafts (Sagarika) and dining locally.</span></li>
+                                </ul>
+                            </div>
+
+                            {/* Traveler Tips - Tip Yellow */}
+                            <div className={`${tipBg} rounded-2xl p-6 shadow-sm border ${tipBorder}`}>
+                                <h3 className={`text-lg font-semibold ${tipText} mb-4 flex items-center`}>
+                                    <MessageCircle className={`mr-2 ${tipIconColor}`} size={20} /> Traveler Tips
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Book flights and popular hotels (especially first/last nights) well in advance, particularly during peak season.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Pre-book ferry tickets (private/govt) online if possible, especially for Havelock/Neil.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Carry sufficient cash; while ATMs are available, they can be unreliable or crowded. Many smaller shops/autos prefer cash.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Mobile connectivity can be patchy (BSNL often works best). Wi-Fi is often slow and limited. Inform family of your itinerary.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Pack light cotton clothing, swimwear, sunscreen, hat, sunglasses, insect repellent, and a basic first-aid kit.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Allow buffer time for transfers, especially for connecting flights after ferry journeys.</span></li>
+                                </ul>
+                            </div>
+                        </aside>
+                    </div>
+                )}
+
+                {/* CTA Section - Contextual Color (Informational Blue) */}
+                <section className={`mt-16 ${infoBg} rounded-2xl p-8 border ${infoBorder} text-center`}>
+                    <h2 className={`text-2xl font-bold ${infoText} mb-4`}>Plan Your Port Blair Experience</h2>
+                    <p className={`${neutralTextLight} max-w-xl mx-auto mb-6`}>Ready to explore the historic capital of the Andamans? Browse our curated packages or get in touch for a customized itinerary.</p>
+                    <div className="flex flex-wrap justify-center gap-4">
+                        <Link href="/packages?destination=port-blair" className={buttonPrimaryStyle}>
+                            View Port Blair Packages <ArrowRight className="ml-2" size={18} />
+                        </Link>
+                        <Link href="/contact" className={`inline-flex items-center justify-center bg-white text-gray-700 border ${neutralBorder} hover:bg-gray-50 font-semibold px-6 py-3 rounded-full transition-all duration-300`}>
+                            Contact Us
+                        </Link>
+                    </div>
+                </section>
+
+            </div>
         </main>
     );
 }

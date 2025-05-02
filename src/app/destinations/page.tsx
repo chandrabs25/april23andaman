@@ -1,15 +1,37 @@
-// Path: .\src\app\destinations\page.tsx
+// Path: ./src/app/destinations/page.tsx
+// Theme: Neutral with Contextual Background Colors
+
 'use client';
 export const dynamic = 'force-dynamic'
-import React, { useState, useEffect, Suspense } from 'react'; // Import Suspense
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Loader2, AlertTriangle, MapPin,Package,Clock,Star,Info,Calendar,Plane,FileText, Wifi, Camera } from 'lucide-react'; // Import icons
-import { useFetch } from '@/hooks/useFetch'; // Import useFetch
+import {
+  Loader2,
+  AlertTriangle,
+  MapPin,
+  Package,
+  Clock,
+  Star,
+  Info,
+  Calendar,
+  Plane,
+  FileText,
+  Wifi,
+  Camera,
+  ArrowRight,
+  ChevronRight,
+  Heart,
+  Users,
+  Compass,
+  Anchor,
+  IndianRupee
+} from 'lucide-react';
+import { useFetch } from '@/hooks/useFetch';
 
 // --- Define Interfaces (consistent with API response) ---
 interface Destination {
-  id: number; // Island ID
+  id: number;
   name: string;
   description: string | null;
   permit_required: number;
@@ -17,417 +39,607 @@ interface Destination {
   coordinates: string | null;
   attractions: string | null;
   activities: string | null;
-  images: string | null; // Comma-separated URLs or single URL
-  // Add derived/formatted fields if needed
-  image_url?: string; // Derived from images
-  location?: string; // Can add a default or fetch if needed
+  images: string | null;
+  image_url?: string;
+  location?: string;
+  slug?: string;
 }
 
-// Define the overall API response structure for GET /api/destinations
 interface GetDestinationsApiResponse {
   success: boolean;
-  data: Destination[]; // Expect an array of islands/destinations
+  data: Destination[];
   message?: string;
 }
 // --- End Interfaces ---
 
+// --- Define Common Styles (Neutral Theme with Contextual Colors) ---
+const primaryButtonBg = 'bg-gray-800';
+const primaryButtonHoverBg = 'hover:bg-gray-900';
+const primaryButtonText = 'text-white';
 
-// --- LoadingSpinner Component ---
-const LoadingSpinner = () => (
-  <div className="flex justify-center items-center py-20">
-    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-    <span className="ml-2 text-lg">Loading destinations...</span>
+const secondaryButtonBg = 'bg-white/20 backdrop-blur-sm';
+const secondaryButtonHoverBg = 'hover:bg-white/30';
+const secondaryButtonText = 'text-white';
+const secondaryButtonBorder = 'border border-white/40';
+
+const infoBg = 'bg-blue-50';
+const infoBorder = 'border-blue-100';
+const infoText = 'text-blue-800';
+const infoIconColor = 'text-blue-600';
+
+const successBg = 'bg-green-50';
+const successBorder = 'border-green-100';
+const successText = 'text-green-800';
+const successIconColor = 'text-green-600';
+
+const warningBg = 'bg-orange-50';
+const warningBorder = 'border-orange-100';
+const warningText = 'text-orange-800';
+const warningIconColor = 'text-orange-600';
+
+const tipBg = 'bg-yellow-50';
+const tipBorder = 'border-yellow-100';
+const tipText = 'text-yellow-800';
+const tipIconColor = 'text-yellow-700';
+
+const errorBg = 'bg-red-50';
+const errorBorder = 'border-red-200';
+const errorText = 'text-red-700';
+const errorIconColor = 'text-red-500';
+
+const neutralBgLight = 'bg-gray-50';
+const neutralBorderLight = 'border-gray-100';
+const neutralBg = 'bg-gray-100';
+const neutralBorder = 'border-gray-200';
+const neutralText = 'text-gray-800';
+const neutralTextLight = 'text-gray-600';
+const neutralIconColor = 'text-gray-600';
+
+const sectionPadding = "py-12 md:py-16";
+const sectionHeadingStyle = `text-3xl md:text-4xl font-bold ${neutralText}`;
+const cardBaseStyle = `bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 ${neutralBorderLight} flex flex-col h-full group`;
+const cardImageContainerStyle = "h-52 sm:h-60 w-full relative flex-shrink-0 overflow-hidden";
+const cardContentStyle = "p-5 flex flex-col flex-grow";
+const cardTitleStyle = `text-lg md:text-xl font-semibold mb-2 ${neutralText}`;
+const cardLinkStyle = `inline-flex items-center text-gray-700 hover:text-gray-900 font-medium text-sm group/link mt-auto pt-4 border-t ${neutralBorderLight}`; // Neutral link color
+const buttonPrimaryStyle = `inline-flex items-center justify-center ${primaryButtonBg} ${primaryButtonHoverBg} ${primaryButtonText} font-semibold py-3 px-8 rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1`;
+const buttonSecondaryStyleHero = `inline-flex items-center justify-center ${secondaryButtonBg} ${secondaryButtonHoverBg} ${secondaryButtonText} ${secondaryButtonBorder} font-semibold py-3 px-8 rounded-full transition-all duration-300`;
+const loadingErrorBaseStyle = "text-center py-10 px-4 rounded-2xl shadow-md";
+const loadingIndicator = <div className={`flex flex-col justify-center items-center py-20`}><div className="relative w-16 h-16"><div className={`absolute top-0 left-0 w-full h-full border-4 ${neutralBorder} rounded-full`}></div><div className={`absolute top-0 left-0 w-full h-full border-4 border-gray-700 rounded-full border-t-transparent animate-spin`}></div></div><span className={`mt-4 text-lg ${neutralTextLight} font-medium`}>Loading destinations...</span></div>;
+const errorIndicator = (message: string | undefined) => (
+  <div className={`${loadingErrorBaseStyle} ${errorBg} ${errorBorder}`}>
+    <AlertTriangle className={`h-8 w-8 ${errorIconColor} mx-auto mb-2`} />
+    <p className={`${errorText} font-semibold`}>Could not load data.</p>
+    <p className={`${errorText} text-sm mt-1`}>{message || 'Please try again later.'}</p>
+    <button className={`mt-3 px-4 py-1.5 bg-red-100 ${errorText} rounded-lg hover:bg-red-200 transition-colors font-medium text-sm`}>
+      Try Again
+    </button>
   </div>
 );
-// --- End LoadingSpinner ---
+const noDataIndicator = (itemType: string) => (
+  <div className={`${loadingErrorBaseStyle} bg-white text-gray-500 flex flex-col items-center`}>
+    <div className={`w-16 h-16 ${neutralBg} rounded-full flex items-center justify-center mb-3`}>
+      <AlertTriangle className="h-8 w-8 text-gray-400" />
+    </div>
+    <p className={`${neutralTextLight} font-medium`}>No {itemType} available right now.</p>
+    <p className="text-gray-500 text-sm mt-1">Please check back soon for updates.</p>
+  </div>
+);
+// --- End Common Styles ---
 
+// --- LoadingSpinner Component (Already defined in common styles) ---
+const LoadingSpinner = () => loadingIndicator;
 
 // --- DestinationCard Component ---
 interface DestinationCardProps {
-    destination: Destination;
+  destination: Destination;
 }
+
 const DestinationCard = ({ destination }: DestinationCardProps) => {
-    const imageUrl = destination.images?.split(',')[0]?.trim() || '/images/placeholder.jpg';
-    const locationDisplay = "Andaman Islands"; // Default location
+  const imageUrl = destination.images?.split(',')[0]?.trim() || '/images/placeholder.jpg';
+  const locationDisplay = "Andaman Islands";
+  const attractionsCount = destination.attractions
+    ? destination.attractions.split(',').length
+    : Math.floor(Math.random() * 6) + 3;
 
-    return (
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100">
-        <div className="h-52 sm:h-60 w-full relative flex-shrink-0">
-          <Image
-            src={imageUrl}
-            alt={destination.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            onError={(e) => (e.currentTarget.src = '/images/placeholder.jpg')} // Fallback
-          />
-          {/* Added overlay gradient for better text visibility */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-
-          {/* Added location badge */}
-          <div className="absolute bottom-3 left-3 bg-white/90 text-blue-600 text-xs font-medium py-1 px-2 rounded-full flex items-center">
-            <MapPin size={12} className="mr-1" />
-            {locationDisplay}
-          </div>
+  return (
+    <div className={cardBaseStyle}>
+      <div className={cardImageContainerStyle}>
+        <Image
+          src={imageUrl}
+          alt={destination.name}
+          fill
+          className="object-cover transition-transform duration-700 group-hover:scale-110"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          onError={(e) => (e.currentTarget.src = '/images/placeholder.jpg')}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        <div className={`absolute bottom-3 left-3 bg-white/90 ${neutralText} text-xs font-medium py-1.5 px-3 rounded-full flex items-center backdrop-blur-sm`}>
+          <MapPin size={12} className="mr-1.5" />
+          {locationDisplay}
         </div>
-        <div className="p-5 flex flex-col flex-grow">
-          <h2 className="text-lg md:text-xl font-semibold mb-2 text-gray-800">{destination.name}</h2>
-          <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-grow">
-            {destination.description || 'Explore this beautiful destination.'}
-          </p>
-          <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
-            {/* Added attractions count */}
-            <div className="text-xs text-gray-500 flex items-center">
-              <Camera size={14} className="mr-1 text-blue-500" />
-              {5} Attractions
-            </div>
-            <Link
-              href={`/destinations/${destination.id}`}
-              className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm group"
-            >
-              Explore More
-              <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">→</span>
-            </Link>
+        <button className="absolute top-3 right-3 bg-white/90 text-gray-700 hover:text-red-500 p-2 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors duration-300">
+          <Heart size={16} />
+        </button>
+      </div>
+      <div className={cardContentStyle}>
+        <h2 className={cardTitleStyle}>{destination.name}</h2>
+        <p className={`text-sm ${neutralTextLight} mb-4 line-clamp-3 flex-grow`}>
+          {destination.description || 'Explore this beautiful destination.'}
+        </p>
+        <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
+          <div className={`text-xs ${neutralTextLight} flex items-center`}>
+            <Camera size={14} className={`mr-1.5 ${neutralIconColor}`} /> {/* Neutral icon color */}
+            {attractionsCount} Attractions
           </div>
+          <Link
+            href={`/destinations/${destination.id}`}
+            className={cardLinkStyle}
+          >
+            Explore More
+            <ArrowRight size={16} className="ml-1.5 transition-transform duration-300 group-hover/link:translate-x-1" />
+          </Link>
         </div>
       </div>
-
-    );
+    </div>
+  );
 };
 // --- End DestinationCard Component ---
 
+// --- Featured Destination Component ---
+interface FeaturedDestinationProps {
+  destination: Destination;
+  index: number;
+}
+
+const FeaturedDestination = ({ destination, index }: FeaturedDestinationProps) => {
+  const imageUrl = destination.images?.split(',')[0]?.trim() || '/images/placeholder.jpg';
+
+  return (
+    <div className="relative h-[400px] md:h-[500px] rounded-2xl overflow-hidden shadow-xl">
+      <Image
+        src={imageUrl}
+        alt={destination.name}
+        fill
+        className="object-cover"
+        priority={index === 0}
+        onError={(e) => (e.currentTarget.src = '/images/placeholder.jpg')}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+      <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
+        <div className="flex items-center text-white/80 text-sm mb-3">
+          <MapPin size={14} className="mr-1.5" /> Andaman Islands
+        </div>
+        <h3 className="text-3xl md:text-4xl font-bold text-white mb-3">{destination.name}</h3>
+        <p className="text-white/90 mb-6 max-w-2xl line-clamp-2">
+          {destination.description || 'Discover the unique charm and beauty of this destination.'}
+        </p>
+        <Link
+          href={`/destinations/${destination.id}`}
+          className={buttonSecondaryStyleHero}
+        >
+          Explore {destination.name} <ArrowRight className="ml-2 h-5 w-5" />
+        </Link>
+      </div>
+    </div>
+  );
+};
+// --- End Featured Destination Component ---
+
+// --- Package Card Component ---
+interface PackageCardProps {
+  title: string;
+  description: string;
+  price: string;
+  duration: string;
+  image: string;
+  rating: number;
+  reviews: number;
+  slug: string;
+}
+
+const PackageCard = ({ title, description, price, duration, image, rating, reviews, slug }: PackageCardProps) => {
+  return (
+    <div className={cardBaseStyle}>
+      <div className={cardImageContainerStyle}>
+        <Image
+          src={image}
+          alt={title}
+          fill
+          className="object-cover transition-transform duration-700 group-hover:scale-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        <div className={`absolute top-3 right-3 ${primaryButtonBg} ${primaryButtonText} text-sm font-bold py-1.5 px-3 rounded-full shadow-md flex items-center`}>
+          <IndianRupee size={12} className="mr-0.5" /> {price.replace('₹', '')}
+        </div>
+        <div className={`absolute bottom-3 left-3 bg-white/90 ${neutralText} text-xs font-medium py-1.5 px-3 rounded-full flex items-center backdrop-blur-sm`}>
+          <Clock size={12} className="mr-1.5" />
+          {duration}
+        </div>
+      </div>
+      <div className={cardContentStyle}>
+        <h3 className={cardTitleStyle}>{title}</h3>
+        <p className={`text-sm ${neutralTextLight} mb-4 line-clamp-2`}>
+          {description}
+        </p>
+        <div className="mb-4">
+          <div className={`flex items-center ${neutralTextLight} text-xs mb-1`}>
+            <div className={`w-3 h-3 rounded-full ${neutralBg} flex items-center justify-center mr-1.5`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${primaryButtonBg}`}></div>
+            </div>
+            <span>Hotel stays included</span>
+          </div>
+          <div className={`flex items-center ${neutralTextLight} text-xs mb-1`}>
+            <div className={`w-3 h-3 rounded-full ${neutralBg} flex items-center justify-center mr-1.5`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${primaryButtonBg}`}></div>
+            </div>
+            <span>All transfers & sightseeing</span>
+          </div>
+          <div className={`flex items-center ${neutralTextLight} text-xs`}>
+            <div className={`w-3 h-3 rounded-full ${neutralBg} flex items-center justify-center mr-1.5`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${primaryButtonBg}`}></div>
+            </div>
+            <span>Expert local guides</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
+          <div className="flex items-center text-yellow-500"> {/* Keep stars yellow for rating */}
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                size={16}
+                className={`${i < rating ? 'fill-current' : 'fill-current opacity-30'}`}
+              />
+            ))}
+            <span className={`ml-1.5 text-xs ${neutralTextLight}`}>({reviews} reviews)</span>
+          </div>
+          <Link
+            href={`/packages/${slug}`}
+            className={cardLinkStyle}
+          >
+            View Details
+            <ArrowRight size={16} className="ml-1.5 transition-transform duration-300 group-hover/link:translate-x-1" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+// --- End Package Card Component ---
+
+// --- Travel Tip Card Component ---
+interface TravelTipProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  bgColorClass: string; // e.g., 'bg-blue-50'
+  borderColorClass: string; // e.g., 'border-blue-100'
+  iconColorClass: string; // e.g., 'text-blue-600'
+}
+
+const TravelTip = ({ icon, title, description, bgColorClass, borderColorClass, iconColorClass }: TravelTipProps) => {
+  return (
+    <div className={`p-6 rounded-2xl shadow-md border ${borderColorClass} ${bgColorClass} transition-all duration-300 hover:shadow-lg hover:-translate-y-1`}>
+      <div className={`w-14 h-14 bg-white rounded-full flex items-center justify-center mb-5 border ${borderColorClass}`}>
+        <div className={iconColorClass}>
+          {icon}
+        </div>
+      </div>
+      <h3 className={`text-lg font-semibold mb-3 ${neutralText}`}>{title}</h3>
+      <p className={`${neutralTextLight} text-sm`}>{description}</p>
+    </div>
+  );
+};
+// --- End Travel Tip Card Component ---
 
 // --- Main Component Logic ---
 function DestinationsContent() {
-  // Fetch data using the hook
+  const [activeDestination, setActiveDestination] = useState(0);
   const { data: apiResponse, error, status } = useFetch<Destination[]>('/api/destinations');
-
-  // Extract destinations, default to empty array
   const destinations = apiResponse || [];
+  const featuredDestinations = destinations.slice(0, Math.min(3, destinations.length));
+
+  // Hardcoded package data for example
+  const featuredPackages = [
+    {
+      id: 1,
+      title: "Havelock Honeymoon Special",
+      description: "Romantic getaway with beach dinners and couple's spa.",
+      price: "25,000",
+      duration: "4 Days",
+      image: "/images/packages/package1.jpg",
+      rating: 5,
+      reviews: 120,
+      slug: "havelock-honeymoon-special"
+    },
+    {
+      id: 2,
+      title: "Neil Island Family Fun",
+      description: "Kid-friendly activities, comfortable stays, and island hopping.",
+      price: "18,000",
+      duration: "5 Days",
+      image: "/images/packages/package2.jpg",
+      rating: 4,
+      reviews: 85,
+      slug: "neil-island-family-fun"
+    },
+    {
+      id: 3,
+      title: "Andaman Adventure Seeker",
+      description: "Scuba diving, trekking, and exploring hidden gems.",
+      price: "30,000",
+      duration: "6 Days",
+      image: "/images/packages/package3.jpg",
+      rating: 5,
+      reviews: 98,
+      slug: "andaman-adventure-seeker"
+    }
+  ];
+
+  // Travel tips data with contextual color classes
+  const travelTips = [
+    {
+      icon: <Calendar size={24} />,
+      title: "Best Time to Visit",
+      description: "October to May is ideal with clear skies and calm seas, perfect for water activities and island exploration.",
+      bgColorClass: infoBg,
+      borderColorClass: infoBorder,
+      iconColorClass: infoIconColor
+    },
+    {
+      icon: <Plane size={24} />,
+      title: "Getting There",
+      description: "Direct flights available from major Indian cities to Port Blair. Book in advance for better rates.",
+      bgColorClass: infoBg,
+      borderColorClass: infoBorder,
+      iconColorClass: infoIconColor
+    },
+    {
+      icon: <FileText size={24} />,
+      title: "Permits Required",
+      description: "Indian tourists need a photo ID. Foreign tourists require a Restricted Area Permit (RAP) issued on arrival.",
+      bgColorClass: warningBg, // Warning color for permits
+      borderColorClass: warningBorder,
+      iconColorClass: warningIconColor
+    },
+    {
+      icon: <Wifi size={24} />,
+      title: "Connectivity",
+      description: "Internet connectivity can be limited on remote islands. Download maps and essential information beforehand.",
+      bgColorClass: tipBg, // Tip color for connectivity advice
+      borderColorClass: tipBorder,
+      iconColorClass: tipIconColor
+    }
+  ];
+
+  // Popular activities data
+  const popularActivities = [
+    {
+      icon: <Anchor size={24} />,
+      title: "Scuba Diving",
+      description: "Explore vibrant coral reefs.",
+      bgColorClass: infoBg,
+      borderColorClass: infoBorder,
+      iconColorClass: infoIconColor
+    },
+    {
+      icon: <Compass size={24} />,
+      title: "Island Hopping",
+      description: "Visit multiple islands easily.",
+      bgColorClass: infoBg,
+      borderColorClass: infoBorder,
+      iconColorClass: infoIconColor
+    },
+    {
+      icon: <Users size={24} />,
+      title: "Beach Camping",
+      description: "Sleep under the stars.",
+      bgColorClass: tipBg,
+      borderColorClass: tipBorder,
+      iconColorClass: tipIconColor
+    },
+    {
+      icon: <Camera size={24} />,
+      title: "Photography Tours",
+      description: "Capture stunning landscapes.",
+      bgColorClass: tipBg,
+      borderColorClass: tipBorder,
+      iconColorClass: tipIconColor
+    }
+  ];
 
   return (
     <>
-      {/* --- Hero Section with enhanced styling --- */}
-      <div className="relative bg-blue-900 h-72 md:h-96">
-        {/* Enhanced gradient overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/90 to-blue-700/80 z-10"></div>
+      {/* --- Hero Section (Neutral Theme) --- */}
+      <div className="relative h-[400px] md:h-[500px] bg-gray-800"> {/* Dark neutral background */}
         <div className="absolute inset-0 z-0">
-          <Image src="/images/destinations-hero.jpg" alt="Panoramic view of Andaman Islands - Desktop" fill className="object-cover hidden md:block" priority />
-          <Image src="/images/destinations-hero-mobile.jpg" alt="Beautiful Andaman beach - Mobile" fill className="object-cover block md:hidden" priority />
+          <Image
+            src="/images/destinations-hero.jpg"
+            alt="Panoramic view of Andaman Islands - Desktop"
+            fill
+            className="object-cover opacity-40" /* Adjusted opacity */
+            priority
+          />
         </div>
-        <div className="container mx-auto px-4 h-full flex flex-col justify-center items-center relative z-20">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white text-center mb-3 md:mb-5 drop-shadow-lg">
-            Explore Andaman Destinations
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent z-10"></div>
+        <div className="container mx-auto px-4 h-full flex flex-col justify-center relative z-20">
+          <nav className="text-sm text-white/80 mb-2" aria-label="Breadcrumb">
+            <ol className="list-none p-0 inline-flex">
+              <li className="flex items-center">
+                <Link href="/" className="hover:text-white">Home</Link>
+                <ChevronRight size={14} className="mx-1" />
+              </li>
+              <li className="flex items-center">
+                <span className="text-white font-medium">Destinations</span>
+              </li>
+            </ol>
+          </nav>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight drop-shadow-lg">
+            Explore the Andaman Islands
           </h1>
-          <p className="text-lg sm:text-xl text-white text-center max-w-2xl opacity-95 drop-shadow-md">
-            Discover paradise islands with pristine beaches, vibrant coral reefs, and lush forests
+          <p className="text-lg md:text-xl text-white/90 max-w-3xl mb-8 drop-shadow-md">
+            Discover breathtaking beaches, lush forests, and vibrant marine life across this stunning archipelago.
           </p>
-          {/* Added CTA button */}
-          <button className="mt-6 bg-white text-blue-700 hover:bg-blue-50 font-semibold py-3 px-8 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-            View All Packages
-          </button>
-        </div>
-
-        {/* Added decorative wave element */}
-        <div className="absolute bottom-0 left-0 right-0 h-12 md:h-16 overflow-hidden">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="absolute bottom-0 w-full h-auto">
-            <path fill="#ffffff" fillOpacity="1" d="M0,224L48,213.3C96,203,192,181,288,181.3C384,181,480,203,576,224C672,245,768,267,864,261.3C960,256,1056,224,1152,197.3C1248,171,1344,149,1392,138.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
-          </svg>
+          <Link href="/packages" className={buttonSecondaryStyleHero}>
+            View All Packages <ArrowRight className="ml-2 h-5 w-5" />
+          </Link>
         </div>
       </div>
 
-      {/* --- Destinations List with enhanced styling --- */}
-      <div className="container mx-auto px-4 py-12 md:py-20">
-        {/* Added section header with icon */}
-        <div className="flex items-center justify-center mb-10 md:mb-14">
-          <MapPin className="text-blue-600 mr-3 flex-shrink-0" size={24} />
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Featured Destinations</h2>
-        </div>
+      {/* --- Featured Destinations Carousel (Neutral) --- */}
+      {status === 'success' && featuredDestinations.length > 0 && (
+        <section className={`${sectionPadding} ${neutralBgLight}`}> {/* Light neutral background */}
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <h2 className={sectionHeadingStyle}>Top Destinations</h2>
+              <p className={`mt-3 text-lg ${neutralTextLight} max-w-2xl mx-auto`}>Start your journey by exploring these must-visit islands.</p>
+            </div>
+            <div className="relative">
+              {featuredDestinations.map((dest, index) => (
+                <div
+                  key={dest.id}
+                  className={`transition-opacity duration-500 ease-in-out ${index === activeDestination ? 'opacity-100' : 'opacity-0 absolute top-0 left-0 w-full'}`}
+                >
+                  <FeaturedDestination destination={dest} index={index} />
+                </div>
+              ))}
+              {/* Carousel Controls */}
+              <div className="flex justify-center mt-6 space-x-2">
+                {featuredDestinations.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setActiveDestination(index)}
+                    className={`w-2.5 h-2.5 rounded-full transition-colors ${index === activeDestination ? primaryButtonBg : neutralBg}`}
+                    aria-label={`Go to featured destination ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
-        {/* Loading state with enhanced styling */}
-        {status === 'loading' ? (
-          <div className="flex justify-center items-center py-12 bg-white rounded-2xl shadow-md">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="ml-3 text-gray-600 font-medium">Loading Destinations...</span>
+      {/* --- All Destinations Grid (Neutral) --- */}
+      <section className={sectionPadding}>
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className={sectionHeadingStyle}>All Destinations</h2>
+            <p className={`mt-3 text-lg ${neutralTextLight} max-w-2xl mx-auto`}>Browse through all the beautiful locations Andaman has to offer.</p>
           </div>
-        ) : status === 'error' ? (
-          <div className="text-center py-12 px-6 bg-red-50 border border-red-200 rounded-2xl shadow-md">
-            <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-3" />
-            <p className="text-red-700 font-medium">Could not load destinations.</p>
-            <p className="text-red-600 text-sm mt-1">{error?.message || "An unknown error occurred."}</p>
-            {/* Added retry button */}
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 px-5 py-2 bg-white text-red-600 border border-red-300 rounded-full hover:bg-red-50 transition-colors shadow-sm"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : (
-          destinations.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          {status === 'loading' && <LoadingSpinner />}
+          {status === 'error' && errorIndicator(error?.message)}
+          {status === 'success' && destinations.length === 0 && noDataIndicator('destinations')}
+          {status === 'success' && destinations.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {destinations.map((destination) => (
                 <DestinationCard key={destination.id} destination={destination} />
               ))}
             </div>
-          ) : (
-            <div className="text-center py-16 bg-white rounded-2xl shadow-lg border border-gray-100">
-              <Image
-                src="/images/no-results.svg"
-                alt="No destinations found"
-                width={150}
-                height={150}
-                className="mx-auto mb-6 opacity-80"
+          )}
+        </div>
+      </section>
+
+      {/* --- Popular Activities Section (Contextual Backgrounds) --- */}
+      <section className={`${sectionPadding} ${neutralBgLight}`}> {/* Light neutral background */}
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className={sectionHeadingStyle}>Popular Activities</h2>
+            <p className={`mt-3 text-lg ${neutralTextLight} max-w-2xl mx-auto`}>Experience the best adventures Andaman has to offer.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {popularActivities.map((tip, index) => (
+              <TravelTip
+                key={index}
+                icon={tip.icon}
+                title={tip.title}
+                description={tip.description}
+                bgColorClass={tip.bgColorClass}
+                borderColorClass={tip.borderColorClass}
+                iconColorClass={tip.iconColorClass}
               />
-              <h2 className="text-xl md:text-2xl font-semibold mb-4 text-gray-800">No Destinations Found</h2>
-              <p className="text-gray-600 mb-6">Check back later or explore our packages!</p>
-              <Link href="/packages" className="inline-block bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
-                Browse Packages
-              </Link>
-            </div>
-          )
-        )}
-      </div>
-
-      {/* Added Featured Packages section */}
-      <div className="bg-gradient-to-b from-blue-50 to-white py-12 md:py-20">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center mb-10 md:mb-14">
-            <Package className="text-blue-600 mr-3 flex-shrink-0" size={24} />
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Popular Packages</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {/* Package Card 1 */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100">
-              <div className="h-52 w-full relative">
-                <Image
-                  src="/images/package-1.jpg"
-                  alt="Havelock Island Package"
-                  fill
-                  className="object-cover"
-                />
-                {/* Added overlay gradient for better text visibility */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                {/* Added price badge */}
-                <div className="absolute top-3 right-3 bg-blue-600 text-white text-sm font-bold py-1.5 px-3 rounded-full">
-                  ₹12,999
-                </div>
-                {/* Added duration badge */}
-                <div className="absolute bottom-3 left-3 bg-white/90 text-blue-600 text-xs font-medium py-1 px-2 rounded-full flex items-center">
-                  <Clock size={12} className="mr-1" />
-                  5 Days / 4 Nights
-                </div>
-              </div>
-              <div className="p-5">
-                <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-800">Havelock Island Explorer</h3>
-                <p className="text-gray-600 mb-4 text-sm line-clamp-2">
-                  Experience the best of Havelock with pristine beaches, water activities, and luxury accommodations.
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-yellow-400">
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <span className="ml-1 text-xs text-gray-600">(48 reviews)</span>
-                  </div>
-                  <Link href="/packages/havelock-explorer" className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm group">
-                    View Details
-                    <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">→</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Package Card 2 */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100">
-              <div className="h-52 w-full relative">
-                <Image
-                  src="/images/package-2.jpg"
-                  alt="Neil Island Package"
-                  fill
-                  className="object-cover"
-                />
-                {/* Added overlay gradient for better text visibility */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                {/* Added price badge */}
-                <div className="absolute top-3 right-3 bg-blue-600 text-white text-sm font-bold py-1.5 px-3 rounded-full">
-                  ₹15,499
-                </div>
-                {/* Added duration badge */}
-                <div className="absolute bottom-3 left-3 bg-white/90 text-blue-600 text-xs font-medium py-1 px-2 rounded-full flex items-center">
-                  <Clock size={12} className="mr-1" />
-                  6 Days / 5 Nights
-                </div>
-              </div>
-              <div className="p-5">
-                <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-800">Island Hopping Adventure</h3>
-                <p className="text-gray-600 mb-4 text-sm line-clamp-2">
-                  Visit multiple islands including Havelock, Neil, and Ross with guided tours and premium stays.
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-yellow-400">
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current opacity-30" />
-                    <span className="ml-1 text-xs text-gray-600">(36 reviews)</span>
-                  </div>
-                  <Link href="/packages/island-hopping" className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm group">
-                    View Details
-                    <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">→</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Package Card 3 */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100">
-              <div className="h-52 w-full relative">
-                <Image
-                  src="/images/package-3.jpg"
-                  alt="Luxury Andaman Package"
-                  fill
-                  className="object-cover"
-                />
-                {/* Added overlay gradient for better text visibility */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                {/* Added price badge */}
-                <div className="absolute top-3 right-3 bg-blue-600 text-white text-sm font-bold py-1.5 px-3 rounded-full">
-                  ₹24,999
-                </div>
-                {/* Added duration badge */}
-                <div className="absolute bottom-3 left-3 bg-white/90 text-blue-600 text-xs font-medium py-1 px-2 rounded-full flex items-center">
-                  <Clock size={12} className="mr-1" />
-                  7 Days / 6 Nights
-                </div>
-              </div>
-              <div className="p-5">
-                <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-800">Luxury Andaman Retreat</h3>
-                <p className="text-gray-600 mb-4 text-sm line-clamp-2">
-                  Premium 5-star accommodations, private beach access, exclusive water activities, and gourmet dining.
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-yellow-400">
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <Star size={16} className="fill-current" />
-                    <span className="ml-1 text-xs text-gray-600">(22 reviews)</span>
-                  </div>
-                  <Link href="/packages/luxury-retreat" className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm group">
-                    View Details
-                    <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">→</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* View All Button */}
-          <div className="text-center mt-12 md:mt-14">
-            <Link href="/packages" className="inline-block bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
-              View All Packages
-            </Link>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Added Travel Tips section */}
-      <div className="py-12 md:py-20">
+      {/* --- Featured Packages Section (Neutral) --- */}
+      <section className={sectionPadding}>
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center mb-10 md:mb-14">
-            <Info className="text-blue-600 mr-3 flex-shrink-0" size={24} />
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Travel Tips</h2>
+          <div className="text-center mb-10">
+            <h2 className={sectionHeadingStyle}>Featured Packages</h2>
+            <p className={`mt-3 text-lg ${neutralTextLight} max-w-2xl mx-auto`}>Handpicked packages for an unforgettable Andaman experience.</p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {/* Tip 1 */}
-            <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Calendar className="text-blue-600" size={20} />
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">Best Time to Visit</h3>
-              <p className="text-gray-600 text-sm">October to May is ideal with clear skies and calm seas, perfect for water activities and island exploration.</p>
-            </div>
-
-            {/* Tip 2 */}
-            <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Plane className="text-blue-600" size={20} />
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">Getting There</h3>
-              <p className="text-gray-600 text-sm">Direct flights available from major Indian cities to Port Blair. Book in advance for better rates.</p>
-            </div>
-
-            {/* Tip 3 */}
-            <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <FileText className="text-blue-600" size={20} />
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">Permits Required</h3>
-              <p className="text-gray-600 text-sm">Indian tourists need a photo ID. Foreign tourists require a Restricted Area Permit (RAP) issued on arrival.</p>
-            </div>
-
-            {/* Tip 4 */}
-            <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Wifi className="text-blue-600" size={20} />
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">Connectivity</h3>
-              <p className="text-gray-600 text-sm">Internet connectivity can be limited on remote islands. Download maps and essential information beforehand.</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {featuredPackages.map((pkg) => (
+              <PackageCard
+                key={pkg.id}
+                title={pkg.title}
+                description={pkg.description}
+                price={pkg.price}
+                duration={pkg.duration}
+                image={pkg.image}
+                rating={pkg.rating}
+                reviews={pkg.reviews}
+                slug={pkg.slug}
+              />
+            ))}
           </div>
-
           <div className="text-center mt-10">
-            <Link href="/travel-guide" className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
-              View Complete Travel Guide
-              <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">→</span>
+            <Link href="/packages" className={buttonPrimaryStyle}>
+              Explore All Packages <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Added Call to Action section */}
-      <div className="bg-blue-700 py-16 md:py-20 relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-white"></div>
-          <div className="absolute -left-20 -bottom-20 w-64 h-64 rounded-full bg-white"></div>
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-2xl md:text-4xl font-bold text-white mb-6">Ready to Explore Andaman?</h2>
-            <p className="text-blue-100 text-lg mb-8">
-              Book your dream vacation today and experience the magic of these pristine islands. Special discounts available for early bookings!
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-white text-blue-700 hover:bg-blue-50 font-semibold py-3 px-8 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                Book Now
-              </button>
-              <button className="bg-transparent text-white border-2 border-white hover:bg-white/10 font-semibold py-3 px-8 rounded-full transition-all duration-300">
-                Contact Us
-              </button>
-            </div>
+      {/* --- Travel Tips Section (Contextual Backgrounds) --- */}
+      <section className={`${sectionPadding} ${neutralBgLight}`}> {/* Light neutral background */}
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className={sectionHeadingStyle}>Essential Travel Tips</h2>
+            <p className={`mt-3 text-lg ${neutralTextLight} max-w-2xl mx-auto`}>Plan your trip smoothly with these helpful insights.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {travelTips.map((tip, index) => (
+              <TravelTip
+                key={index}
+                icon={tip.icon}
+                title={tip.title}
+                description={tip.description}
+                bgColorClass={tip.bgColorClass}
+                borderColorClass={tip.borderColorClass}
+                iconColorClass={tip.iconColorClass}
+              />
+            ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* --- Call to Action Section (Contextual Background) --- */}
+      <section className={`${sectionPadding} ${infoBg} border-t ${infoBorder}`}> {/* Info Blue background */}
+        <div className="container mx-auto px-4 text-center">
+          <h2 className={`text-3xl font-bold ${infoText} mb-4`}>Ready to Explore Andaman?</h2>
+          <p className={`${neutralTextLight} max-w-xl mx-auto mb-8`}>Let us help you plan your dream vacation. Browse our packages or contact us for a custom itinerary.</p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link href="/packages" className={buttonPrimaryStyle}>
+              Browse Packages <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Link>
+            <Link href="/contact" className={`inline-flex items-center justify-center bg-white text-gray-700 border ${neutralBorder} hover:bg-gray-50 font-semibold py-3 px-8 rounded-full transition-all duration-300`}>
+              Contact Us
+            </Link>
+          </div>
+        </div>
+      </section>
     </>
-
-
   );
 }
 
-// Wrap the main content component with Suspense
+// Main component wrapper with Suspense
 export default function DestinationsPage() {
-    return (
-        <Suspense fallback={<LoadingSpinner />}>
-            <DestinationsContent />
-        </Suspense>
-    );
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <DestinationsContent />
+    </Suspense>
+  );
 }
+

@@ -1,710 +1,554 @@
-// Path: src/app/destinations/3/page.tsx // Assuming Neil Island is destination #3
-'use client'; // Needed because we use useState for the toggle
+// Path: src/app/destinations/neil-island/page.tsx // Renamed for clarity (or shaheed-dweep)
+// Theme: Neutral with Contextual Background Colors (Applied based on Baratang sample)
 
-import { useState } from 'react'; // Import useState for the toggle
+'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Check, Info, Calendar, Home, Utensils, MapIcon, Users, Shield, Leaf, Camera, Ship, Bike, BedDouble, Sprout, Heart, Anchor, Sun, Sunset, Waves, Recycle, LifeBuoy, Route } from 'lucide-react'; // Import relevant icons
+import {
+    MapPin,
+    Check,
+    Info,
+    Calendar,
+    Bed,        // Consistent icon for Accommodation
+    Utensils,
+    Compass,
+    Users,
+    Shield,
+    Leaf,
+    ChevronRight,
+    Star,
+    Navigation, // Consistent icon for Travel
+    ArrowRight,
+    MessageCircle,
+    Camera,
+    Ship,       // Relevant for Neil access
+    Bike,       // Relevant for Neil transport
+    Waves,      // Relevant for beaches
+    Sun,        // Relevant for sunrise/sunset
+    Sunset,     // Specific for Laxmanpur Beach
+    LifeBuoy    // Consistent icon for Safety
+    // Recycle removed as Leaf is used for Sustainability/Responsible Tourism
+} from 'lucide-react';
 
-// Assuming you have Header and Footer components imported via a layout typically
-// import Header from '@/components/Header';
-// import Footer from '@/components/Footer';
+// --- Define Common Styles (Copied from Baratang Sample - Neutral Theme with Contextual Colors) ---
+const primaryButtonBg = 'bg-gray-800';
+const primaryButtonHoverBg = 'hover:bg-gray-900';
+const primaryButtonText = 'text-white';
+
+const secondaryButtonBg = 'bg-white/20 backdrop-blur-sm';
+const secondaryButtonHoverBg = 'hover:bg-white/30';
+const secondaryButtonText = 'text-white';
+const secondaryButtonBorder = 'border border-white/40';
+
+const infoBg = 'bg-blue-50';
+const infoBorder = 'border-blue-100';
+const infoText = 'text-blue-800';
+const infoIconColor = 'text-blue-600';
+
+const successBg = 'bg-green-50';
+const successBorder = 'border-green-100';
+const successText = 'text-green-800';
+const successIconColor = 'text-green-600';
+
+const warningBg = 'bg-orange-50';
+const warningBorder = 'border-orange-100';
+const warningText = 'text-orange-800';
+const warningIconColor = 'text-orange-600';
+
+const tipBg = 'bg-yellow-50';
+const tipBorder = 'border-yellow-100';
+const tipText = 'text-yellow-800';
+const tipIconColor = 'text-yellow-700';
+
+const errorBg = 'bg-red-50';
+const errorBorder = 'border-red-200';
+const errorText = 'text-red-700';
+const errorIconColor = 'text-red-500';
+
+const neutralBgLight = 'bg-gray-50';
+const neutralBorderLight = 'border-gray-100';
+const neutralBg = 'bg-gray-100';
+const neutralBorder = 'border-gray-200';
+const neutralText = 'text-gray-800';
+const neutralTextLight = 'text-gray-600';
+const neutralIconColor = 'text-gray-600';
+
+const sectionPadding = "py-10 md:py-12"; // Consistent padding
+const sectionHeadingStyle = `text-2xl font-bold ${neutralText} mb-6 flex items-center`;
+const cardBaseStyle = `bg-white rounded-2xl shadow-sm border ${neutralBorderLight} p-6 transition-shadow hover:shadow-md`;
+const buttonPrimaryStyle = `inline-flex items-center justify-center ${primaryButtonBg} ${primaryButtonHoverBg} ${primaryButtonText} px-6 py-3 rounded-full font-medium transition-all duration-300 shadow-md`;
+const buttonSecondaryStyleHero = `inline-flex items-center justify-center ${secondaryButtonBg} ${secondaryButtonHoverBg} ${secondaryButtonText} ${secondaryButtonBorder} px-6 py-3 rounded-full font-medium transition-all duration-300`;
+// --- End Common Styles ---
 
 export default function NeilIslandPage() {
-    // State to manage the toggle switch
     const [showComprehensive, setShowComprehensive] = useState(false);
+    const [activeImage, setActiveImage] = useState(0);
 
     const handleToggle = () => {
         setShowComprehensive(!showComprehensive);
     };
 
+    // Gallery images specific to Neil Island
+    const galleryImages = [
+        {
+            src: "/images/neil/bharatpur-beach-neil.jpg", // Use specific paths
+            alt: "Bharatpur Beach lagoon, Neil Island",
+            caption: "The calm, shallow waters of Bharatpur Beach, ideal for swimming"
+        },
+        {
+            src: "/images/neil/natural-bridge-neil.jpg", // Use specific paths
+            alt: "Natural Bridge rock formation at low tide, Neil Island",
+            caption: "The iconic Natural Bridge, best viewed during low tide"
+        },
+        {
+            src: "/images/neil/laxmanpur-beach-sunset.jpg", // Use specific paths
+            alt: "Sunset over Laxmanpur Beach, Neil Island",
+            caption: "Spectacular sunset views from Laxmanpur Beach"
+        },
+        {
+            src: "/images/neil/sitapur-beach-sunrise.jpg", // Use specific paths
+            alt: "Sunrise at Sitapur Beach, Neil Island",
+            caption: "Catching the serene sunrise at Sitapur Beach"
+        },
+        {
+            src: "/images/neil/neil-cycling.jpg", // Use specific paths
+            alt: "Cycling through the green fields of Neil Island",
+            caption: "Exploring the island's tranquil beauty by bicycle"
+        }
+    ];
+
     return (
-        // Assumes Header/Footer are handled by a layout file (e.g., src/app/layout.tsx)
-        <main className="container mx-auto px-4 py-8 md:py-12 bg-gradient-to-b from-green-50 to-white min-h-screen">
-            {/* Hero section with image and button */}
-            <div className="relative rounded-2xl overflow-hidden shadow-xl mb-10">
-                {/* Hero image */}
-                <div className="relative h-[450px] w-full">
-                    <Image
-                        src="/images/neil-hero.jpg" // Placeholder image path
-                        alt="Bharatpur Beach lagoon, Neil Island (Shaheed Dweep)"
-                        fill
-                        style={{ objectFit: 'cover' }}
-                        priority
-                    />
-                    {/* Dark overlay for better text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                </div>
-
-                {/* Hero content */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-white">
-                    <h1 className="text-3xl md:text-5xl font-bold mb-4 drop-shadow-lg">
-                        Neil Island (Shaheed Dweep) Travel Guide
-                    </h1>
-                    <p className="text-lg md:text-xl text-white/90 max-w-3xl mb-6 drop-shadow-md">
-                        Discover Andaman's serene "vegetable bowl"—pristine beaches, natural bridges, and an unhurried pace perfect for relaxation and cycling.
-                    </p>
-                    <button className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                        Explore Neil Island Packages
-                    </button>
+        <main className={`bg-white ${neutralText}`}>
+            {/* Hero Section - Matches Baratang Structure */}
+            <div className="relative h-[70vh] w-full">
+                <Image
+                    src="/images/neil/hero.jpg" // Use specific Neil hero image
+                    alt="Panoramic view of Neil Island's coastline and greenery"
+                    fill
+                    priority
+                    style={{ objectFit: 'cover' }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 text-white">
+                    <div className="container mx-auto">
+                        <nav className="text-sm text-white/80 mb-2" aria-label="Breadcrumb">
+                            <ol className="list-none p-0 inline-flex">
+                                <li className="flex items-center">
+                                    <Link href="/" className="hover:text-white">Home</Link>
+                                    <ChevronRight size={14} className="mx-1" />
+                                </li>
+                                <li className="flex items-center">
+                                    <Link href="/destinations" className="hover:text-white">Destinations</Link>
+                                    <ChevronRight size={14} className="mx-1" />
+                                </li>
+                                <li className="flex items-center">
+                                    <span className="text-white font-medium">Neil Island (Shaheed Dweep)</span>
+                                </li>
+                            </ol>
+                        </nav>
+                        <h1 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-md">Neil Island (Shaheed Dweep)</h1>
+                        <p className="text-xl md:text-2xl max-w-3xl mb-6 text-white/90">Experience the tranquil charm of Andaman's 'vegetable bowl' with pristine beaches and an unhurried pace.</p>
+                        <div className="flex flex-wrap gap-4 items-center">
+                            <button className={buttonPrimaryStyle}>
+                                Explore Neil Island <ArrowRight size={18} className="ml-2" />
+                            </button>
+                            <button className={buttonSecondaryStyleHero}>
+                                <Camera size={18} className="mr-2" /> View Gallery
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Toggle Switch with improved styling */}
-            <div className="flex items-center justify-center md:justify-start mb-8 bg-white p-4 rounded-full shadow-md">
-                <label htmlFor="guide-toggle" className="mr-3 text-sm font-medium text-gray-600">Brief Guide</label>
-                <label className="relative inline-block w-14 h-7">
-                    <input
-                        type="checkbox"
-                        id="guide-toggle"
-                        className="opacity-0 w-0 h-0"
-                        checked={showComprehensive}
-                        onChange={handleToggle} // Use React's onChange
-                    />
-                    <span className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-all duration-300 ${showComprehensive ? 'bg-green-600' : 'bg-gray-300'}`}>
-                        <span className={`absolute h-5 w-5 bg-white rounded-full top-1 transition-all duration-300 ${showComprehensive ? 'left-8' : 'left-1'}`}></span>
-                    </span>
-                </label>
-                <label htmlFor="guide-toggle" className="ml-3 text-sm font-medium text-gray-600">Comprehensive Guide</label>
-            </div>
+            {/* Main Content Container */}
+            <div className={`container mx-auto px-4 ${sectionPadding}`}>
 
-            {/* Conditional Rendering based on state */}
-            {!showComprehensive && (
-                // Brief Guide Content
-                <div>
-                    <h2 className="text-2xl font-semibold text-green-700 mt-8 mb-6 pb-2 border-b-2 border-green-200">Neil Island: Brief Guide</h2>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Info className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Overview</h3>
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            A serene, small island famed for its “vegetable bowl” farms, pristine beaches, the Natural Bridge rock formation and unhurried pace.
-                        </p>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Route className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Getting There & Around</h3>
-                        </div>
-                        <div className="flex flex-col md:flex-row gap-6 mb-4">
-                            <div className="md:w-1/3 relative h-[200px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/neil-jetty.jpg" // Placeholder image
-                                    alt="Ferry at Neil Island Jetty (Bharatpur)"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
+                {/* Quick Facts Card - Contextual Color (Informational Blue) */}
+                <div className={`${infoBg} rounded-2xl p-6 mb-12 shadow-sm border ${infoBorder}`}>
+                    <h2 className={`text-xl font-semibold ${infoText} mb-4 flex items-center`}>
+                        <Info className={`mr-2 ${infoIconColor}`} size={20} />
+                        Quick Facts About Neil Island
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="flex items-start">
+                            <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
+                                <MapPin className={infoIconColor} size={18} />
                             </div>
-                            <ul className="list-disc list-inside space-y-3 md:w-2/3 pl-4 text-gray-700">
-                                <li><strong className="text-gray-800">Ferries:</strong> Port Blair ~2 hr; Havelock ~1 hr (private recommended).</li>
-                                <li><strong className="text-gray-800">On-island:</strong> Bicycle (₹150–200/day), scooter (₹400–500), autos (₹50–150), walking, occasional bus.</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Calendar className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Best Time to Visit</h3>
-                        </div>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Nov–May:</strong> Ideal beaches, snorkeling.</li>
-                            <li><strong className="text-gray-800">Jun–Sep:</strong> Monsoon—fewer tourists, lush vegetation, some closures.</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Home className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Accommodation</h3>
-                        </div>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Budget (₹500–1.5k):</strong> Homestays, huts, basic camps.</li>
-                            <li><strong className="text-gray-800">Mid-range (₹2k–5k):</strong> Pearl Park, TSG Aura, Summer Sands.</li>
-                            <li><strong className="text-gray-800">Luxury (₹6k+):</strong> SeaShell Neil, eco-cottages.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed font-medium text-green-600 bg-green-50 p-3 rounded-xl mt-4">
-                            Recommendation: Book ahead as options are fewer than Havelock, especially during peak season.
-                        </p>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Utensils className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Food & Dining</h3>
-                        </div>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Local dhabas:</strong> Fish thalis (₹150–200); Ganesh Restaurant.</li>
-                            <li><strong className="text-gray-800">Resort eateries:</strong> Dugong (SeaShell), Organic Khao (Summer Sands).</li>
-                            <li><strong className="text-gray-800">Street fruit:</strong> Coconuts (₹30–40), farm stands.</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <MapPin className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Key Attractions</h3>
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-6 mb-4">
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/bharatpur-beach-neil.jpg" // Placeholder
-                                    alt="Bharatpur Beach lagoon"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/natural-bridge-neil.jpg" // Placeholder
-                                    alt="Natural Bridge rock formation at low tide"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
+                            <div>
+                                <h3 className={`font-medium ${neutralText}`}>Location</h3>
+                                <p className={`text-sm ${neutralTextLight}`}>South Andaman, part of Ritchie's Archipelago, near Havelock</p>
                             </div>
                         </div>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Bharatpur Beach:</strong> Lagoon, snorkeling, glass-bottom boats.</li>
-                            <li><strong className="text-gray-800">Natural Bridge:</strong> Coral rock arch at Laxmanpur (low tide).</li>
-                            <li><strong className="text-gray-800">Laxmanpur Beach:</strong> Sunset, golden sand.</li>
-                            <li><strong className="text-gray-800">Sitapur Beach:</strong> Sunrise, limestone cliffs.</li>
-                            <li><strong className="text-gray-800">Snorkeling/Diving:</strong> Junction, Bus Stop, rare dugong sightings.</li>
-                        </ul>
-                    </section>
-
-                    {/* Styled Table Card */}
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Users className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Activities by Traveler Type</h3>
-                        </div>
-                        <div className="overflow-hidden mb-6">
-                            <div className="overflow-x-auto"> {/* Wrapper for responsiveness */}
-                                <table className="w-full text-left text-sm border-collapse">
-                                    <thead className="bg-green-50 text-green-700 font-semibold uppercase">
-                                        <tr>
-                                            <th scope="col" className="px-4 py-3 border-b-2 border-green-100 rounded-tl-xl">Traveler</th>
-                                            <th scope="col" className="px-4 py-3 border-b-2 border-green-100 rounded-tr-xl">Highlights</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium">Backpackers</td>
-                                            <td className="px-4 py-3">Cycle the island, sunrise & sunset points, hammock time, local tea-stall socializing</td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium">Families</td>
-                                            <td className="px-4 py-3">Glass-bottom boat, safe wading at Bharatpur, gentle cycling, beach picnics</td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium">Couples</td>
-                                            <td className="px-4 py-3">Sunrise at Sitapur, sunset at Laxmanpur, picnic on beach, private candlelight dinner at resort</td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium">Adventure Seekers</td>
-                                            <td className="px-4 py-3">Drift dives with currents, night snorkeling with bioluminescence, deep-sea fishing, offbeat coral exploration</td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium rounded-bl-xl">Luxury Travelers</td>
-                                            <td className="px-4 py-3 rounded-br-xl">Private speedboat snorkel charters, sandbank picnics, in-resort spa, helicopter transfers + yacht day trips</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                        <div className="flex items-start">
+                            <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
+                                <Star className={infoIconColor} size={18} />
+                            </div>
+                            <div>
+                                <h3 className={`font-medium ${neutralText}`}>Known For</h3>
+                                <p className={`text-sm ${neutralTextLight}`}>Natural Bridge, Bharatpur/Laxmanpur/Sitapur Beaches, Cycling, Serenity</p>
                             </div>
                         </div>
-                    </section>
-
-                    <div className="grid md:grid-cols-3 gap-6 mb-8">
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <Users className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                                <h3 className="text-xl font-semibold text-gray-800">Cultural & Etiquette</h3>
+                        <div className="flex items-start">
+                            <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
+                                <Bike className={infoIconColor} size={18} /> {/* Highlighting cycling */}
                             </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li>Village wear modest in market; beachwear only on beaches.</li>
-                                <li>Greet with “Namaste,” “Dada/Didi.”</li>
-                                <li>No shell/coral souvenirs—buy local handicrafts instead.</li>
-                            </ul>
-                        </section>
-
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <Shield className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                                <h3 className="text-xl font-semibold text-gray-800">Safety & Health</h3>
+                            <div>
+                                <h3 className={`font-medium ${neutralText}`}>Vibe</h3>
+                                <p className={`text-sm ${neutralTextLight}`}>Quiet, relaxed, rural charm, ideal for unwinding</p>
                             </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li>Mosquito repellent, sun protection.</li>
-                                <li>Tap water not reliably treated—use bottled/RO water.</li>
-                                <li>Primary Health Centre on-island; major care in Port Blair.</li>
-                            </ul>
-                        </section>
-
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <Leaf className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                                <h3 className="text-xl font-semibold text-gray-800">Sustainability</h3>
-                            </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li>Reduce plastic, reef-safe sunscreen, trench your trash.</li>
-                                <li>Respect turtle nesting (Nov–Feb).</li>
-                                <li>Support local farmers & eco-lodges.</li>
-                            </ul>
-                        </section>
+                        </div>
                     </div>
                 </div>
-            )}
 
-            {showComprehensive && (
-                // Comprehensive Guide Content
-                <div>
-                    <h2 className="text-2xl font-semibold text-green-700 mt-8 mb-6 pb-2 border-b-2 border-green-200">Neil Island: Comprehensive Guide</h2>
+                {/* Toggle Switch - Neutral Theme */}
+                <div className="flex flex-col items-center mb-10">
+                    <h2 className={`text-2xl font-bold ${neutralText} mb-4`}>Choose Your Guide Style</h2>
+                    <p className={`${neutralTextLight} mb-6 text-center max-w-2xl`}>Select between a quick overview or an in-depth exploration of Neil Island.</p>
+                    <div className={`${neutralBg} p-1 rounded-full inline-flex border ${neutralBorder}`}>
+                        <button
+                            onClick={() => setShowComprehensive(false)}
+                            className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${!showComprehensive ? `${primaryButtonBg} ${primaryButtonText} shadow-sm` : `bg-transparent text-gray-700 hover:${neutralBg}`}`}
+                        >
+                            Brief Guide
+                        </button>
+                        <button
+                            onClick={() => setShowComprehensive(true)}
+                            className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${showComprehensive ? `${primaryButtonBg} ${primaryButtonText} shadow-sm` : `bg-transparent text-gray-700 hover:${neutralBg}`}`}
+                        >
+                            Comprehensive Guide
+                        </button>
+                    </div>
+                </div>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Info className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Overview</h3>
+                {/* Image Gallery - Neutral Theme */}
+                <div className="mb-16">
+                    <div className={`relative h-[50vh] w-full rounded-2xl overflow-hidden shadow-lg mb-4 border ${neutralBorderLight}`}>
+                        <Image src={galleryImages[activeImage].src} alt={galleryImages[activeImage].alt} fill style={{ objectFit: 'cover' }} />
+                        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/70 to-transparent">
+                            <p className="text-white text-lg drop-shadow">{galleryImages[activeImage].caption}</p>
                         </div>
-                        <div className="flex flex-col md:flex-row gap-6 mb-4">
-                            <div className="md:w-1/3 relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/neil-overview.jpg" // Placeholder
-                                    alt="Lush green fields and coastline of Neil Island"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                        {galleryImages.map((image, index) => (
+                            <div
+                                key={index}
+                                className={`relative h-20 w-32 rounded-lg overflow-hidden cursor-pointer transition-all ${activeImage === index ? `ring-4 ${primaryButtonBg}` : 'opacity-70 hover:opacity-100'}`}
+                                onClick={() => setActiveImage(index)}
+                            >
+                                <Image src={image.src} alt={image.alt} fill style={{ objectFit: 'cover' }} />
                             </div>
-                            <div className="md:w-2/3">
-                                <p className="text-base leading-relaxed mb-4">
-                                    Neil Island, officially Shaheed Dweep, is a tranquil emerald isle known as the “vegetable bowl” of Andamans for its rich soil and agricultural produce. It’s smaller and far quieter than Havelock, exuding a serene rural charm. Neil is beloved for its picture-postcard beaches, spectacular coral reefs, and a signature natural rock formation aptly nicknamed the “Howrah Bridge.” Life on Neil moves at a gentle pace – perfect for travelers looking to unwind, cycle through sleepy villages, and enjoy nature without crowds. With just 13.7 sq km area, you can cover the whole island in a day or two, yet many end up lingering, seduced by its simplicity and raw beauty.
-                                </p>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Content Based on Toggle */}
+                {!showComprehensive ? (
+                    // Brief Guide Content - Neutral Theme with Contextual Colors
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-10">
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Info className={`mr-3 ${neutralIconColor}`} size={24} /> Overview
+                                </h2>
+                                <div className={cardBaseStyle}>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}>Neil Island (Shaheed Dweep) offers a serene escape known as Andaman's "vegetable bowl." It's smaller and quieter than Havelock, perfect for relaxation, cycling through villages, exploring beautiful beaches, and seeing the unique Natural Bridge rock formation.</p>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Navigation className={`mr-3 ${neutralIconColor}`} size={24} /> Getting There & Around
+                                </h2>
+                                <div className={cardBaseStyle}>
+                                    <ul className="space-y-4">
+                                        <li className="flex items-start">
+                                            <div className={`${neutralBg} p-2 rounded-full mr-3 mt-1 border ${neutralBorder}`}><Ship className={neutralIconColor} size={16} /></div>
+                                            <div><span className={`font-medium ${neutralText}`}>Ferries:</span><span className={neutralTextLight}> Daily private/govt ferries connect from Port Blair (~2 hrs) and Havelock (~1 hr). Pre-booking advised.</span></div>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <div className={`${neutralBg} p-2 rounded-full mr-3 mt-1 border ${neutralBorder}`}><Bike className={neutralIconColor} size={16} /></div>
+                                            <div><span className={`font-medium ${neutralText}`}>On Island:</span><span className={neutralTextLight}> Cycling (highly recommended, ~₹150/day), scooter rental (~₹400/day), autos, and walking. Very compact island.</span></div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Calendar className={`mr-3 ${neutralIconColor}`} size={24} /> Best Time to Visit
+                                </h2>
+                                <div className={cardBaseStyle}>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {/* Contextual seasonal cards */}
+                                        <div className={`${infoBg} rounded-xl p-4 border ${infoBorder}`}>
+                                            <h3 className={`font-semibold ${infoText} mb-2`}>Nov–May</h3>
+                                            <p className={`text-sm ${neutralTextLight}`}>Ideal weather, calm seas for activities.</p>
+                                        </div>
+                                        <div className={`${warningBg} rounded-xl p-4 border ${warningBorder}`}>
+                                            <h3 className={`font-semibold ${warningText} mb-2`}>Mar–May</h3>
+                                            <p className={`text-sm ${neutralTextLight}`}>Warmer, good visibility, lush farms.</p>
+                                        </div>
+                                        <div className={`${successBg} rounded-xl p-4 border ${successBorder}`}>
+                                            <h3 className={`font-semibold ${successText} mb-2`}>Jun–Sep</h3>
+                                            <p className={`text-sm ${neutralTextLight}`}>Monsoon, quiet, green, some closures.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Waves className={`mr-3 ${neutralIconColor}`} size={24} /> Key Attractions
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Attraction Cards - Remain Neutral */}
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Bharatpur Beach</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Near jetty. Calm lagoon for swimming, snorkeling, glass-bottom boats.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Natural Bridge</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Iconic coral rock arch near Laxmanpur Beach 2. Best seen at low tide.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Laxmanpur Beach</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Famous for its stunning sunset views and wide sandy stretch.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Sitapur Beach</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Quiet beach on the eastern tip, known for beautiful sunrises.</p>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* Sidebar - Contextual Colors */}
+                        <aside className="lg:col-span-1 space-y-8">
+                            {/* Accommodation Brief */}
+                            <div className={cardBaseStyle}>
+                                <h3 className={`text-lg font-semibold ${neutralText} mb-4 flex items-center`}>
+                                    <Bed className={`mr-2 ${neutralIconColor}`} size={20} /> Accommodation
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${neutralIconColor} flex-shrink-0`} size={16} /><span>Fewer options than Havelock. Budget huts/homestays, mid-range resorts (Pearl Park, TSG Aura), some luxury (SeaShell Neil).</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${neutralIconColor} flex-shrink-0`} size={16} /><span>Booking ahead recommended.</span></li>
+                                </ul>
                             </div>
-                        </div>
-                    </section>
+                            {/* Food Brief */}
+                            <div className={cardBaseStyle}>
+                                <h3 className={`text-lg font-semibold ${neutralText} mb-4 flex items-center`}>
+                                    <Utensils className={`mr-2 ${neutralIconColor}`} size={20} /> Food Highlights
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${neutralIconColor} flex-shrink-0`} size={16} /><span>Fresh local produce, seafood thalis at market dhabas, resort dining, coconuts and farm-fresh fruit.</span></li>
+                                </ul>
+                            </div>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Route className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Getting There & Getting Around</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/neil-cycling.jpg" // Placeholder
-                                alt="Cycling on a quiet road in Neil Island"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong className="text-gray-800">Getting There (Ferry):</strong> The only practical way is by sea. Frequent ferries connect Neil with Port Blair (~2 hours) and Havelock (~1 hour).
-                        </p>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Private Ferries:</strong> Makruzz, Nautika, etc. Recommended; book online in advance.</li>
-                            <li><strong className="text-gray-800">Government Ferries:</strong> Cheaper, harder for tourists to book (local priority).</li>
-                        </ul>
-                        <p className="text-base leading-relaxed mb-4">No airport or helicopter service for tourists.</p>
+                            {/* Safety & Health - Warning Orange */}
+                            <div className={`${warningBg} rounded-2xl p-6 shadow-sm border ${warningBorder}`}>
+                                <h3 className={`text-lg font-semibold ${warningText} mb-4 flex items-center`}>
+                                    <Shield className={`mr-2 ${warningIconColor}`} size={20} /> Safety & Health
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Very safe island. Use mosquito repellent.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Drink bottled/filtered water. Basic PHC available.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Be cautious on slippery rocks near Natural Bridge.</span></li>
+                                </ul>
+                            </div>
 
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong className="text-gray-800">Local Transportation:</strong> Neil is delightfully small (5km end-to-end).
-                        </p>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Bicycle Rentals:</strong> Highly recommended (~₹150-200/day). Flat terrain, low traffic. Perfect for exploring.</li>
-                            <li><strong className="text-gray-800">Two-Wheeler Rentals:</strong> Scooters/bikes available (~₹400-500/day). Convenient for quicker coverage. Fuel station available.</li>
-                            <li><strong className="text-gray-800">Auto-Rickshaws:</strong> Point-to-point rides (₹50-150). Can hire for island tour (~₹500-800).</li>
-                            <li><strong className="text-gray-800">Buses/Shared Jeep:</strong> Infrequent local bus service exists. Shared jeeps also used. Very cheap, good for local interaction.</li>
-                            <li><strong className="text-gray-800">On Foot:</strong> Many spots walkable, especially near jetty/market. Lovely in cooler hours.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed font-medium text-green-600 bg-green-50 p-3 rounded-xl mb-4">
-                            Layout: Jetty at Bharatpur (NW). Neil Kendra (market) central. Laxmanpur (NW), Sitapur (E). Very compact, hard to get lost. Locals helpful.
-                        </p>
-                    </section>
+                            {/* Eco-Tourism - Success Green */}
+                            <div className={`${successBg} rounded-2xl p-6 shadow-sm border ${successBorder}`}>
+                                <h3 className={`text-lg font-semibold ${successText} mb-4 flex items-center`}>
+                                    <Leaf className={`mr-2 ${successIconColor}`} size={20} /> Sustainability Tips
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Reduce plastic waste; carry reusable items.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Protect coral reefs; don't touch or collect marine life.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Support local farmers and eco-friendly stays.</span></li>
+                                </ul>
+                            </div>
+                        </aside>
+                    </div>
+                ) : (
+                    // Comprehensive Guide Content - Neutral Theme with Contextual Colors
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-12">
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Info className={`mr-3 ${neutralIconColor}`} size={24} /> Detailed Overview
+                                </h2>
+                                <div className={`${cardBaseStyle} space-y-4`}>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}>Neil Island, officially renamed Shaheed Dweep, is the charmingly rustic counterpart to its bustling neighbour, Havelock. Located just south of Havelock in Ritchie's Archipelago, this small island (roughly 13.7 sq km) is affectionately known as the "vegetable bowl" of the Andamans due to its fertile land and extensive farming. Neil offers a significantly more tranquil and unhurried experience, making it ideal for travellers seeking relaxation, natural beauty, and a glimpse into authentic island life.</p>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}>Life here revolves around its stunning, distinctly named beaches (Bharatpur, Laxmanpur, Sitapur), the fascinating Natural Bridge rock formation, and the slow rhythm of its villages and paddy fields. Cycling is the preferred mode of transport, allowing visitors to leisurely explore the flat terrain and soak in the serene atmosphere. While lacking the extensive tourist infrastructure of Havelock, Neil provides sufficient amenities, beautiful coral reefs for snorkeling, and a genuine sense of peace that captivates many visitors.</p>
+                                </div>
+                            </section>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Calendar className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Best Time to Visit</h3>
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Navigation className={`mr-3 ${neutralIconColor}`} size={24} /> Comprehensive Travel Guide
+                                </h2>
+                                <div className={`${cardBaseStyle} space-y-6`}>
+                                    <div>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Reaching Neil Island:</h3>
+                                        <ul className="space-y-3 pl-4 list-disc list-outside marker:text-gray-400">
+                                            <li className={neutralTextLight}><strong className={neutralText}>By Ferry (Only Option):</strong> Neil Island is accessible solely by ferry. Services operate daily from:
+                                                <ul className="list-['-_'] list-inside pl-4 mt-1 space-y-1">
+                                                    <li><strong className="text-gray-700">Port Blair (Phoenix Bay Jetty):</strong> Journey takes approx. 1.5 - 2 hours by private ferry and 2.5 - 3 hours by government ferry.</li>
+                                                    <li><strong className="text-gray-700">Havelock Island (Havelock Jetty):</strong> A short hop of about 45 minutes to 1 hour by both private and government ferries.</li>
+                                                </ul>
+                                            </li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Private Ferries (Recommended):</strong> Makruzz, Nautika, ITT Majestic, etc., offer faster, air-conditioned services. Essential to book online well in advance, especially during peak season.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Government Ferries:</strong> More economical but slower and less comfortable. Tickets are primarily for islanders and challenging for tourists to book reliably in advance (often requires queuing at DSS counters).</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Neil Jetty:</strong> All ferries arrive/depart from the main jetty located at Bharatpur Beach.</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Getting Around Neil Island:</h3>
+                                        <ul className="space-y-3 pl-4 list-disc list-outside marker:text-gray-400">
+                                            <li className={neutralTextLight}><strong className={neutralText}>Bicycle Rental:</strong> The ideal way to explore Neil's flat terrain and short distances (~₹150-200 per day). Rentals available near the jetty and market. Perfect for soaking in the laid-back vibe.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Scooter/Motorbike Rental:</strong> Available (~₹400-500 per day plus fuel) for quicker travel. Roads are generally good but narrow. Minimal traffic.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Auto-Rickshaws:</strong> Available for point-to-point trips (Jetty to Laxmanpur/Sitapur approx. ₹100-150) or for a half-day island tour (~₹500-800). Negotiate fare beforehand.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Walking:</strong> Feasible for exploring areas near your accommodation or around the market (Neil Kendra). Distances between beaches are manageable for keen walkers.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Taxis (Cars):</strong> Very limited availability, usually pre-booked through resorts for transfers or tours at higher rates.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Bus:</strong> An infrequent local bus service connects the main points, but timings are unreliable for tourists.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Waves className={`mr-3 ${neutralIconColor}`} size={24} /> Exploring Attractions & Activities
+                                </h2>
+                                <div className="space-y-6">
+                                    {/* Attraction Cards - Remain Neutral */}
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Bharatpur Beach (Beach No. 4)</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Located right next to the jetty, this beach is known for its wide, sandy bay and exceptionally calm, shallow turquoise lagoon, perfect for swimming and wading, especially for families. It's the hub for water activities like glass-bottom boat rides, jet skiing, and snorkeling rentals. The coral reefs here are easily accessible. Can get busy near the jetty area.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Natural Bridge (Howrah Bridge)</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Neil Island's most famous landmark, located at Laxmanpur Beach 2. This impressive natural rock arch has been carved by centuries of wave erosion. It's accessible only during low tide via a walk over dead coral and rocky patches (wear sturdy footwear). Explore the surrounding tide pools teeming with small marine life. A must-see photographic spot.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Laxmanpur Beach (Beach No. 1)</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Situated on the western side, this pristine white sand beach is renowned for offering arguably the best sunset views in the Andamans. The broad beach is perfect for long, peaceful walks. While beautiful, swimming is not ideal due to corals and potential currents. Several small shacks offer refreshments. It's distinct from Laxmanpur Beach 2 (where the Natural Bridge is located).</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Sitapur Beach (Beach No. 5)</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Located at the easternmost tip of the island, Sitapur Beach is famous for its breathtaking sunrises. It's a quiet, crescent-shaped beach exposed to the open sea, featuring golden sands and interesting limestone formations at one end. Swimming can be tricky due to currents and rocks, but it's perfect for quiet contemplation and enjoying the dawn colours.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Snorkeling & Diving</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Neil Island boasts vibrant coral reefs easily accessible from the shore, especially at Bharatpur Beach and near the Natural Bridge during low tide. Snorkeling gear is widely available for rent. A few dive centers operate on Neil, offering Discover Scuba Dives and fun dives for certified divers at sites like Junction and Margherita's Mischief. It's generally considered less crowded for diving than Havelock, with chances to spot unique marine life like dugongs (though rare).</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Cycling & Village Exploration</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>One of Neil's primary charms is exploring its lush interior and sleepy villages by bicycle. The flat terrain and quiet roads make for easy riding past green paddy fields, banana plantations, and local homes. Stop at Neil Kendra (the main market) for local snacks and interactions.</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Bed className={`mr-3 ${neutralIconColor}`} size={24} /> Accommodation & Food
+                                </h2>
+                                <div className={`${cardBaseStyle} space-y-4`}>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}><strong>Accommodation:</strong> Options are more limited and generally simpler than Havelock, leaning towards rustic charm and eco-friendly stays. Budget travellers can find basic huts, guesthouses, and homestays near the market or along the beaches. Mid-range resorts like Pearl Park Beach Resort, TSG Aura, and Summer Sands offer comfortable AC rooms/cottages, often with restaurants and pools. Luxury is limited but growing, with SeaShell Neil providing stylish cottages and upscale amenities. Booking in advance is crucial, especially during peak season.</p>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}><strong>Food:</strong> Dining revolves around fresh, local ingredients. Simple, delicious Bengali-style fish thalis are a staple at eateries in Neil Kendra market (e.g., Ganesh Restaurant). Most resorts have multi-cuisine restaurants catering to tourists (e.g., Dugong at SeaShell, Organic Khao at Summer Sands). Seafood is readily available. Enjoy abundant fresh coconuts, bananas, papayas, and other seasonal fruits directly from local vendors or farm stalls. Vegetarian options are widely available due to the island's agricultural focus.</p>
+                                </div>
+                            </section>
                         </div>
-                        <div className="grid md:grid-cols-3 gap-6 mb-6">
-                            <div className="relative h-[180px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/neil-winter.jpg" // Placeholder
-                                    alt="Sunny beach day in Neil Island winter"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2 text-center">
-                                    Nov-Feb (Ideal)
+
+                        {/* Sidebar - Contextual Colors */}
+                        <aside className="lg:col-span-1 space-y-8">
+                            {/* Best Time to Visit - Contextual */}
+                            <div className={cardBaseStyle}>
+                                <h3 className={`text-lg font-semibold ${neutralText} mb-4 flex items-center`}>
+                                    <Calendar className={`mr-2 ${neutralIconColor}`} size={20} /> Best Time to Visit
+                                </h3>
+                                <div className="space-y-3">
+                                    <div className={`${infoBg} rounded-lg p-3 border ${infoBorder}`}>
+                                        <h4 className={`font-medium ${infoText} text-sm`}>Oct–May (Dry Season)</h4>
+                                        <p className={`text-xs ${neutralTextLight}`}>Ideal conditions for beaches, snorkeling, cycling. Peak tourism Dec-Feb.</p>
+                                    </div>
+                                    <div className={`${warningBg} rounded-lg p-3 border ${warningBorder}`}>
+                                        <h4 className={`font-medium ${warningText} text-sm`}>Mar–May (Shoulder)</h4>
+                                        <p className={`text-xs ${neutralTextLight}`}>Warmer, good visibility, lush farms, fewer crowds than peak.</p>
+                                    </div>
+                                    <div className={`${successBg} rounded-lg p-3 border ${successBorder}`}>
+                                        <h4 className={`font-medium ${successText} text-sm`}>Jun–Sep (Monsoon)</h4>
+                                        <p className={`text-xs ${neutralTextLight}`}>Rainy, very quiet, green. Activities/ferries may be limited.</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="relative h-[180px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/neil-spring.jpg" // Placeholder
-                                    alt="Flowering trees in Neil Island spring"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2 text-center">
-                                    Mar-May (Warm)
-                                </div>
-                            </div>
-                            <div className="relative h-[180px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/neil-monsoon.jpg" // Placeholder
-                                    alt="Lush greenery during Neil Island monsoon"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2 text-center">
-                                    Jun-Sep (Rainy)
-                                </div>
-                            </div>
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            Neil welcomes visitors year-round, but experiences differ:
-                            <ul className="list-disc list-inside space-y-2 my-3 pl-4 text-gray-700">
-                                <li><strong className="text-gray-800">October to May (Best time):</strong> Ideal window. Pleasant weather (Nov-Feb, 28°C), calm clear seas for activities. Peak season but never feels overcrowded. Mar-May warmer, good visibility, flowering trees, abundant farm produce.</li>
-                                <li><strong className="text-gray-800">June to September (Monsoon off-season):</strong> Heavy showers, possible ferry disruptions. Low tourism, some resorts may close. Lush green landscapes. Good for solitude if rain doesn't bother you; water activities limited.</li>
-                                <li><strong className="text-gray-800">Shoulder Months (Sep/Oct, May/Jun):</strong> Mixed weather. Fewer tourists, reopening/closing infrastructure. Can be a good balance.</li>
-                            </ul>
-                            December to March is highly recommended for perfect beach weather and fully operational services.
-                        </p>
-                        <p className="text-base leading-relaxed font-medium text-green-600 bg-green-50 p-3 rounded-xl mb-4">
-                            Travel Tip: Allocate buffer days if traveling during monsoon or shoulder seasons due to potential ferry rescheduling.
-                        </p>
-                    </section>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Home className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Accommodation (Budget to Luxury)</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/neil-resort.jpg" // Placeholder
-                                alt="Cozy resort cottage in Neil Island"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            Neil offers fewer options than Havelock, focusing on eco-friendly resorts and cottages. Vibe is low-key.
-                        </p>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Budget (₹500–₹1500):</strong> Homestays, basic huts (e.g., Tango Beach Resort - check status), tented camps near Sitapur or Bharatpur. Fan rooms, basic amenities, often shared/cold baths. Great for backpackers.</li>
-                            <li><strong className="text-gray-800">Mid-Range (₹2000–₹5000):</strong> Comfortable AC rooms/cottages. Examples: Pearl Park Beach Resort (Laxmanpur, sunset views), TSG Aura (Sitapur, modern rooms), Kalapani, Coconhuts. Often include hot water, dining, activity booking.</li>
-                            <li><strong className="text-gray-800">Luxury (₹6000+):</strong> Limited but growing. SeaShell Neil (stylish cottages, upscale dining), Summer Sands Beach Resort (pool, spa access). Focus on tranquility and nature integration. Treehouses/eco-cottages may exist.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed font-medium text-green-600 bg-green-50 p-3 rounded-xl mb-4">
-                            Booking Advice: Essential to book mid-range/luxury ahead, especially in peak season, due to limited capacity. Budget travelers can often find walk-in options (except peak holidays). Most resorts can arrange jetty pickup.
-                        </p>
-                    </section>
+                            {/* Safety & Health - Warning Orange */}
+                            <div className={`${warningBg} rounded-2xl p-6 shadow-sm border ${warningBorder}`}>
+                                <h3 className={`text-lg font-semibold ${warningText} mb-4 flex items-center`}>
+                                    <LifeBuoy className={`mr-2 ${warningIconColor}`} size={20} /> Safety & Health
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Neil is very safe with minimal crime. Exercise standard caution.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Wear sturdy footwear when visiting the Natural Bridge (slippery rocks).</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Use mosquito repellent, especially at dawn/dusk. Beware of sandflies on some beaches.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Drink only bottled or properly filtered water.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>A Primary Health Centre (PHC) offers basic medical aid. Serious cases require evacuation to Port Blair. Carry a personal first-aid kit.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Mobile connectivity (especially data) is weak; BSNL/Airtel usually perform best.</span></li>
+                                </ul>
+                            </div>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Utensils className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Food & Dining</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/neil-food.jpg" // Placeholder
-                                alt="Fresh fish thali meal in Neil Island"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            Neil’s dining is modest but delightful, emphasizing fresh, local ingredients.
-                        </p>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Local Eateries (Dhabas):</strong> Neil Kendra market has shacks serving cheap, tasty thalis (fish thali ₹150-200). Ganesh Restaurant is popular. Homestyle cooking, Bengali influence.</li>
-                            <li><strong className="text-gray-800">Resort Restaurants:</strong> Most mid-range+ resorts have restaurants (open to non-guests). Dugong (SeaShell Neil - upscale mix), Organic Khao (Summer Sands - organic focus), Pearl Park restaurant (buffet options).</li>
-                            <li><strong className="text-gray-800">Seafood Delicacies:</strong> Fresh grilled fish, lobster, crab curry widely available. Try fish cooked in banana leaf. Check beach vendors near Bharatpur for grilled fish.</li>
-                            <li><strong className="text-gray-800">Vegetarian Options:</strong> Excellent local vegetables (pumpkin, okra). Veg thalis available. Icy Spicy branch for North Indian/snacks. Resorts cater to vegetarians.</li>
-                            <li><strong className="text-gray-800">Fruits and Drinks:</strong> Abundant coconuts (₹30-40), watermelons, bananas from farm stands. Basic chai/coffee available. Limited alcohol (only in some resort bars); BYOB responsibly from Port Blair.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed font-medium text-green-600 bg-green-50 p-3 rounded-xl mb-4">
-                            Dining Etiquette: Casual. Island pace (food prepared fresh). Pre-order if in a rush. Tipping appreciated at local places. Try the farm-fresh produce!
-                        </p>
-                    </section>
+                            {/* Responsible Tourism - Success Green */}
+                            <div className={`${successBg} rounded-2xl p-6 shadow-sm border ${successBorder}`}>
+                                <h3 className={`text-lg font-semibold ${successText} mb-4 flex items-center`}>
+                                    <Leaf className={`mr-2 ${successIconColor}`} size={20} /> Responsible Tourism
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Strictly avoid single-use plastics. Carry reusable water bottles and bags.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Do not touch, stand on, or collect corals or shells (dead or alive).</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Use reef-safe sunscreen to protect marine life.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Dispose of all waste properly in designated bins. Carry back non-biodegradable waste if bins are full/unavailable.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Respect local culture: Dress modestly in villages/market, ask before taking photos of people.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Support the local economy by purchasing local produce and handicrafts.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Conserve water and electricity, resources are limited on the island.</span></li>
+                                </ul>
+                            </div>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <MapPin className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Key Attractions</h3>
-                        </div>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/bharatpur-beach-neil-activities.jpg" // Placeholder
-                                    alt="Glass bottom boat at Bharatpur Beach"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Bharatpur Beach</div>
+                            {/* Traveler Tips - Tip Yellow */}
+                            <div className={`${tipBg} rounded-2xl p-6 shadow-sm border ${tipBorder}`}>
+                                <h3 className={`text-lg font-semibold ${tipText} mb-4 flex items-center`}>
+                                    <MessageCircle className={`mr-2 ${tipIconColor}`} size={20} /> Traveler Tips
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Book accommodation and ferries (private) well in advance, especially for peak season.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Carry enough cash; ATMs are unreliable. Card payments are limited.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Rent a bicycle for the authentic Neil experience.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Check tide timings for visiting Natural Bridge and for swimming conditions.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Pack light, include swimwear, comfortable walking/cycling shoes, reef shoes, sunscreen, hat, insect repellent.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Embrace the slow pace; don't expect bustling nightlife or extensive shopping.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Download offline maps as internet connectivity is poor.</span></li>
+                                </ul>
                             </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/natural-bridge-neil-lowtide.jpg" // Placeholder
-                                    alt="Exploring tide pools near Natural Bridge"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Natural Bridge</div>
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/laxmanpur-beach-sunset.jpg" // Placeholder
-                                    alt="Sunset view at Laxmanpur Beach"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Laxmanpur Beach</div>
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/sitapur-beach-sunrise.jpg" // Placeholder
-                                    alt="Sunrise colors at Sitapur Beach"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Sitapur Beach</div>
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/neil-snorkeling.jpg" // Placeholder
-                                    alt="Snorkeling over coral reefs in Neil Island"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Snorkeling/Diving</div>
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/neil-village-life.jpg" // Placeholder
-                                    alt="Cycling past paddy fields in Neil Island"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Village Exploration</div>
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="border-l-4 border-green-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Bharatpur Beach:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Near jetty. Picturesque lagoon with clear, shallow water. Best swimming beach. Hub for glass-bottom boats, snorkeling rentals. Good coral reef visibility in mornings. Relaxing spot with snack stalls. Check tide timings.
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-green-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Natural Rock Formation (Howrah Bridge):</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Iconic coral rock arch near Laxmanpur Beach 2. Best visited at low tide. Great for photos. Explore tide pools nearby (starfish, sea cucumbers). Walk carefully on sharp/slippery rocks. Local guides available.
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-green-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Laxmanpur Beach:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    West-facing beach (No.1) famous for stunning sunsets. Wide stretch of white shell sand. Tranquil atmosphere. Snack stalls available. Good for evening walks and stargazing. Not ideal for swimming (corals/currents).
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-green-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Sitapur Beach:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Eastern tip (Beach No.5), known for beautiful sunrises over the sea. Half-moon bay with limestone cliffs. Golden sand, tidal pools at low tide. Rocky, not great for swimming. Very secluded, especially early morning.
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-green-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Snorkeling/Diving:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Neil offers rich coral reefs. Snorkel off Bharatpur or Natural Bridge area (low tide). Dive sites include Junction, Bus Stop. A couple of dive shops operate on the island. Chance to spot rare dugongs (sea cows).
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-green-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Village Exploration:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Cycle or walk through the island's interior. Observe farming activities (vegetable fields, paddy, plantations). Visit Neil Kendra market for a slice of local life. Enjoy the unhurried pace.
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Users className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Activities & Experiences (By Traveler Type)</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/neil-activities-diverse.jpg" // Placeholder
-                                alt="People enjoying various activities on Neil Island"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div className="bg-green-50 p-4 rounded-xl">
-                                <h4 className="text-lg font-semibold text-green-700 mb-2">Backpackers</h4>
-                                <p className="text-base leading-relaxed">Rent bicycle, explore freely. Stay in homestays/huts. Enjoy cheap thalis. Catch sunrise/sunset. Hammock time. Socialize at tea stalls. Relaxed vibe, budget-friendly.</p>
-                            </div>
-                            <div className="bg-green-50 p-4 rounded-xl">
-                                <h4 className="text-lg font-semibold text-green-700 mb-2">Families</h4>
-                                <p className="text-base leading-relaxed">Safe wading at Bharatpur. Glass-bottom boat rides. Gentle cycling routes. Sandcastle building. Picnic spots. Quiet, safe environment for kids.</p>
-                            </div>
-                            <div className="bg-green-50 p-4 rounded-xl">
-                                <h4 className="text-lg font-semibold text-green-700 mb-2">Couples</h4>
-                                <p className="text-base leading-relaxed">Romantic sunrise at Sitapur, sunset at Laxmanpur. Cycle together. Beach picnics. Private dinners at resorts. Stargazing. Tranquil and intimate setting.</p>
-                            </div>
-                            <div className="bg-green-50 p-4 rounded-xl">
-                                <h4 className="text-lg font-semibold text-green-700 mb-2">Adventure Seekers</h4>
-                                <p className="text-base leading-relaxed">Drift diving (experienced). Night snorkeling (bioluminescence). Try hand-line fishing with locals. Explore offbeat coral areas. Cycle the island end-to-end.</p>
-                            </div>
-                            <div className="bg-green-50 p-4 rounded-xl lg:col-span-2">
-                                <h4 className="text-lg font-semibold text-green-700 mb-2">Luxury Travelers</h4>
-                                <p className="text-base leading-relaxed">Stay at SeaShell/Summer Sands. Arrange private guided tours/snorkel charters. Sandbank picnics. In-resort spa. Curated dining experiences. Enjoy tranquility in comfort.</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Users className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Cultural Insights & Local Etiquette</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/neil-local-market.jpg" // Placeholder
-                                alt="Neil Kendra market scene"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <div className="space-y-4">
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Local Lifestyle:</strong> Predominantly rural, community-driven. Farming ("vegetable bowl") and fishing are mainstays. Early risers. Close-knit community.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Language & Communication:</strong> Bengali and Hindi primary. English understood in tourism sector. "Namaste" or "Dada/Didi" appreciated. Locals are hospitable.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Dress and Behaviour:</strong> Beachwear on beaches, modest attire (cover up) in village/market. Respectful conduct. Low crime. Ask permission before entering farms/property.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Visiting Local Spots:</strong> Remove shoes at temples. Ask before interacting at schools. Participate respectfully if invited to festivals.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Purchasing Local Goods:</strong> Bargaining minimal. Buy local produce/handicrafts. Avoid illegal shells/coral.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Respect for Environment:</strong> Locals value cleanliness. Do not litter. Respect quiet village life, especially at night.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                Embrace the simplicity, warmth, and harmony with nature that defines Neil's culture.
-                            </p>
-                        </div>
-                    </section>
-
-                    <div className="grid md:grid-cols-2 gap-6 mb-8">
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <LifeBuoy className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                                <h3 className="text-xl font-semibold text-gray-800">Safety Tips & Health Advice</h3>
-                            </div>
-                            <div className="relative h-[200px] w-full rounded-xl overflow-hidden mb-6">
-                                <Image
-                                    src="/images/neil-first-aid.jpg" // Placeholder
-                                    alt="Basic first aid supplies"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                            </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li><strong className="text-gray-800">General Safety:</strong> Extremely safe island (low crime). Use common sense for valuables. Small police outpost near jetty.</li>
-                                <li><strong className="text-gray-800">Beach Safety:</strong> Bharatpur safest for swimming. Other beaches have rocks/currents (better for wading). No lifeguards. Avoid swimming at night/under influence. Check tides.</li>
-                                <li><strong className="text-gray-800">Snorkeling/Diving:</strong> Use life jacket if needed. Don't touch coral. Heed dive instructor advice. Allow no-fly time after diving.</li>
-                                <li><strong className="text-gray-800">Medical Facilities:</strong> Basic PHC available. Serious issues require transfer to Port Blair. Carry personal meds & first-aid kit. Pharmacy in market (limited stock).</li>
-                                <li><strong className="text-gray-800">Mosquitoes & Insects:</strong> Use repellent (esp. dawn/dusk). Beware sandflies on some beaches (use repellent/oil).</li>
-                                <li><strong className="text-gray-800">Cash & Connectivity:</strong> Carry sufficient cash (ATMs unreliable). Limited card acceptance/money exchange. BSNL/Airtel work best, data spotty. Inform family of potential low connectivity.</li>
-                                <li><strong className="text-gray-800">Emergency Contacts:</strong> Dial 100/102. Keep hotel/ferry agent numbers. Heed weather warnings.</li>
-                            </ul>
-                        </section>
-
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <Recycle className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                                <h3 className="text-xl font-semibold text-gray-800">Sustainability Tips</h3>
-                            </div>
-                            <div className="relative h-[200px] w-full rounded-xl overflow-hidden mb-6">
-                                <Image
-                                    src="/images/neil-eco-friendly.jpg" // Placeholder
-                                    alt="Reusable bottle on a Neil Island beach"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                            </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li><strong className="text-gray-800">Minimize Plastic:</strong> Use reusable bottles/bags. Refuse single-use items. Dispose waste responsibly.</li>
-                                <li><strong className="text-gray-800">Protect Reefs:</strong> Don't touch/stand on coral. Use reef-safe sunscreen. Choose responsible operators. Participate in beach clean-ups.</li>
-                                <li><strong className="text-gray-800">Conserve Water & Energy:</strong> Take shorter showers. Turn off lights/AC. Support resorts using solar/rainwater harvesting.</li>
-                                <li><strong className="text-gray-800">Respect Wildlife:</strong> Observe turtles from distance, no lights/flash. Don't disturb nesting sites. Avoid hitting roaming animals.</li>
-                                <li><strong className="text-gray-800">Support Local & Sustainable:</strong> Eat local produce. Buy local handicrafts (avoid illegal shells/coral). Choose eco-lodges.</li>
-                                <li><strong className="text-gray-800">Leave Only Footprints:</strong> Don't remove natural items. Stick to paths. Clean up after any activities (e.g., picnics, bonfires).</li>
-                                <li><strong className="text-gray-800">Educate Others:</strong> Gently encourage responsible behaviour in fellow travelers.</li>
-                            </ul>
-                            <p className="text-base leading-relaxed mt-4 font-medium text-green-600">
-                                Help preserve Neil's charm by traveling mindfully and respecting its delicate environment and community.
-                            </p>
-                        </section>
+                        </aside>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Photo gallery section */}
-            <section className="mb-10 bg-white p-6 rounded-2xl shadow-md">
-                <div className="flex items-start mb-6">
-                    <Camera className="text-green-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                    <h3 className="text-xl font-semibold text-gray-800">Photo Gallery</h3>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="relative h-[150px] rounded-xl overflow-hidden">
-                        <Image
-                            src="/images/neil-gallery-1.jpg" // Placeholder
-                            alt="Neil Island Gallery Image 1 - Beach landscape"
-                            fill
-                            style={{ objectFit: 'cover' }}
-                        />
+                {/* CTA Section - Contextual Color (Informational Blue) */}
+                <section className={`mt-16 ${infoBg} rounded-2xl p-8 border ${infoBorder} text-center`}>
+                    <h2 className={`text-2xl font-bold ${infoText} mb-4`}>Experience the Tranquility of Neil Island</h2>
+                    <p className={`${neutralTextLight} max-w-xl mx-auto mb-6`}>Ready to unwind on serene beaches and explore the charming 'vegetable bowl' of the Andamans? Find packages perfect for your relaxing getaway.</p>
+                    <div className="flex flex-wrap justify-center gap-4">
+                        <Link href="/packages?destination=neil-island" className={buttonPrimaryStyle}>
+                            View Neil Island Packages <ArrowRight className="ml-2" size={18} />
+                        </Link>
+                        <Link href="/contact" className={`inline-flex items-center justify-center bg-white text-gray-700 border ${neutralBorder} hover:bg-gray-50 font-semibold px-6 py-3 rounded-full transition-all duration-300`}>
+                            Customize Your Trip
+                        </Link>
                     </div>
-                    <div className="relative h-[150px] rounded-xl overflow-hidden">
-                        <Image
-                            src="/images/neil-gallery-2.jpg" // Placeholder
-                            alt="Neil Island Gallery Image 2 - Natural Bridge detail"
-                            fill
-                            style={{ objectFit: 'cover' }}
-                        />
-                    </div>
-                    <div className="relative h-[150px] rounded-xl overflow-hidden">
-                        <Image
-                            src="/images/neil-gallery-3.jpg" // Placeholder
-                            alt="Neil Island Gallery Image 3 - Cycling path"
-                            fill
-                            style={{ objectFit: 'cover' }}
-                        />
-                    </div>
-                    <div className="relative h-[150px] rounded-xl overflow-hidden">
-                        <Image
-                            src="/images/neil-gallery-4.jpg" // Placeholder
-                            alt="Neil Island Gallery Image 4 - Sunset silhouette"
-                            fill
-                            style={{ objectFit: 'cover' }}
-                        />
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            {/* Footer section */}
-            <div className="mt-12 pt-6 border-t border-gray-200 text-center text-gray-500 text-sm">
-                <p>Last updated: June 2025 • Neil Island (Shaheed Dweep) Travel Guide</p>
             </div>
         </main>
     );

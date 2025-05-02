@@ -1,714 +1,552 @@
-// Path: src/app/destinations/2/page.tsx // Assuming Havelock is destination #2
-'use client'; // Needed because we use useState for the toggle
+// Path: src/app/destinations/havelock-island/page.tsx // Renamed for clarity (or swaraj-dweep)
+// Theme: Neutral with Contextual Background Colors (Applied based on Baratang sample)
 
-import { useState } from 'react'; // Import useState for the toggle
+'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Check, Info, Calendar, Home, Utensils, MapIcon, Users, Shield, Leaf, Camera, Ship, Bike, BedDouble, Sprout, Heart, Anchor, Sun, Waves, Sparkles, Route, LifeBuoy, Recycle } from 'lucide-react'; // Import additional relevant icons
+import {
+    MapPin,
+    Check,
+    Info,
+    Calendar,
+    Bed,        // Use Bed instead of Home for Accommodation consistency
+    Utensils,
+    Compass,
+    Users,
+    Shield,
+    Leaf,
+    ChevronRight,
+    Star,
+    Navigation, // Use Navigation instead of Route
+    ArrowRight,
+    MessageCircle,
+    Camera,
+    Ship,       // Relevant for Havelock access
+    Bike,       // Relevant for Havelock transport
+    Waves,      // Relevant for beaches/diving
+    Sun,        // Relevant for beaches/weather
+    LifeBuoy,   // For Safety section consistency
+    Sparkles    // Could use for Bioluminescence or special experiences
+} from 'lucide-react';
 
-// Assuming you have Header and Footer components imported via a layout typically
-// import Header from '@/components/Header';
-// import Footer from '@/components/Footer';
+// --- Define Common Styles (Copied from Baratang Sample - Neutral Theme with Contextual Colors) ---
+const primaryButtonBg = 'bg-gray-800';
+const primaryButtonHoverBg = 'hover:bg-gray-900';
+const primaryButtonText = 'text-white';
+
+const secondaryButtonBg = 'bg-white/20 backdrop-blur-sm';
+const secondaryButtonHoverBg = 'hover:bg-white/30';
+const secondaryButtonText = 'text-white';
+const secondaryButtonBorder = 'border border-white/40';
+
+const infoBg = 'bg-blue-50';
+const infoBorder = 'border-blue-100';
+const infoText = 'text-blue-800';
+const infoIconColor = 'text-blue-600';
+
+const successBg = 'bg-green-50';
+const successBorder = 'border-green-100';
+const successText = 'text-green-800';
+const successIconColor = 'text-green-600';
+
+const warningBg = 'bg-orange-50';
+const warningBorder = 'border-orange-100';
+const warningText = 'text-orange-800';
+const warningIconColor = 'text-orange-600';
+
+const tipBg = 'bg-yellow-50';
+const tipBorder = 'border-yellow-100';
+const tipText = 'text-yellow-800';
+const tipIconColor = 'text-yellow-700';
+
+const errorBg = 'bg-red-50';
+const errorBorder = 'border-red-200';
+const errorText = 'text-red-700';
+const errorIconColor = 'text-red-500';
+
+const neutralBgLight = 'bg-gray-50';
+const neutralBorderLight = 'border-gray-100';
+const neutralBg = 'bg-gray-100';
+const neutralBorder = 'border-gray-200';
+const neutralText = 'text-gray-800';
+const neutralTextLight = 'text-gray-600';
+const neutralIconColor = 'text-gray-600';
+
+const sectionPadding = "py-10 md:py-12"; // Consistent padding
+const sectionHeadingStyle = `text-2xl font-bold ${neutralText} mb-6 flex items-center`;
+const cardBaseStyle = `bg-white rounded-2xl shadow-sm border ${neutralBorderLight} p-6 transition-shadow hover:shadow-md`;
+const buttonPrimaryStyle = `inline-flex items-center justify-center ${primaryButtonBg} ${primaryButtonHoverBg} ${primaryButtonText} px-6 py-3 rounded-full font-medium transition-all duration-300 shadow-md`;
+const buttonSecondaryStyleHero = `inline-flex items-center justify-center ${secondaryButtonBg} ${secondaryButtonHoverBg} ${secondaryButtonText} ${secondaryButtonBorder} px-6 py-3 rounded-full font-medium transition-all duration-300`;
+// --- End Common Styles ---
 
 export default function HavelockIslandPage() {
-    // State to manage the toggle switch
     const [showComprehensive, setShowComprehensive] = useState(false);
+    const [activeImage, setActiveImage] = useState(0);
 
     const handleToggle = () => {
         setShowComprehensive(!showComprehensive);
     };
 
+    // Gallery images specific to Havelock Island
+    const galleryImages = [
+        {
+            src: "/images/havelock/radhanagar-beach-day.jpg", // Use specific paths
+            alt: "Radhanagar Beach (Beach No. 7), Havelock Island",
+            caption: "The world-renowned Radhanagar Beach with its white sands"
+        },
+        {
+            src: "/images/havelock/elephant-beach-snorkeling.jpg", // Use specific paths
+            alt: "Snorkeling at Elephant Beach, Havelock Island",
+            caption: "Vibrant coral reefs accessible via snorkeling at Elephant Beach"
+        },
+        {
+            src: "/images/havelock/havelock-diving.jpg", // Use specific paths
+            alt: "Scuba diving scene near Havelock Island",
+            caption: "Exploring the rich underwater world through scuba diving"
+        },
+        {
+            src: "/images/havelock/kalapathar-beach.jpg", // Use specific paths
+            alt: "Kalapathar Beach with its distinctive black rocks",
+            caption: "Scenic Kalapathar Beach, known for beautiful sunrises"
+        },
+        {
+            src: "/images/havelock/resort-view.jpg", // Use a representative resort image path
+            alt: "Beachfront resort view on Havelock Island",
+            caption: "Relaxing ambiance at one of Havelock's many resorts"
+        }
+    ];
+
     return (
-        // Assumes Header/Footer are handled by a layout file (e.g., src/app/layout.tsx)
-        <main className="container mx-auto px-4 py-8 md:py-12 bg-gradient-to-b from-cyan-50 to-white min-h-screen">
-            {/* Hero section with image and button */}
-            <div className="relative rounded-2xl overflow-hidden shadow-xl mb-10">
-                {/* Hero image */}
-                <div className="relative h-[450px] w-full">
-                    <Image
-                        src="/images/havelock-hero.jpg" // Placeholder image path
-                        alt="Radhanagar Beach, Havelock Island (Swaraj Dweep)"
-                        fill
-                        style={{ objectFit: 'cover' }}
-                        priority
-                    />
-                    {/* Dark overlay for better text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                </div>
-
-                {/* Hero content */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-white">
-                    <h1 className="text-3xl md:text-5xl font-bold mb-4 drop-shadow-lg">
-                        Havelock Island (Swaraj Dweep) Travel Guide
-                    </h1>
-                    <p className="text-lg md:text-xl text-white/90 max-w-3xl mb-6 drop-shadow-md">
-                        Experience the jewel of the Andamans: pristine beaches, vibrant reefs, world-class diving, and stays from rustic huts to luxury resorts.
-                    </p>
-                    <button className="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                        Book Havelock Packages
-                    </button>
+        <main className={`bg-white ${neutralText}`}>
+            {/* Hero Section - Matches Baratang Structure */}
+            <div className="relative h-[70vh] w-full">
+                <Image
+                    src="/images/havelock/hero.jpg" // Use specific Havelock hero image
+                    alt="Stunning aerial view of Havelock Island (Swaraj Dweep) coastline"
+                    fill
+                    priority
+                    style={{ objectFit: 'cover' }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 text-white">
+                    <div className="container mx-auto">
+                        <nav className="text-sm text-white/80 mb-2" aria-label="Breadcrumb">
+                            <ol className="list-none p-0 inline-flex">
+                                <li className="flex items-center">
+                                    <Link href="/" className="hover:text-white">Home</Link>
+                                    <ChevronRight size={14} className="mx-1" />
+                                </li>
+                                <li className="flex items-center">
+                                    <Link href="/destinations" className="hover:text-white">Destinations</Link>
+                                    <ChevronRight size={14} className="mx-1" />
+                                </li>
+                                <li className="flex items-center">
+                                    <span className="text-white font-medium">Havelock Island (Swaraj Dweep)</span>
+                                </li>
+                            </ol>
+                        </nav>
+                        <h1 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-md">Havelock Island (Swaraj Dweep)</h1>
+                        <p className="text-xl md:text-2xl max-w-3xl mb-6 text-white/90">Discover pristine beaches, vibrant coral reefs, and world-class diving in the Andamans' jewel.</p>
+                        <div className="flex flex-wrap gap-4 items-center">
+                            <button className={buttonPrimaryStyle}>
+                                Discover Havelock <ArrowRight size={18} className="ml-2" />
+                            </button>
+                            <button className={buttonSecondaryStyleHero}>
+                                <Camera size={18} className="mr-2" /> View Gallery
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Toggle Switch with improved styling */}
-            <div className="flex items-center justify-center md:justify-start mb-8 bg-white p-4 rounded-full shadow-md">
-                <label htmlFor="guide-toggle" className="mr-3 text-sm font-medium text-gray-600">Brief Guide</label>
-                <label className="relative inline-block w-14 h-7">
-                    <input
-                        type="checkbox"
-                        id="guide-toggle"
-                        className="opacity-0 w-0 h-0"
-                        checked={showComprehensive}
-                        onChange={handleToggle} // Use React's onChange
-                    />
-                    <span className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-all duration-300 ${showComprehensive ? 'bg-cyan-600' : 'bg-gray-300'}`}>
-                        <span className={`absolute h-5 w-5 bg-white rounded-full top-1 transition-all duration-300 ${showComprehensive ? 'left-8' : 'left-1'}`}></span>
-                    </span>
-                </label>
-                <label htmlFor="guide-toggle" className="ml-3 text-sm font-medium text-gray-600">Comprehensive Guide</label>
-            </div>
+            {/* Main Content Container */}
+            <div className={`container mx-auto px-4 ${sectionPadding}`}>
 
-            {/* Conditional Rendering based on state */}
-            {!showComprehensive && (
-                // Brief Guide Content
-                <div>
-                    <h2 className="text-2xl font-semibold text-cyan-700 mt-8 mb-6 pb-2 border-b-2 border-cyan-200">Havelock Island: Brief Guide</h2>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Info className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Overview</h3>
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            The Andamans’ most popular island: white-sand beaches, vibrant coral reefs, world-class diving, with options from bamboo huts to five-star resorts.
-                        </p>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Route className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Getting There & Around</h3>
-                        </div>
-                        <div className="flex flex-col md:flex-row gap-6 mb-4">
-                            <div className="md:w-1/3 relative h-[200px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/havelock-ferry.jpg" // Placeholder image
-                                    alt="Ferry arriving at Havelock Island"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
+                {/* Quick Facts Card - Contextual Color (Informational Blue) */}
+                <div className={`${infoBg} rounded-2xl p-6 mb-12 shadow-sm border ${infoBorder}`}>
+                    <h2 className={`text-xl font-semibold ${infoText} mb-4 flex items-center`}>
+                        <Info className={`mr-2 ${infoIconColor}`} size={20} />
+                        Quick Facts About Havelock
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="flex items-start">
+                            <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
+                                <MapPin className={infoIconColor} size={18} />
                             </div>
-                            <ul className="list-disc list-inside space-y-3 md:w-2/3 pl-4 text-gray-700">
-                                <li><strong className="text-gray-800">Ferries:</strong> Private (Makruzz, Nautika) 1.5–2.5 hr; govt 2.5–3 hr.</li>
-                                <li><strong className="text-gray-800">On-island:</strong> Scooter rentals (~₹500/day), autos (₹50–700), point-to-point taxis, shared jeeps, occasional bus, bicycles.</li>
-                            </ul>
-                        </div>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Calendar className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Best Time to Visit</h3>
-                        </div>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Nov–Feb:</strong> Peak season, calm seas.</li>
-                            <li><strong className="text-gray-800">Mar–May:</strong> Warmer, good visibility.</li>
-                            <li><strong className="text-gray-800">Jun–Sep:</strong> Monsoon—fewer activities, lush greenery.</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Home className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Accommodation</h3>
-                        </div>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Budget (₹500–3k):</strong> Huts/dorms near Govind Nagar & Beach 5.</li>
-                            <li><strong className="text-gray-800">Mid-range (₹4k–8k):</strong> Resorts with AC, pools (Dolphin Resort, Symphony Palms).</li>
-                            <li><strong className="text-gray-800">Luxury (₹10k+):</strong> Taj Exotica, Barefoot, SeaShell, Jalakara.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed font-medium text-cyan-600 bg-cyan-50 p-3 rounded-xl mt-4">
-                            Recommendation: Book well in advance, especially for peak season (Dec-Jan).
-                        </p>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Utensils className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Food & Dining</h3>
-                        </div>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Local:</strong> Fish thalis (₹200), grilled catch of the day.</li>
-                            <li><strong className="text-gray-800">Cafés:</strong> Full Moon, Anju Coco, Something Different.</li>
-                            <li><strong className="text-gray-800">International:</strong> Sea Dragon (Chinese/Thai), B3 at Barefoot.</li>
-                            <li><strong className="text-gray-800">Nightlife:</strong> Venom Bar, Bonova; no clubs—acoustic jams.</li>
-                        </ul>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <MapPin className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Key Attractions</h3>
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-6 mb-4">
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/radhanagar-beach.jpg" // Placeholder
-                                    alt="Radhanagar Beach sunset"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/elephant-beach-snorkeling.jpg" // Placeholder
-                                    alt="Snorkeling at Elephant Beach"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
+                            <div>
+                                <h3 className={`font-medium ${neutralText}`}>Location</h3>
+                                <p className={`text-sm ${neutralTextLight}`}>Part of Ritchie's Archipelago, ~70 km NE of Port Blair</p>
                             </div>
                         </div>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Radhanagar Beach (No. 7):</strong> White sand, sunsets, Neil’s Cove trail.</li>
-                            <li><strong className="text-gray-800">Elephant Beach:</strong> Snorkeling, water sports, boat or jungle trek.</li>
-                            <li><strong className="text-gray-800">Kalapathar Beach:</strong> Black rocks, sunrise.</li>
-                            <li><strong className="text-gray-800">Vijaynagar (Beach 5):</strong> Kayaking, sunrise, bioluminescence tours.</li>
-                            <li><strong className="text-gray-800">Diving:</strong> Sites like Seduction Point, Jackson’s Bar, Barren Island trips available.</li>
-                        </ul>
-                    </section>
-
-                    {/* Styled Table Card */}
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Users className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Activities by Traveler Type</h3>
-                        </div>
-                        <div className="overflow-hidden mb-6">
-                            <div className="overflow-x-auto"> {/* Wrapper for responsiveness */}
-                                <table className="w-full text-left text-sm border-collapse">
-                                    <thead className="bg-cyan-50 text-cyan-700 font-semibold uppercase">
-                                        <tr>
-                                            <th scope="col" className="px-4 py-3 border-b-2 border-cyan-100 rounded-tl-xl">Traveler</th>
-                                            <th scope="col" className="px-4 py-3 border-b-2 border-cyan-100 rounded-tr-xl">Highlights</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium">Backpackers</td>
-                                            <td className="px-4 py-3">Budget PADI courses + dorms, beach-café social scene, sunrise at Kalapathar</td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium">Families</td>
-                                            <td className="px-4 py-3">Glass-bottom boat, sea walk for kids, calm beaches, playgrounds in resorts</td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium">Couples</td>
-                                            <td className="px-4 py-3">Candlelight dinners, private dives, spa treatments, sunset picnics</td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium">Adventure Seekers</td>
-                                            <td className="px-4 py-3">Night diving, game fishing, off-road mountain biking, freediving courses</td>
-                                        </tr>
-                                        <tr className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium rounded-bl-xl">Luxury Travelers</td>
-                                            <td className="px-4 py-3 rounded-br-xl">Helicopter transfers (weather-dependent), private yacht cruises, bespoke island tours</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                        <div className="flex items-start">
+                            <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
+                                <Star className={infoIconColor} size={18} />
+                            </div>
+                            <div>
+                                <h3 className={`font-medium ${neutralText}`}>Known For</h3>
+                                <p className={`text-sm ${neutralTextLight}`}>Radhanagar Beach, Elephant Beach, Scuba Diving, Coral Reefs</p>
                             </div>
                         </div>
-                    </section>
-
-                    <div className="grid md:grid-cols-3 gap-6 mb-8">
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <Users className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} /> {/* Using Users icon for cultural aspect */}
-                                <h3 className="text-xl font-semibold text-gray-800">Cultural & Etiquette</h3>
+                        <div className="flex items-start">
+                            <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
+                                <Ship className={infoIconColor} size={18} />
                             </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li>Beachwear on beaches; cover up in villages/market.</li>
-                                <li>Ask before photographing locals.</li>
-                                <li>Respect marine life; no feeding or touching coral.</li>
-                            </ul>
-                        </section>
-
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <Shield className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                                <h3 className="text-xl font-semibold text-gray-800">Safety & Health</h3>
+                            <div>
+                                <h3 className={`font-medium ${neutralText}`}>Access</h3>
+                                <p className={`text-sm ${neutralTextLight}`}>Primarily via Ferry (1.5-3 hrs) from Port Blair / Neil Island</p>
                             </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li>Reef-safe sunscreen, hydration, flag warnings.</li>
-                                <li>Wear aqua shoes on rocky beaches; heed croc advisories.</li>
-                                <li>Basic health centre + pharmacies on island.</li>
-                            </ul>
-                        </section>
-
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <Leaf className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                                <h3 className="text-xl font-semibold text-gray-800">Sustainability</h3>
-                            </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li>Reusable bottles, no plastics.</li>
-                                <li>Coral-safe practices; support eco-friendly dive shops.</li>
-                                <li>Beach clean-ups; respect turtle nesting seasons.</li>
-                            </ul>
-                        </section>
+                        </div>
                     </div>
                 </div>
-            )}
 
-            {showComprehensive && (
-                // Comprehensive Guide Content
-                <div>
-                    <h2 className="text-2xl font-semibold text-cyan-700 mt-8 mb-6 pb-2 border-b-2 border-cyan-200">Havelock Island: Comprehensive Guide</h2>
+                {/* Toggle Switch - Neutral Theme */}
+                <div className="flex flex-col items-center mb-10">
+                    <h2 className={`text-2xl font-bold ${neutralText} mb-4`}>Choose Your Guide Style</h2>
+                    <p className={`${neutralTextLight} mb-6 text-center max-w-2xl`}>Select between a quick overview or an in-depth exploration of Havelock Island.</p>
+                    <div className={`${neutralBg} p-1 rounded-full inline-flex border ${neutralBorder}`}>
+                        <button
+                            onClick={() => setShowComprehensive(false)}
+                            className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${!showComprehensive ? `${primaryButtonBg} ${primaryButtonText} shadow-sm` : `bg-transparent text-gray-700 hover:${neutralBg}`}`}
+                        >
+                            Brief Guide
+                        </button>
+                        <button
+                            onClick={() => setShowComprehensive(true)}
+                            className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${showComprehensive ? `${primaryButtonBg} ${primaryButtonText} shadow-sm` : `bg-transparent text-gray-700 hover:${neutralBg}`}`}
+                        >
+                            Comprehensive Guide
+                        </button>
+                    </div>
+                </div>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Info className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Overview</h3>
+                {/* Image Gallery - Neutral Theme */}
+                <div className="mb-16">
+                    <div className={`relative h-[50vh] w-full rounded-2xl overflow-hidden shadow-lg mb-4 border ${neutralBorderLight}`}>
+                        <Image src={galleryImages[activeImage].src} alt={galleryImages[activeImage].alt} fill style={{ objectFit: 'cover' }} />
+                        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/70 to-transparent">
+                            <p className="text-white text-lg drop-shadow">{galleryImages[activeImage].caption}</p>
                         </div>
-                        <div className="flex flex-col md:flex-row gap-6 mb-4">
-                            <div className="md:w-1/3 relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/havelock-overview.jpg" // Placeholder
-                                    alt="Aerial view of Havelock Island"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                        {galleryImages.map((image, index) => (
+                            <div
+                                key={index}
+                                className={`relative h-20 w-32 rounded-lg overflow-hidden cursor-pointer transition-all ${activeImage === index ? `ring-4 ${primaryButtonBg}` : 'opacity-70 hover:opacity-100'}`}
+                                onClick={() => setActiveImage(index)}
+                            >
+                                <Image src={image.src} alt={image.alt} fill style={{ objectFit: 'cover' }} />
                             </div>
-                            <div className="md:w-2/3">
-                                <p className="text-base leading-relaxed mb-4">
-                                    Havelock Island, officially renamed Swaraj Dweep, is the jewel of the Andamans – a tropical paradise famed for its powdery white beaches, turquoise waters, and world-class scuba diving. It’s the most visited island in the archipelago, yet still offers a laid-back vibe that appeals to all traveler types. Whether you’re a backpacker on a budget or a honeymooner seeking luxury, Havelock has something special: picture-perfect sunsets at Radhanagar Beach, vibrant coral reefs off Elephant Beach, dense jungles, and a range of accommodations from bamboo huts to five-star resorts. Time moves slower here, and most visitors end up extending their stay once they fall in love with Havelock’s charm.
-                                </p>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Content Based on Toggle */}
+                {!showComprehensive ? (
+                    // Brief Guide Content - Neutral Theme with Contextual Colors
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-10">
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Info className={`mr-3 ${neutralIconColor}`} size={24} /> Overview
+                                </h2>
+                                <div className={cardBaseStyle}>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}>Havelock (Swaraj Dweep) is the most popular Andaman island, celebrated for stunning white-sand beaches like Radhanagar, vibrant coral reefs perfect for snorkeling and diving, and a relaxed tropical vibe catering to all budgets.</p>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Navigation className={`mr-3 ${neutralIconColor}`} size={24} /> Getting There & Around
+                                </h2>
+                                <div className={cardBaseStyle}>
+                                    <ul className="space-y-4">
+                                        <li className="flex items-start">
+                                            <div className={`${neutralBg} p-2 rounded-full mr-3 mt-1 border ${neutralBorder}`}><Ship className={neutralIconColor} size={16} /></div>
+                                            <div><span className={`font-medium ${neutralText}`}>Ferries:</span><span className={neutralTextLight}> Daily private (1.5-2.5 hrs) & government (2.5-3 hrs) ferries from Port Blair & Neil Island. Book ahead.</span></div>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <div className={`${neutralBg} p-2 rounded-full mr-3 mt-1 border ${neutralBorder}`}><Bike className={neutralIconColor} size={16} /></div>
+                                            <div><span className={`font-medium ${neutralText}`}>On Island:</span><span className={neutralTextLight}> Scooter rental (~₹500/day) is popular. Autos, taxis, shared jeeps, and bicycles also available.</span></div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Calendar className={`mr-3 ${neutralIconColor}`} size={24} /> Best Time to Visit
+                                </h2>
+                                <div className={cardBaseStyle}>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {/* Contextual seasonal cards */}
+                                        <div className={`${infoBg} rounded-xl p-4 border ${infoBorder}`}>
+                                            <h3 className={`font-semibold ${infoText} mb-2`}>Nov–Feb</h3>
+                                            <p className={`text-sm ${neutralTextLight}`}>Peak season, best weather, calm seas.</p>
+                                        </div>
+                                        <div className={`${warningBg} rounded-xl p-4 border ${warningBorder}`}>
+                                            <h3 className={`font-semibold ${warningText} mb-2`}>Mar–May</h3>
+                                            <p className={`text-sm ${neutralTextLight}`}>Warmer, excellent water visibility.</p>
+                                        </div>
+                                        <div className={`${successBg} rounded-xl p-4 border ${successBorder}`}>
+                                            <h3 className={`font-semibold ${successText} mb-2`}>Jun–Sep</h3>
+                                            <p className={`text-sm ${neutralTextLight}`}>Monsoon, fewer activities, lush scenery.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Waves className={`mr-3 ${neutralIconColor}`} size={24} /> Key Attractions & Activities
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Attraction Cards - Remain Neutral */}
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Radhanagar Beach (No. 7)</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>World-famous white sand beach, ideal for swimming and sunsets.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Elephant Beach</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Accessible by boat/trek. Known for coral reefs, snorkeling, and water sports.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Scuba Diving</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Numerous dive sites for beginners and certified divers. Many PADI centers.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Kalapathar Beach</h3>
+                                        <p className={`text-sm ${neutralTextLight}`}>Scenic beach with black rocks, perfect for sunrise views and photography.</p>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* Sidebar - Contextual Colors */}
+                        <aside className="lg:col-span-1 space-y-8">
+                            {/* Accommodation Brief */}
+                            <div className={cardBaseStyle}>
+                                <h3 className={`text-lg font-semibold ${neutralText} mb-4 flex items-center`}>
+                                    <Bed className={`mr-2 ${neutralIconColor}`} size={20} /> Accommodation
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${neutralIconColor} flex-shrink-0`} size={16} /><span>Widest range: Budget beach huts, mid-range resorts (Symphony Palms, Dolphin), luxury stays (Taj, Barefoot).</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${neutralIconColor} flex-shrink-0`} size={16} /><span>Book well in advance for peak season.</span></li>
+                                </ul>
                             </div>
-                        </div>
-                    </section>
+                            {/* Food Brief */}
+                            <div className={cardBaseStyle}>
+                                <h3 className={`text-lg font-semibold ${neutralText} mb-4 flex items-center`}>
+                                    <Utensils className={`mr-2 ${neutralIconColor}`} size={20} /> Food Highlights
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${neutralIconColor} flex-shrink-0`} size={16} /><span>Fresh seafood, local thalis, popular cafes (Full Moon, Anju Coco), international options, resort dining.</span></li>
+                                </ul>
+                            </div>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Route className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Getting There & Getting Around</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/havelock-map-transport.jpg" // Placeholder
-                                alt="Map showing Havelock transport options"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong className="text-gray-800">Getting There (By Sea):</strong> Havelock Island lies about 70 km northeast of Port Blair and is primarily accessed by ferry. Multiple ferry services operate daily:
-                        </p>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Private Ferries:</strong> Modern high-speed catamarans (Makruzz, Nautika, etc.) take 1.5–2.5 hours. Book online in advance. Preferred for comfort and speed.</li>
-                            <li><strong className="text-gray-800">Government Ferry:</strong> Cheaper but slower (2.5-3 hours), seats fill fast (local priority). Buy tickets at the counter. Open deck offers views.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong className="text-gray-800">By Helicopter/Sea Plane:</strong> Seaplane services are currently not operational. Helicopter seats are very limited, primarily for locals/emergencies. Ferries are the standard mode of transport. Ferries also connect Havelock directly with Neil Island (1 hr trip).
-                        </p>
-                        <p className="text-base leading-relaxed mb-4">
-                            <strong className="text-gray-800">Getting Around:</strong> Havelock is small (18 km end-to-end) with one main road. Options include:
-                        </p>
-                        <ul className="list-disc list-inside space-y-2 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Two-Wheeler Rentals:</strong> Most popular (~₹500/day + fuel). Explore freely. Drive carefully, especially after dark (minimal lighting). Petrol pump closes by 5 PM.</li>
-                            <li><strong className="text-gray-800">Taxis:</strong> Available at jetty. Fixed point-to-point rates (Jetty to Radhanagar ~₹1000). Can hire for a day (~₹2000-2500). Good for families.</li>
-                            <li><strong className="text-gray-800">Auto-Rickshaws:</strong> Budget option (short rides ₹50-100, longer rides ₹500-700). Agree on fare beforehand.</li>
-                            <li><strong className="text-gray-800">Public Bus & Shared Jeeps:</strong> Infrequent local bus. Shared jeeps used by locals (very cheap). Ask locals for timings/routes.</li>
-                            <li><strong className="text-gray-800">Bicycles:</strong> Rentable at some guesthouses. Eco-friendly way to explore nearby areas. Hot midday; carry light for night biking.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed font-medium text-cyan-600 bg-cyan-50 p-3 rounded-xl mb-4">
-                            Orientation Tip: Areas referred by village/beach numbers (e.g., Beach No. 5 = Vijaynagar). Main clusters: Govind Nagar (Jetty/Market), Vijay Nagar (Resorts), Radhanagar (West Coast). Hard to get lost.
-                        </p>
-                    </section>
+                            {/* Safety & Health - Warning Orange */}
+                            <div className={`${warningBg} rounded-2xl p-6 shadow-sm border ${warningBorder}`}>
+                                <h3 className={`text-lg font-semibold ${warningText} mb-4 flex items-center`}>
+                                    <Shield className={`mr-2 ${warningIconColor}`} size={20} /> Safety & Health
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Use reef-safe sunscreen, stay hydrated. Observe beach flags.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Wear water shoes on rocky shores. Basic PHC available.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Drive scooters carefully, especially at night.</span></li>
+                                </ul>
+                            </div>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Calendar className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Best Time to Visit</h3>
+                            {/* Eco-Tourism - Success Green */}
+                            <div className={`${successBg} rounded-2xl p-6 shadow-sm border ${successBorder}`}>
+                                <h3 className={`text-lg font-semibold ${successText} mb-4 flex items-center`}>
+                                    <Leaf className={`mr-2 ${successIconColor}`} size={20} /> Sustainability Tips
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Avoid single-use plastics; use reusable bottles.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Do not touch or stand on coral. Use reef-safe sunscreen.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Dispose of waste responsibly; participate in clean-ups if possible.</span></li>
+                                </ul>
+                            </div>
+                        </aside>
+                    </div>
+                ) : (
+                    // Comprehensive Guide Content - Neutral Theme with Contextual Colors
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-12">
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Info className={`mr-3 ${neutralIconColor}`} size={24} /> Detailed Overview
+                                </h2>
+                                <div className={`${cardBaseStyle} space-y-4`}>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}>Havelock Island, officially Swaraj Dweep since 2018, is the undeniable star of the Andaman archipelago. Renowned globally for its breathtaking beaches, particularly the award-winning Radhanagar Beach, Havelock offers a quintessential tropical paradise experience. Its crystal-clear turquoise waters lap onto powdery white sands, fringed by lush green forests. Beyond the stunning coastline, the island boasts vibrant coral reefs teeming with marine life, establishing it as a premier destination for scuba diving and snorkeling in India.</p>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}>Despite its popularity, Havelock maintains a relaxed, laid-back atmosphere. It caters to a wide spectrum of travelers, offering everything from basic bamboo beach huts favoured by backpackers to opulent luxury resorts perfect for honeymooners and families. The island provides a perfect balance of natural beauty, adventure activities, comfortable amenities, and diverse dining options, making it an unforgettable destination for anyone visiting the Andamans.</p>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Navigation className={`mr-3 ${neutralIconColor}`} size={24} /> Comprehensive Travel Guide
+                                </h2>
+                                <div className={`${cardBaseStyle} space-y-6`}>
+                                    <div>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Reaching Havelock Island:</h3>
+                                        <ul className="space-y-3 pl-4 list-disc list-outside marker:text-gray-400">
+                                            <li className={neutralTextLight}><strong className={neutralText}>By Ferry (Standard):</strong> This is the primary mode. Regular ferry services connect Havelock (Havelock Jetty) with Port Blair (Phoenix Bay Jetty) and Neil Island (Bharatpur Jetty).
+                                                <ul className="list-['-_'] list-inside pl-4 mt-1 space-y-1">
+                                                    <li><strong className="text-gray-700">Private Ferries:</strong> Companies like Makruzz, Nautika (formerly Green Ocean), ITT Majestic offer faster (1.5-2.5 hrs from Port Blair), air-conditioned catamaran services. Book online well in advance, especially during peak season. More expensive but comfortable.</li>
+                                                    <li><strong className="text-gray-700">Government Ferries:</strong> Slower (2.5-3 hrs+ from Port Blair), more basic, and significantly cheaper. Tickets are harder to book online (often requires visiting the DSS counter in Port Blair). Prioritizes locals; tourists get remaining seats. Offers an open deck experience.</li>
+                                                </ul>
+                                            </li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>By Helicopter/Seaplane:</strong> Seaplane services are currently non-operational (as of recent updates). Helicopter services (Pawan Hans) exist but have very limited seats, are expensive, weather-dependent, and primarily reserved for islanders or medical emergencies. Not a reliable option for tourist travel planning.</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Getting Around Havelock:</h3>
+                                        <ul className="space-y-3 pl-4 list-disc list-outside marker:text-gray-400">
+                                            <li className={neutralTextLight}><strong className={neutralText}>Scooter/Motorbike Rental:</strong> The most popular and convenient way to explore (~₹400-600 per day plus fuel). Rental shops are near the jetty and along the main road. Requires a valid driving license. Drive cautiously, roads can be narrow, and lighting is minimal at night. Petrol pump has limited hours.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Auto-Rickshaws:</strong> Readily available for point-to-point travel. Fares are somewhat fixed but always confirm before starting (e.g., Jetty to Radhanagar approx. ₹500-700, shorter trips ₹50-150).</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Taxis (Cars/Vans):</strong> Available for hire, especially for families or groups. Can be hired for full-day or half-day tours (~₹2000-3000) or point-to-point transfers. Arrange through your hotel or at the jetty.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Bicycle Rental:</strong> Eco-friendly option for exploring nearby areas (Beaches 1-5). Available at some guesthouses. Suitable for shorter distances due to heat and humidity.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Public Bus / Shared Jeeps:</strong> Limited government bus service runs along the main road. Shared jeeps are used by locals and offer a very cheap way to travel, though timings and routes might be unclear to tourists.</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Walking:</strong> Possible around specific beach areas (e.g., along Beach No. 5) but distances between main attractions (Jetty, Radhanagar, Kalapathar) are significant.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Waves className={`mr-3 ${neutralIconColor}`} size={24} /> Exploring Attractions & Activities
+                                </h2>
+                                <div className="space-y-6">
+                                    {/* Attraction Cards - Remain Neutral */}
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Radhanagar Beach (Beach No. 7)</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Consistently ranked among Asia's best beaches. Features a vast expanse of fine white sand, calm turquoise waters ideal for swimming, and a backdrop of lush forest. Famous for spectacular sunsets. Basic facilities like changing rooms, lockers, and snack stalls available. The nearby Neil's Cove offers a short trail to a serene lagoon (check tide timings). A must-visit.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Elephant Beach</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Accessible via a 20-minute speedboat ride or a ~40-minute guided jungle trek. Renowned for its shallow-water coral reef, making it excellent for snorkeling (equipment rentable). Hub for various water sports like Sea Walk, Jet Ski, Banana Boat rides. Can get crowded; try visiting early morning. The beach itself was partially damaged by the 2004 tsunami but the reef remains vibrant.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Kalapathar Beach</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Located on the eastern coast, this beach is characterized by the black rocks (kala pathar) scattered along the shoreline and contrasting emerald waters. It's a picturesque spot, especially popular for watching the sunrise. Less suitable for swimming due to rocks but perfect for photography and peaceful walks. Limited stalls sell refreshments.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Vijaynagar Beach (Beach No. 5) & Govind Nagar Beach (Beach No. 3)</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>These beaches form a long stretch on the east coast where many resorts are located. Waters are calm and shallow, suitable for swimming, especially during high tide. Great for long walks, sunrises, and spotting marine life in tide pools during low tide (wear reef shoes). Kayaking is popular here.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Scuba Diving</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}>Havelock is arguably the best place for scuba diving in India. Numerous PADI/SSI certified dive centers offer 'Discover Scuba Dives' (for non-certified beginners) and courses (Open Water, Advanced, etc.). Popular dive sites include The Wall, Aquarium, Dixon's Pinnacle, Johnny's Gorge, and Jackson's Bar, offering diverse marine life from colourful fish and turtles to rays and occasionally reef sharks. Visibility is best from Feb to Apr.</p>
+                                    </div>
+                                    <div className={cardBaseStyle}>
+                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Other Activities</h3>
+                                        <p className={`text-base leading-relaxed ${neutralTextLight}`}><strong>Snorkeling:</strong> Easily done at Elephant Beach, Neil's Cove, or via boat trips to nearby reefs. <strong>Kayaking:</strong> Explore the coastline or mangrove creeks (daytime or night bioluminescence tours). <strong>Game Fishing:</strong> Charters available for deep-sea fishing enthusiasts. <strong>Trekking:</strong> Guided treks through the forest, including the path to Elephant Beach. <strong>Bird Watching:</strong> Possible in forested areas.</p>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h2 className={sectionHeadingStyle}>
+                                    <Bed className={`mr-3 ${neutralIconColor}`} size={24} /> Accommodation & Food
+                                </h2>
+                                <div className={`${cardBaseStyle} space-y-4`}>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}><strong>Accommodation:</strong> Havelock caters to all budgets. Backpackers find affordable bamboo huts and dorms mainly near Govind Nagar (Beach 3) and Vijay Nagar (Beach 5). Mid-range options include comfortable resorts with AC, pools, and restaurants scattered along the east coast (e.g., Symphony Palms, Havelock Island Beach Resort, TSG Blue, Dolphin Resort). For luxury, Taj Exotica offers pool villas near Radhanagar, Barefoot at Havelock provides eco-luxury jungle cottages, SeaShell Havelock boasts stunning sea views and an infinity pool, and Jalakara offers exclusive boutique villas inland.</p>
+                                    <p className={`text-base leading-relaxed ${neutralTextLight}`}><strong>Food:</strong> Dining is diverse. Fresh seafood is abundant – try grilled fish, lobster, or crab at beach shacks or restaurants like Anju Coco or New Lighthouse. Popular multi-cuisine cafes include Full Moon Café, Something Different, and Nemo Café (at Havelock Island Beach Resort). Vegetarian options are plentiful at places like Annapurna and Icy Spicy. High-end resorts offer fine dining experiences (e.g., Turtle House at Taj, B3 at Barefoot). Many dive centers have attached cafes serving good breakfasts and coffee.</p>
+                                </div>
+                            </section>
                         </div>
-                        <div className="grid md:grid-cols-3 gap-6 mb-6">
-                            <div className="relative h-[180px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/havelock-winter.jpg" // Placeholder
-                                    alt="Havelock beach in winter"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2 text-center">
-                                    Nov-Feb (Peak)
+
+                        {/* Sidebar - Contextual Colors */}
+                        <aside className="lg:col-span-1 space-y-8">
+                            {/* Best Time to Visit - Contextual */}
+                            <div className={cardBaseStyle}>
+                                <h3 className={`text-lg font-semibold ${neutralText} mb-4 flex items-center`}>
+                                    <Calendar className={`mr-2 ${neutralIconColor}`} size={20} /> Best Time to Visit
+                                </h3>
+                                <div className="space-y-3">
+                                    <div className={`${infoBg} rounded-lg p-3 border ${infoBorder}`}>
+                                        <h4 className={`font-medium ${infoText} text-sm`}>Oct–May (Dry Season)</h4>
+                                        <p className={`text-xs ${neutralTextLight}`}>Ideal conditions. Peak tourism Nov-Feb. Best visibility Feb-Apr.</p>
+                                    </div>
+                                    <div className={`${warningBg} rounded-lg p-3 border ${warningBorder}`}>
+                                        <h4 className={`font-medium ${warningText} text-sm`}>Feb-Apr (Shoulder)</h4>
+                                        <p className={`text-xs ${neutralTextLight}`}>Often considered best for diving/snorkeling due to calm seas & clarity.</p>
+                                    </div>
+                                    <div className={`${successBg} rounded-lg p-3 border ${successBorder}`}>
+                                        <h4 className={`font-medium ${successText} text-sm`}>Jun–Sep (Monsoon)</h4>
+                                        <p className={`text-xs ${neutralTextLight}`}>Rainy, activities limited, ferry disruptions possible. Lower prices, lush.</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="relative h-[180px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/havelock-summer.jpg" // Placeholder
-                                    alt="Havelock under the summer sun"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2 text-center">
-                                    Mar-May (Warm)
-                                </div>
-                            </div>
-                            <div className="relative h-[180px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/havelock-monsoon.jpg" // Placeholder
-                                    alt="Lush green Havelock in monsoon"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2 text-center">
-                                    Jun-Sep (Rainy)
-                                </div>
-                            </div>
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            Havelock has a tropical climate. The best time is the dry season:
-                            <ul className="list-disc list-inside space-y-2 my-3 pl-4 text-gray-700">
-                                <li><strong className="text-gray-800">October – February (Winter):</strong> Pleasant weather (25-30°C), calm seas, excellent for water sports. Dec-Jan is peak season (book ahead!).</li>
-                                <li><strong className="text-gray-800">March – May (Spring/Summer):</strong> Warmer, still good conditions. Feb-Mar often have the BEST underwater visibility for diving/snorkeling due to calm waters and low plankton.</li>
-                                <li><strong className="text-gray-800">June – September (Monsoon):</strong> Heavy rains, occasional storms. Lush greenery, but many activities might be limited or cancelled. Ferries can be erratic.</li>
-                            </ul>
-                            Plan for November to early May for the ideal experience. Brief showers can occur anytime.
-                        </p>
-                        <p className="text-base leading-relaxed font-medium text-cyan-600 bg-cyan-50 p-3 rounded-xl mb-4">
-                            Diving Tip: February and March usually offer the calmest seas and clearest water for underwater activities.
-                        </p>
-                    </section>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Home className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Accommodation (Budget to Luxury)</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/havelock-resort.jpg" // Placeholder
-                                alt="Beachfront resort in Havelock"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            Havelock offers the widest accommodation range in Andamans:
-                        </p>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Budget (₹500–3000):</strong> Beach huts (e.g., Flying Elephant, Emerald Gecko), dorms, simple cottages near Govind Nagar & Beach No.5. Basic amenities (fan, shared/cold bath). Perfect for backpackers. Camping is not allowed.</li>
-                            <li><strong className="text-gray-800">Mid-Range (₹4000–8000):</strong> Comfortable cottages/bungalows, often beachfront. Examples: Havelock Island Beach Resort, TSG Blue, Symphony Palms, Dolphin Resort (govt-run, great location). AC rooms, private baths, often pools/restaurants. Book ahead in peak season.</li>
-                            <li><strong className="text-gray-800">Premium (₹10,000+):</strong> Luxury resorts blending with nature. Examples: Taj Exotica (pool villas on Radhanagar), Barefoot at Havelock (jungle cottages near Radhanagar), SeaShell Havelock (infinity pool), Jalakara (exclusive boutique hotel inland). Offer spas, fine dining, top service.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed font-medium text-cyan-600 bg-cyan-50 p-3 rounded-xl mb-4">
-                            Booking Advice: Reserve accommodation well in advance, especially for peak season (Dec-Jan) and mid-range/luxury options. Many places arrange jetty pickups.
-                        </p>
-                    </section>
+                            {/* Safety & Health - Warning Orange */}
+                            <div className={`${warningBg} rounded-2xl p-6 shadow-sm border ${warningBorder}`}>
+                                <h3 className={`text-lg font-semibold ${warningText} mb-4 flex items-center`}>
+                                    <LifeBuoy className={`mr-2 ${warningIconColor}`} size={20} /> Safety & Health
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Use high SPF reef-safe sunscreen and stay hydrated.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Observe beach safety flags and lifeguard instructions. Avoid swimming alone or after dark.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Be cautious of sharp corals/rocks; wear water shoes in shallow reef areas.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Choose reputable operators for diving and water sports; check safety standards.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Drive scooters carefully; wear helmets. Roads are unlit at night.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Basic medical facilities (PHC) and pharmacies exist. Serious issues require transfer to Port Blair.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${warningIconColor} flex-shrink-0`} size={16} /><span>Drink bottled/filtered water. Use insect repellent, especially evenings.</span></li>
+                                </ul>
+                            </div>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Utensils className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Food & Dining</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/havelock-food.jpg" // Placeholder
-                                alt="Seafood meal in Havelock"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <p className="text-base leading-relaxed mb-4">
-                            Havelock is a relative foodie paradise with diverse options:
-                        </p>
-                        <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                            <li><strong className="text-gray-800">Seafood & Local Cuisine:</strong> Fresh grilled fish, lobster, crab curry are staples. Try local fish thalis (₹200+) at beach shacks or market dhabas. New Lighthouse Restaurant is famed for pick-your-own seafood.</li>
-                            <li><strong className="text-gray-800">Popular Cafés & Restaurants:</strong> Full Moon Café (eclectic, chill vibe), Anju Coco (seafood BBQ, continental), Something Different (seafront lounge, varied menu), Nemo Café (beachfront), Venom Bar (snacks, drinks). Icy Spicy (veg chaat/sweets). Annapurna (pure-veg North/South Indian).</li>
-                            <li><strong className="text-gray-800">International Flavors:</strong> Pizza, Israeli, Thai widely available. Sea Dragon (SeaShell resort - upscale Chinese/Thai), B3 (Barefoot resort - gourmet local ingredients). Dive center cafés often serve good breakfast/espresso.</li>
-                            <li><strong className="text-gray-800">Nightlife & Drinks:</strong> Not a party island. Bars like Venom Bar, Bonova Café (SeaShell) offer cocktails/music. Most resorts serve beer. Evenings are relaxed; places close by 10:30-11 PM.</li>
-                        </ul>
-                        <p className="text-base leading-relaxed font-medium text-cyan-600 bg-cyan-50 p-3 rounded-xl mb-4">
-                            Dining Etiquette: Service charge often added (5-10%). Be patient ("island time"). Menu items might be unavailable based on catch/supply. Must-try: Grilled fish, coconut milk curry.
-                        </p>
-                    </section>
+                            {/* Responsible Tourism - Success Green */}
+                            <div className={`${successBg} rounded-2xl p-6 shadow-sm border ${successBorder}`}>
+                                <h3 className={`text-lg font-semibold ${successText} mb-4 flex items-center`}>
+                                    <Leaf className={`mr-2 ${successIconColor}`} size={20} /> Responsible Tourism
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Say NO to single-use plastic. Carry reusable bottles/bags. Refill water.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Protect coral reefs: Do NOT touch, stand on, or collect coral/shells.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Use reef-safe sunscreen (check ingredients like oxybenzone).</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Dispose of all waste properly. Participate in or support beach clean-ups.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Respect wildlife: Observe marine life and birds from a distance. Do not feed animals.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Conserve water and electricity. Support eco-conscious businesses.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${successIconColor} flex-shrink-0`} size={16} /><span>Dress modestly when away from the beach. Ask permission before taking photos of locals.</span></li>
+                                </ul>
+                            </div>
 
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <MapPin className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Key Attractions</h3>
-                        </div>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/radhanagar-beach-day.jpg" // Placeholder
-                                    alt="Daytime at Radhanagar Beach"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Radhanagar Beach</div>
+                            {/* Traveler Tips - Tip Yellow */}
+                            <div className={`${tipBg} rounded-2xl p-6 shadow-sm border ${tipBorder}`}>
+                                <h3 className={`text-lg font-semibold ${tipText} mb-4 flex items-center`}>
+                                    <MessageCircle className={`mr-2 ${tipIconColor}`} size={20} /> Traveler Tips
+                                </h3>
+                                <ul className="space-y-3">
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Book accommodation and ferry tickets (especially private ones) far in advance, particularly for Dec-Jan.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Carry sufficient cash. ATMs exist but can be unreliable or run out of money.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Mobile connectivity is limited (BSNL/Airtel generally best). Data speeds are slow. Download offline maps.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Wi-Fi is available at many cafes/resorts but is often slow and chargeable. Don't rely on it for heavy usage.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Pack light clothing, swimwear, sunglasses, hat, insect repellent, basic first-aid, and any personal medications.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Allow buffer time for travel, especially ferry schedules which can change due to weather.</span></li>
+                                    <li className={`flex items-start text-sm ${neutralTextLight}`}><Check className={`mr-2 mt-1 ${tipIconColor} flex-shrink-0`} size={16} /><span>Power cuts can occur; carry a power bank.</span></li>
+                                </ul>
                             </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/elephant-beach-watersports.jpg" // Placeholder
-                                    alt="Water sports at Elephant Beach"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Elephant Beach</div>
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/kalapathar-beach.jpg" // Placeholder
-                                    alt="Kalapathar Beach sunrise"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Kalapathar Beach</div>
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/vijaynagar-beach.jpg" // Placeholder
-                                    alt="Vijaynagar Beach tranquility"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Vijaynagar Beach (No. 5)</div>
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/havelock-diving.jpg" // Placeholder
-                                    alt="Scuba diving in Havelock"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Scuba Diving Sites</div>
-                            </div>
-                            <div className="relative h-[250px] rounded-xl overflow-hidden">
-                                <Image
-                                    src="/images/havelock-kayaking.jpg" // Placeholder
-                                    alt="Kayaking through mangroves"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white p-2">Mangrove Kayaking</div>
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="border-l-4 border-cyan-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Radhanagar Beach (Beach No.7):</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Asia’s best beach contender. Powdery white sand, turquoise water, stunning sunsets. Perfect for swimming. Basic facilities (changing rooms, snacks). Neil's Cove trail nearby (lagoon walk). Heed lifeguard flags. Pristine & protected.
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-cyan-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Elephant Beach:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Adventure & coral hub. Access via speedboat (20 min) or jungle trek (40 min). Excellent shallow snorkeling near shore. Hub for water sports (jetski, sea walk, banana boat). Can get busy midday. Go early. Limited refreshments.
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-cyan-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Kalapathar Beach:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    East coast beach with black rocks, emerald water. Scenic, great for photos, especially sunrise. Not ideal for swimming (rocks). Good for quiet walks, picnics. Basic stalls at entrance.
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-cyan-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Vijaynagar (Beach No.5) & Govind Nagar Beach:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Long eastern coastline with many resorts. Calm lagoons, good for swimming/kayaking at high tide. Tide pools at low tide (wear aqua shoes). Great for sunrise walks. Quieter than Radhanagar.
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-cyan-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Scuba Diving & Snorkeling Sites:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Havelock is a diver's paradise. Numerous dive shops offer courses & fun dives. Popular sites: Elephant Beach Reef (beginners), Seduction Point, Aquarium, Jackson’s Bar, The Wall. Excellent visibility Nov-Apr. Snorkeling trips widely available.
-                                </p>
-                            </div>
-                            <div className="border-l-4 border-cyan-500 pl-4">
-                                <p className="text-base font-semibold text-gray-800 mb-2">Others:</p>
-                                <p className="text-base leading-relaxed mb-4">
-                                    Mangrove kayaking (daytime or night bioluminescence tours). Neil's Cove near Radhanagar (quiet snorkel spot). Govind Nagar Beach #2 Lagoon (spot juvenile sharks seasonally).
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Users className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                            <h3 className="text-xl font-semibold text-gray-800">Activities & Experiences (By Traveler Type)</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/havelock-activities.jpg" // Placeholder
-                                alt="Diverse activities in Havelock"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div className="bg-cyan-50 p-4 rounded-xl">
-                                <h4 className="text-lg font-semibold text-cyan-700 mb-2">Backpackers</h4>
-                                <p className="text-base leading-relaxed">Stay in beach huts/dorms. Affordable PADI courses. Rent scooters. Socialize at cafés (Full Moon, Anju Coco). Eat at local dhabas. Catch sunrise at Kalapathar. Safe for solo travelers.</p>
-                            </div>
-                            <div className="bg-cyan-50 p-4 rounded-xl">
-                                <h4 className="text-lg font-semibold text-cyan-700 mb-2">Families</h4>
-                                <p className="text-base leading-relaxed">Gentle beaches (Radhanagar). Glass-bottom boat, Sea Walk at Elephant Beach. Kid-friendly resorts with play areas. Neil's Cove trek. Stargazing. Easy food options. Carry beach toys!</p>
-                            </div>
-                            <div className="bg-cyan-50 p-4 rounded-xl">
-                                <h4 className="text-lg font-semibold text-cyan-700 mb-2">Couples & Honeymooners</h4>
-                                <p className="text-base leading-relaxed">Private scuba dives. Candlelight beach dinners. Couples spa treatments. Sunset picnics at Radhanagar. Quiet beach walks (Vijaynagar). Mangrove kayaking. Romantic photo ops.</p>
-                            </div>
-                            <div className="bg-cyan-50 p-4 rounded-xl">
-                                <h4 className="text-lg font-semibold text-cyan-700 mb-2">Adventure Seekers</h4>
-                                <p className="text-base leading-relaxed">Advanced/Night Diving. Game fishing trips. Mountain biking inland trails. Parasailing. Night kayaking (bioluminescence). Forest trekking. Freediving courses.</p>
-                            </div>
-                            <div className="bg-cyan-50 p-4 rounded-xl lg:col-span-2">
-                                <h4 className="text-lg font-semibold text-cyan-700 mb-2">Luxury Travelers</h4>
-                                <p className="text-base leading-relaxed">Pool villas (Taj Exotica). Private yacht trips. Bespoke tours/nature walks. Fine dining (Turtle House, Mahua). Helicopter transfers (arrange ahead). Exclusive spa treatments (Jalakara). Personalized service at high-end resorts.</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="mb-8 bg-white p-6 rounded-2xl shadow-md">
-                        <div className="flex items-start mb-3">
-                            <Users className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} /> {/* Keeping Users icon */}
-                            <h3 className="text-xl font-semibold text-gray-800">Cultural Insights & Local Etiquette</h3>
-                        </div>
-                        <div className="relative h-[250px] w-full rounded-xl overflow-hidden mb-6">
-                            <Image
-                                src="/images/havelock-local-life.jpg" // Placeholder
-                                alt="Local market scene in Havelock"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
-                        </div>
-                        <div className="space-y-4">
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Local Community:</strong> Settlers from mainland India (mostly Bengali). Friendly, laid-back. No indigenous tribes on Havelock. Many work in tourism/fishing. "Namaste" or "Hello" appreciated.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Lifestyle:</strong> Slower pace ("island time"). Be patient with service. Locals are curious and conversational.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Dress Code:</strong> Beachwear fine on beaches. Cover up (shirt/sarong) in villages/market. Modest attire respected. No topless sunbathing.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Photography Etiquette:</strong> Always ask permission before photographing people, especially children/women. Most are happy to oblige.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Language:</strong> Hindi & Bengali common. English widely understood in tourist areas.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Environment & Respect:</strong> Locals value the environment. Avoid littering. Respect marine life. Joining community clean-ups earns goodwill.
-                            </p>
-                            <p className="text-base leading-relaxed mb-4">
-                                <strong className="text-gray-800">Religion & Culture Mix:</strong> Small temples/churches. Welcoming during festivals (e.g., Durga Puja). Remove shoes at temples. Strong diving sub-culture adds cosmopolitan vibe.
-                            </p>
-                        </div>
-                    </section>
-
-                    <div className="grid md:grid-cols-2 gap-6 mb-8">
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <LifeBuoy className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} /> {/* Using LifeBuoy for safety */}
-                                <h3 className="text-xl font-semibold text-gray-800">Safety Tips & Health Advice</h3>
-                            </div>
-                            <div className="relative h-[200px] w-full rounded-xl overflow-hidden mb-6">
-                                <Image
-                                    src="/images/havelock-safety-sign.jpg" // Placeholder
-                                    alt="Beach safety sign in Havelock"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                            </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li><strong className="text-gray-800">Sun & Heat:</strong> Use high SPF reef-safe sunscreen. Stay hydrated (coconut water!). Hat/sunglasses. Take shade breaks midday.</li>
-                                <li><strong className="text-gray-800">Swimming:</strong> Observe beach flags (Red=No Swim). Don't swim too far out. Avoid dawn/dusk swimming near mangroves (rare croc advisory). Use life vest if unsure.</li>
-                                <li><strong className="text-gray-800">Marine Life:</strong> Don't touch coral/creatures. Watch for jellyfish (carry vinegar). Wear water shoes in rocky shallows (stonefish risk).</li>
-                                <li><strong className="text-gray-800">Night Safety:</strong> Very low crime. Minimal street lights - use flashlight. Drive scooters slowly at night. Lock rooms/valuables.</li>
-                                <li><strong className="text-gray-800">Wildlife & Trekking:</strong> Watch step in forests (snakes rare). Use repellent (mosquitoes). Guide recommended for long treks.</li>
-                                <li><strong className="text-gray-800">Transport Safety:</strong> Wear helmet on scooter. Beware potholes/animals. Allow buffer time for return ferries before flights.</li>
-                                <li><strong className="text-gray-800">Health:</strong> Basic PHC & pharmacies available. Serious issues require evacuation to Port Blair. Carry first-aid kit, personal meds. Drink bottled/filtered water. Be mindful with street food.</li>
-                                <li><strong className="text-gray-800">Communication:</strong> BSNL/Airtel work best; Jio spotty. Data slow (3G/4G). Wi-Fi limited, often slow.</li>
-                            </ul>
-                        </section>
-
-                        <section className="bg-white p-6 rounded-2xl shadow-md">
-                            <div className="flex items-start mb-3">
-                                <Recycle className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} /> {/* Using Recycle for sustainability */}
-                                <h3 className="text-xl font-semibold text-gray-800">Sustainability Tips</h3>
-                            </div>
-                            <div className="relative h-[200px] w-full rounded-xl overflow-hidden mb-6">
-                                <Image
-                                    src="/images/havelock-sustainability.jpg" // Placeholder
-                                    alt="Eco-friendly practices in Havelock"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
-                                />
-                            </div>
-                            <ul className="list-disc list-inside space-y-3 mb-4 pl-4 text-gray-700">
-                                <li><strong className="text-gray-800">Reduce Plastics:</strong> Use reusable water bottles/bags. Refill water at resorts. Avoid single-use plastics.</li>
-                                <li><strong className="text-gray-800">No Littering:</strong> Dispose of waste properly. Pick up extra trash if you can ("+1 rule"). Join beach clean-ups.</li>
-                                <li><strong className="text-gray-800">Protect Coral:</strong> Don't touch/stand on coral. Use reef-safe sunscreen (oxybenzone-free). Practice good buoyancy.</li>
-                                <li><strong className="text-gray-800">Respect Wildlife:</strong> Observe turtles/marine life from distance. No flash photography for nesting turtles. Don't chase animals.</li>
-                                <li><strong className="text-gray-800">Choose Eco-Options:</strong> Support sustainable operators/dive shops/resorts. Prefer boats using moorings.</li>
-                                <li><strong className="text-gray-800">Conserve Resources:</strong> Turn off AC/lights. Take shorter showers. Reuse towels. Water/power can be limited.</li>
-                                <li><strong className="text-gray-800">Leave No Trace:</strong> Don't collect shells/coral (illegal). Buy local handicrafts instead.</li>
-                                <li><strong className="text-gray-800">Support Local:</strong> Eat local, buy local souvenirs. Ensure community benefits from tourism.</li>
-                            </ul>
-                            <p className="text-base leading-relaxed mt-4 font-medium text-cyan-600">
-                                Help keep Havelock pristine for future generations. Travel responsibly.
-                            </p>
-                        </section>
+                        </aside>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Photo gallery section */}
-            <section className="mb-10 bg-white p-6 rounded-2xl shadow-md">
-                <div className="flex items-start mb-6">
-                    <Camera className="text-cyan-600 mr-2 mt-1 flex-shrink-0" size={20} />
-                    <h3 className="text-xl font-semibold text-gray-800">Photo Gallery</h3>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="relative h-[150px] rounded-xl overflow-hidden">
-                        <Image
-                            src="/images/havelock-gallery-1.jpg" // Placeholder
-                            alt="Havelock Island Gallery Image 1 - Beach view"
-                            fill
-                            style={{ objectFit: 'cover' }}
-                        />
+                {/* CTA Section - Contextual Color (Informational Blue) */}
+                <section className={`mt-16 ${infoBg} rounded-2xl p-8 border ${infoBorder} text-center`}>
+                    <h2 className={`text-2xl font-bold ${infoText} mb-4`}>Ready for Havelock Paradise?</h2>
+                    <p className={`${neutralTextLight} max-w-xl mx-auto mb-6`}>Plan your dream escape to Havelock Island. Explore packages including ferry transfers, stays, and activities like diving and snorkeling.</p>
+                    <div className="flex flex-wrap justify-center gap-4">
+                        <Link href="/packages?destination=havelock" className={buttonPrimaryStyle}>
+                            View Havelock Packages <ArrowRight className="ml-2" size={18} />
+                        </Link>
+                        <Link href="/contact" className={`inline-flex items-center justify-center bg-white text-gray-700 border ${neutralBorder} hover:bg-gray-50 font-semibold px-6 py-3 rounded-full transition-all duration-300`}>
+                            Enquire Now
+                        </Link>
                     </div>
-                    <div className="relative h-[150px] rounded-xl overflow-hidden">
-                        <Image
-                            src="/images/havelock-gallery-2.jpg" // Placeholder
-                            alt="Havelock Island Gallery Image 2 - Diving scene"
-                            fill
-                            style={{ objectFit: 'cover' }}
-                        />
-                    </div>
-                    <div className="relative h-[150px] rounded-xl overflow-hidden">
-                        <Image
-                            src="/images/havelock-gallery-3.jpg" // Placeholder
-                            alt="Havelock Island Gallery Image 3 - Resort ambiance"
-                            fill
-                            style={{ objectFit: 'cover' }}
-                        />
-                    </div>
-                    <div className="relative h-[150px] rounded-xl overflow-hidden">
-                        <Image
-                            src="/images/havelock-gallery-4.jpg" // Placeholder
-                            alt="Havelock Island Gallery Image 4 - Sunset colors"
-                            fill
-                            style={{ objectFit: 'cover' }}
-                        />
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            {/* Footer section */}
-            <div className="mt-12 pt-6 border-t border-gray-200 text-center text-gray-500 text-sm">
-                <p>Last updated: May 2025 • Havelock Island (Swaraj Dweep) Travel Guide</p>
             </div>
         </main>
     );

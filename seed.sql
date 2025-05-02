@@ -78,7 +78,7 @@ INSERT INTO services (id, name, description, type, provider_id, island_id, price
 -- included_services can be descriptive text or JSON array of service IDs
 -- =============================================
 INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (1, 'Andaman Trip - 3 Days Port Blair & Havelock Excursion', 'Explore Port Blair''s history with Cellular Jail and Corbyn''s Cove, witness the Light & Sound Show, and take an excursion to Havelock''s famed Radhanagar Beach.', '3 Days / 2 Nights', 20020, 2, 1, 1,
+  (1, '3 Days Port Blair & Havelock Excursion', 'Explore Port Blair''s history with Cellular Jail and Corbyn''s Cove, witness the Light & Sound Show, and take an excursion to Havelock''s famed Radhanagar Beach.', '3 Days / 2 Nights', 20020, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail Visit", "Light & Sound Show", "Corbyn''s Cove Beach", "Havelock Excursion", "Radhanagar Beach"],
       "inclusions": ["Airport Transfers", "Private AC Cab for sightseeing", "Accommodation (Port Blair)", "Breakfast", "Cruise tickets to Havelock (Round Trip)", "Entry tickets"],
@@ -93,7 +93,7 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_3d_1.jpg,/images/cellular_jail.jpg,/images/radhanagar.jpg'
   );
   INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (2, 'Andaman Adventure - 5 Days with Barren Island', 'An adventurous trip covering Port Blair''s history, Havelock''s beaches (Kalapathar, Radhanagar), an exciting excursion to Barren Island for snorkeling/fishing, Elephant Beach, and Chidiyatapu sunset.', '5 Days / 4 Nights', 88880, 2, 1, 1,
+  (2, '5 Days with Barren Island', 'An adventurous trip covering Port Blair''s history, Havelock''s beaches (Kalapathar, Radhanagar), an exciting excursion to Barren Island for snorkeling/fishing, Elephant Beach, and Chidiyatapu sunset.', '5 Days / 4 Nights', 88880, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail", "Corbyn''s Cove", "Havelock Island", "Kalapathar Beach", "Radhanagar Beach", "Barren Island Excursion", "Snorkeling & Fishing", "Elephant Beach", "Chidiyatapu Sunset"],
       "inclusions": ["Private AC Cab Transfers (as per itinerary)", "Accommodation (2N Port Blair, 2N Havelock)", "Breakfast", "Cellular Jail Entry & Light/Sound Show Tickets", "Cruise Tickets (PB-Hav, Hav-PB)", "Speed Boat to Barren Island", "Boat Ride to Elephant Beach", "Snorkeling/Fishing at Barren Island", "Refreshments on Barren Trip"],
@@ -110,7 +110,7 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_5d_barren_1.jpg,/images/barren_island.jpg,/images/kalapathar.jpg,/images/chidiyatapu.jpg'
   );
   INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (3, 'Andaman Explorer - 5 Days Port Blair, Havelock & Neil', 'Explore the best of three islands: Port Blair''s history, Havelock''s Radhanagar & Kalapathar beaches, and Neil Island''s Bharatpur, Laxmanpur & Sitapur beaches, plus Chidiyatapu sunset.', '5 Days / 4 Nights', 36465, 2, 1, 1,
+  (3, '5 Days Port Blair, Havelock & Neil', 'Explore the best of three islands: Port Blair''s history, Havelock''s Radhanagar & Kalapathar beaches, and Neil Island''s Bharatpur, Laxmanpur & Sitapur beaches, plus Chidiyatapu sunset.', '5 Days / 4 Nights', 36465, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail", "Corbyn''s Cove", "Havelock (Swaraj Dweep)", "Kalapathar Beach", "Radhanagar Beach", "Neil Island (Shaheed Dweep)", "Bharatpur Beach", "Laxmanpur Beach", "Sitapur Beach Sunrise", "Chidiyatapu Sunset"],
       "inclusions": ["Private AC Cab Transfers (as per itinerary)", "Accommodation (2N Port Blair, 1N Havelock, 1N Neil)", "Breakfast", "Cellular Jail Entry & Light/Sound Show Tickets", "Cruise Tickets (PB-Hav, Hav-Neil, Neil-PB)"],
@@ -127,7 +127,7 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_5d_neil_1.jpg,/images/neil_island.jpg,/images/bharatpur.jpg,/images/laxmanpur.jpg'
   );
   INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (4, 'Andaman Discovery - 6 Days Port Blair, Havelock & Neil', 'A comprehensive tour featuring Port Blair, 2 nights in Havelock including Radhanagar, Kalapathar & Elephant Beach (snorkeling included!), 1 night in Neil Island exploring its beaches, and Chidiyatapu sunset.', '6 Days / 5 Nights', 43175, 2, 1, 1,
+  (4, '6 Days Port Blair, Havelock & Neil', 'A comprehensive tour featuring Port Blair, 2 nights in Havelock including Radhanagar, Kalapathar & Elephant Beach (snorkeling included!), 1 night in Neil Island exploring its beaches, and Chidiyatapu sunset.', '6 Days / 5 Nights', 43175, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail", "Corbyn''s Cove", "Havelock (2N Stay)", "Kalapathar Beach", "Radhanagar Beach", "Elephant Beach", "Complimentary Snorkeling", "Neil Island Stay", "Bharatpur Beach", "Laxmanpur Beach", "Sitapur Beach Sunrise", "Chidiyatapu Sunset"],
       "inclusions": ["Private AC Cab Transfers (as per itinerary)", "Accommodation (2N Port Blair, 2N Havelock, 1N Neil)", "Breakfast", "Cellular Jail Entry & Light/Sound Show Tickets", "Cruise Tickets (PB-Hav, Hav-Neil, Neil-PB)", "Speedboat to Elephant Beach", "Complimentary Snorkeling at Elephant Beach"],
@@ -145,7 +145,7 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_6d_1.jpg,/images/elephant_beach.jpg,/images/sitapur_sunrise.jpg,/images/neil_bharatpur.jpg'
   );
   INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (5, 'Andaman Getaway - 3 Days Port Blair, Ross & North Bay', 'A short trip focusing on Port Blair''s historical sites (Cellular Jail, Corbyn''s Cove), the scenic Ross Island ruins, North Bay''s coral reefs, and the beautiful Chidiyatapu sunset.', '3 Days / 2 Nights', 13970, 2, 1, 1,
+  (5, '3 Days Port Blair, Ross & North Bay', 'A short trip focusing on Port Blair''s historical sites (Cellular Jail, Corbyn''s Cove), the scenic Ross Island ruins, North Bay''s coral reefs, and the beautiful Chidiyatapu sunset.', '3 Days / 2 Nights', 13970, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail Visit", "Light & Sound Show", "Corbyn''s Cove Beach", "Ross Island", "North Bay Island", "Coral Reefs", "Chidiyatapu Sunset"],
       "inclusions": ["Airport Transfers", "Private AC Cab for sightseeing", "Accommodation (2N Port Blair)", "Breakfast", "Boat tickets (PB-Ross-North Bay-PB)", "Entry tickets (Cellular Jail, L&S Show)"],
@@ -160,7 +160,7 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_3d_ross_1.jpg,/images/ross_island.jpg,/images/north_bay.jpg,/images/chidiyatapu_sunset.jpg'
   );
   INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (6, 'Andaman Mix - 4 Days Port Blair, Havelock, Ross & North Bay', 'Experience a mix of Andaman: Port Blair''s history, an overnight stay in Havelock exploring Radhanagar Beach, and the popular Ross & North Bay island tour, plus Chidiyatapu sunset.', '4 Days / 3 Nights', 29040, 2, 1, 1,
+  (6, '4 Days Port Blair, Havelock, Ross & North Bay', 'Experience a mix of Andaman: Port Blair''s history, an overnight stay in Havelock exploring Radhanagar Beach, and the popular Ross & North Bay island tour, plus Chidiyatapu sunset.', '4 Days / 3 Nights', 29040, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail", "Corbyn''s Cove", "Havelock Overnight Stay", "Radhanagar Beach", "Ross Island", "North Bay Island", "Chidiyatapu Sunset"],
       "inclusions": ["Private AC Cab Transfers", "Accommodation (2N Port Blair, 1N Havelock)", "Breakfast", "Cruise tickets (PB-Hav, Hav-PB)", "Boat tickets (Ross & North Bay)", "Entry tickets (Cellular Jail, L&S Show)"],
@@ -176,7 +176,7 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_4d_mix_1.jpg,/images/radhanagar_beach.jpg,/images/ross_island_ruins.jpg,/images/north_bay_snorkeling.jpg'
   );
   INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (7, 'Andaman Expedition - 7 Days with Baratang', 'An extensive Andaman journey covering Port Blair, a day trip to Baratang''s Limestone Caves & Mud Volcano, 2 nights in Havelock (Radhanagar, Kalapathar, Elephant Beach), 1 night in Neil Island, and Chidiyatapu.', '7 Days / 6 Nights', 54425, 2, 1, 1,
+  (7, '7 Days with Baratang', 'An extensive Andaman journey covering Port Blair, a day trip to Baratang''s Limestone Caves & Mud Volcano, 2 nights in Havelock (Radhanagar, Kalapathar, Elephant Beach), 1 night in Neil Island, and Chidiyatapu.', '7 Days / 6 Nights', 54425, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail", "Corbyn''s Cove", "Baratang Day Trip", "Limestone Caves", "Mud Volcano", "Jarawa Reserve Transit", "Havelock (2N)", "Kalapathar Beach", "Radhanagar Beach", "Elephant Beach", "Neil Island (1N)", "Bharatpur Beach", "Laxmanpur Beach", "Sitapur Beach Sunrise", "Chidiyatapu Sunset"],
       "inclusions": ["Private AC Cab Transfers (incl. Baratang)", "Accommodation (3N Port Blair, 2N Havelock, 1N Neil)", "Breakfast", "Cellular Jail Entry & Light/Sound Show Tickets", "Cruise Tickets (PB-Hav, Hav-Neil, Neil-PB)", "Baratang Boat Tickets", "Elephant Beach Speedboat Ticket", "Complimentary Snorkeling at Elephant Beach"],
@@ -195,7 +195,7 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_7d_baratang_1.jpg,/images/baratang_limestone.jpg,/images/mud_volcano.jpg,/images/elephant_beach_snorkeling.jpg'
   );
   INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (8, 'Andaman Escape - 4 Days Havelock & Elephant Beach', 'Focus on Port Blair''s history and Havelock''s beauty. Includes an overnight stay at Havelock, visits to Kalapathar & Radhanagar beaches, an excursion to Elephant Beach, and Chidiyatapu sunset on return.', '4 Days / 3 Nights', 29370, 2, 1, 1,
+  (8, '4 Days Havelock & Elephant Beach', 'Focus on Port Blair''s history and Havelock''s beauty. Includes an overnight stay at Havelock, visits to Kalapathar & Radhanagar beaches, an excursion to Elephant Beach, and Chidiyatapu sunset on return.', '4 Days / 3 Nights', 29370, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail", "Corbyn''s Cove", "Havelock Overnight", "Kalapathar Beach", "Radhanagar Beach", "Elephant Beach Excursion", "Chidiyatapu Sunset"],
       "inclusions": ["Private AC Cab Transfers", "Accommodation (2N Port Blair, 1N Havelock)", "Breakfast", "Cruise tickets (PB-Hav, Hav-PB)", "Boat ticket to Elephant Beach", "Entry tickets (Cellular Jail, L&S Show)"],
@@ -211,7 +211,7 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_4d_elephant_1.jpg,/images/kalapathar_beach.jpg,/images/elephant_beach_corals.jpg,/images/mundapahad.jpg'
   );
   INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (9, 'Andaman Getaway - 4 Days Neil Island Focus', 'A delightful trip covering Port Blair history, Havelock''s Radhanagar & Kalapathar, and an overnight stay in Neil Island exploring Bharatpur, Sitapur, and Laxmanpur beaches.', '4 Days / 3 Nights', 30030, 2, 1, 1,
+  (9, '4 Days Neil Island Focus', 'A delightful trip covering Port Blair history, Havelock''s Radhanagar & Kalapathar, and an overnight stay in Neil Island exploring Bharatpur, Sitapur, and Laxmanpur beaches.', '4 Days / 3 Nights', 30030, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail", "Corbyn''s Cove", "Havelock Island", "Kalapathar Beach", "Radhanagar Beach", "Neil Island Overnight", "Bharatpur Beach", "Sitapur Beach", "Laxmanpur Beach"],
       "inclusions": ["Private AC Cab Transfers", "Accommodation (1N Port Blair, 1N Havelock, 1N Neil)", "Breakfast", "Cruise tickets (PB-Hav, Hav-Neil, Neil-PB)", "Entry tickets (Cellular Jail, L&S Show)"],
@@ -227,7 +227,7 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_4d_neil_focus_1.jpg,/images/neil_bharatpur_beach.jpg,/images/sitapur_beach.jpg,/images/laxmanpur_beach_sunset.jpg'
   );
   INSERT INTO packages (id, name, description, duration, base_price, max_people, created_by, is_active, itinerary, included_services, images) VALUES
-  (10, 'Andaman Quick Bliss - 4 Days Havelock Special', 'A relaxed trip focusing on Port Blair''s highlights and a two-night stay in Havelock to enjoy Kalapathar and Radhanagar beaches at leisure.', '4 Days / 3 Nights', 29370, 2, 1, 1,
+  (10, '4 Days Havelock Special', 'A relaxed trip focusing on Port Blair''s highlights and a two-night stay in Havelock to enjoy Kalapathar and Radhanagar beaches at leisure.', '4 Days / 3 Nights', 29370, 2, 1, 1,
     '{
       "highlights": ["Cellular Jail", "Corbyn''s Cove", "Havelock (2N Stay)", "Kalapathar Beach", "Radhanagar Beach", "Leisure Time"],
       "inclusions": ["Private AC Cab Transfers (PB Sightseeing, Airport/Jetty)", "Accommodation (1N Port Blair, 2N Havelock)", "Breakfast", "Cruise tickets (PB-Hav, Hav-PB)", "Entry tickets (Cellular Jail, L&S Show)"],
@@ -242,6 +242,13 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '["Accommodation", "Transfers", "Breakfast", "Sightseeing (PB Only)", "Cruise Tickets", "Entry Tickets"]',
     '/images/andaman_4d_havelock_1.jpg,/images/havelock_kalapathar.jpg,/images/radhanagar_sunset.jpg,/images/port_blair_aerial.jpg'
   );
+
+
+  INSERT INTO islands (id, name, description, permit_required, images) VALUES
+  (5, 'Rangat', 'A tranquil town in Middle Andaman offering India’s longest mangrove boardwalk at Dhani Nallah, eco-parks like Amkunj Beach, and secluded turtle-nesting beaches.', 0, '/images/rangat.jpg'),
+  (6, 'Mayabundar', 'The administrative hub of North & Middle Andaman, notable for its cultural mix of Karen and Bengali communities, turtle-nesting Karmatang Beach, and nearby mangrove creeks.', 0, '/images/mayabundar.jpg'),
+  (7, 'Diglipur', 'The northern frontier town famed for the twin-islands of Ross & Smith, Saddle Peak National Park treks, limestone caves, mud volcanoes, and seasonal turtle nesting.', 0, '/images/diglipur.jpg'),
+  (8, 'Little Andaman', 'A remote southern island known for Butler Bay surf breaks, pristine beaches, White Surf and Whisper Wave waterfalls, and lush rainforest trails.', 0, '/images/little_andaman.jpg');
 
 
 INSERT INTO bookings (user_id, package_id, total_people, start_date, end_date, status, total_amount, payment_status)

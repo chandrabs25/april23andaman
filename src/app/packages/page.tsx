@@ -1,16 +1,46 @@
 // Path: ./src/app/packages/page.tsx
+// Theme: Neutral with Contextual Background Colors & Enhanced FAQ/Testimonials (FAQ bg changed to gray)
+
 'use client';
 export const dynamic = 'force-dynamic'
-import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react'; // Added useMemo
+import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Clock, Star, ArrowRight, Filter, X, Loader2, AlertTriangle, Package, SlidersHorizontal, DollarSign, RefreshCw, MessageSquare, HelpCircle, Camera, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  MapPin,
+  Clock,
+  Star,
+  ArrowRight,
+  Filter,
+  X,
+  Loader2,
+  AlertTriangle,
+  Package,
+  SlidersHorizontal,
+  DollarSign,
+  RefreshCw,
+  MessageSquare,
+  HelpCircle,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Heart,
+  Users,
+  Anchor,
+  Compass,
+  ChevronDown,
+  Check,
+  IndianRupee,
+  Info, // Added for info sections
+  Ban, // Added for error/exclusions
+  Quote, // Added for testimonials
+  Phone // Added for CTA
+} from 'lucide-react';
 import { useFetch } from '@/hooks/useFetch';
 
-// --- Define interfaces ---
-
-// Package data structure from API
+// --- Define interfaces (Keep as is) ---
 interface Package {
   id: number;
   name: string;
@@ -20,106 +50,159 @@ interface Package {
   max_people: number | null;
   created_by: number;
   is_active: number;
-  itinerary: string | null; 
-  included_services: string | null; 
-  images: string | null; 
+  itinerary: string | null;
+  included_services: string | null;
+  images: string | null;
 }
 
-// Island data structure from /api/destinations
 interface Island {
   id: number;
   name: string;
-  // Add other island properties if needed by filters/UI
 }
 
-// API response structure for destinations
 interface GetDestinationsApiResponse {
   success: boolean;
-  data: Island[]; // Expecting an array of islands
+  data: Island[];
   message?: string;
 }
 
-
-// API response structure for paginated packages
 interface PaginationInfo {
   totalItems: number;
   currentPage: number;
   pageSize: number;
   totalPages: number;
 }
+
 interface GetPackagesApiResponse {
   packages: Package[];
   pagination: PaginationInfo;
 }
 
-// Updated Filters State (removed activities)
 interface FiltersState {
-  destination: string; // Now corresponds to Island Name/ID ideally
   duration: string;
   priceRange: string;
-  // activities: string[]; // Removed
+  searchQuery: string;
 }
 // --- End Interfaces ---
 
-// --- LoadingSpinner Component ---
-const LoadingSpinner = ({ message = "Loading..." }: { message?: string }) => (
+// --- Define Common Styles (Neutral Theme with Contextual Colors) ---
+const primaryButtonBg = 'bg-gray-800';
+const primaryButtonHoverBg = 'hover:bg-gray-700';
+const primaryButtonText = 'text-white';
+
+const infoBg = 'bg-blue-50';
+const infoBorder = 'border-blue-100';
+const infoText = 'text-blue-800';
+const infoIconColor = 'text-blue-600';
+
+const successBg = 'bg-green-50';
+const successBorder = 'border-green-100';
+const successText = 'text-green-800';
+const successIconColor = 'text-green-600';
+
+const warningBg = 'bg-orange-50';
+const warningBorder = 'border-orange-100';
+const warningText = 'text-orange-800';
+const warningIconColor = 'text-orange-600';
+
+const errorBg = 'bg-red-50';
+const errorBorder = 'border-red-100';
+const errorText = 'text-red-800';
+const errorIconColor = 'text-red-600';
+
+const tipBg = 'bg-yellow-50'; // For active filters, no results
+const tipBorder = 'border-yellow-100';
+const tipText = 'text-yellow-800';
+const tipIconColor = 'text-yellow-700';
+
+const neutralBgLight = 'bg-gray-50'; // Used for FAQ section now
+const neutralBorderLight = 'border-gray-100';
+const neutralBg = 'bg-gray-100';
+const neutralBorder = 'border-gray-200';
+const neutralText = 'text-gray-800';
+const neutralTextLight = 'text-gray-600';
+const neutralIconColor = 'text-gray-600';
+
+const sectionPadding = "py-16 md:py-24"; // Consistent padding
+const sectionHeadingStyle = `text-2xl md:text-3xl font-bold ${neutralText}`;
+const cardBaseStyle = `bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:scale-[1.03] border ${neutralBorderLight} h-full group`;
+const buttonPrimaryStyle = `inline-flex items-center justify-center ${primaryButtonBg} ${primaryButtonHoverBg} ${primaryButtonText} font-semibold py-2.5 px-6 rounded-full transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1`;
+const cardLinkStyle = `inline-flex items-center ${neutralText} hover:${primaryButtonBg} hover:text-white font-medium text-sm group mt-auto pt-2 border-t ${neutralBorderLight} px-1`; // Adjusted link style
+// --- End Common Styles ---
+
+// --- LoadingSpinner Component (Apply Neutral Theme) ---
+const LoadingSpinner = ({ message = "Loading Packages..." }: { message?: string }) => (
   <div className="flex flex-col justify-center items-center min-h-[60vh] text-center py-20">
-    <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
-    <span className="text-lg font-medium text-gray-700">{message}</span>
+    <div className="relative w-16 h-16">
+      <div className={`absolute top-0 left-0 w-full h-full border-4 ${neutralBorder} rounded-full`}></div>
+      <div className={`absolute top-0 left-0 w-full h-full border-4 ${primaryButtonBg} rounded-full border-t-transparent animate-spin`}></div>
+    </div>
+    <span className={`mt-4 text-lg ${neutralText} font-medium`}>{message}</span>
   </div>
 );
 // --- End LoadingSpinner ---
 
-// --- Package Card Component (Simplified - No hardcoded destinations/activities) ---
+// --- Package Card Component (Apply Neutral Theme) ---
 interface PackageCardProps {
   pkg: Package;
 }
+
 const PackageCard = ({ pkg }: PackageCardProps) => {
   const imageUrl = pkg.images?.split(',')[0]?.trim() || '/images/placeholder.jpg';
-
-  // We cannot reliably display specific destinations/activities here
-  // without significant client-side parsing or API changes.
-  // Showing only data directly available in the pkg object.
+  const includedServices = pkg.included_services
+    ? pkg.included_services.split(',').slice(0, 3).map(service => service.trim())
+    : ['Hotel stays included', 'All transfers & sightseeing', 'Expert local guides'];
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100 h-full">
-      <div className="h-52 w-full relative flex-shrink-0">
+    <div className={cardBaseStyle}> {/* Use cardBaseStyle */}
+      <div className="h-52 w-full relative flex-shrink-0 overflow-hidden">
         <Image
           src={imageUrl}
           alt={pkg.name}
           fill
-          className="object-cover"
+          className="object-cover transition-transform duration-700 group-hover:scale-110"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           priority={false}
           onError={(e) => { if (e.currentTarget.src !== '/images/placeholder.jpg') e.currentTarget.src = '/images/placeholder.jpg'; }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-        <div className="absolute top-3 right-3 bg-blue-600 text-white text-sm font-bold py-1.5 px-3 rounded-full shadow-md">
-          ₹{pkg.base_price.toLocaleString('en-IN')}
+        {/* Price badge - Neutral dark */}
+        <div className={`absolute top-3 right-3 ${primaryButtonBg} ${primaryButtonText} text-sm font-bold py-1.5 px-3 rounded-full shadow-md flex items-center`}>
+          <IndianRupee size={12} className="mr-0.5" />{pkg.base_price.toLocaleString('en-IN')}
         </div>
-        <div className="absolute bottom-3 left-3 bg-white/90 text-blue-600 text-xs font-medium py-1 px-2 rounded-full flex items-center">
-          <Clock size={12} className="mr-1" />
+        {/* Duration badge - Neutral light */}
+        <div className={`absolute bottom-3 left-3 bg-white/90 ${neutralText} text-xs font-medium py-1.5 px-3 rounded-full flex items-center backdrop-blur-sm border ${neutralBorderLight}`}>
+          <Clock size={12} className="mr-1.5" />
           {pkg.duration}
         </div>
+        {/* Wishlist button - Neutral */}
+        <button className={`absolute top-3 left-3 bg-white/90 ${neutralTextLight} hover:text-red-500 p-2 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors duration-300 border ${neutralBorderLight}`}>
+          <Heart size={16} />
+        </button>
       </div>
-      <div className="p-5 flex flex-col flex-grow">
-        <h3 className="text-lg font-semibold leading-tight mb-2 text-gray-800">{pkg.name}</h3>
-
-        {/* Removed hardcoded destinations/activities */}
-        <p className="text-gray-600 text-sm mb-4 line-clamp-3 flex-grow"> {/* Increased line-clamp */}
+      <div className="p-4 flex flex-col flex-grow"> {/* Reduced padding */}
+        <h3 className={`text-lg font-semibold leading-tight mb-2 ${neutralText} line-clamp-2`}>{pkg.name}</h3>
+        <p className={`${neutralTextLight} text-sm mb-3 line-clamp-2 flex-grow`}>
           {pkg.description || 'Explore the beauty of the Andaman Islands with this package. Click View Details for the full itinerary.'}
         </p>
-
-        <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-100">
-          <span className="text-gray-600 text-sm">
-            From <span className="font-semibold text-blue-600">₹{pkg.base_price.toLocaleString('en-IN')}</span>
+        {/* Features List - Neutral */}
+        <div className="mb-3 space-y-1">
+          {includedServices.map((service, index) => (
+            <div key={index} className={`flex items-center ${neutralTextLight} text-xs`}>
+              <div className={`w-3 h-3 rounded-full ${neutralBg} flex items-center justify-center mr-1.5 flex-shrink-0 border ${neutralBorder}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${primaryButtonBg}`}></div>
+              </div>
+              <span>{service}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between items-center mt-auto pt-3 border-t ${neutralBorderLight}"> {/* Reduced pt */}
+          <span className={`${neutralTextLight} text-sm`}>
+            From <span className={`font-semibold ${neutralText}`}>₹{pkg.base_price.toLocaleString('en-IN')}</span>
           </span>
-          <Link
-            href={`/packages/${pkg.id}`}
-            className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm group"
-          >
+          <Link href={`/packages/${pkg.id}`} className={cardLinkStyle}>
             View Details
-            <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">→</span>
+            <ArrowRight size={14} className="ml-1 transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
         </div>
       </div>
@@ -128,46 +211,59 @@ const PackageCard = ({ pkg }: PackageCardProps) => {
 };
 // --- End Package Card ---
 
-// --- Main Component Logic ---
+// --- Filter Tag Component (Apply Contextual Tip Color) ---
+interface FilterTagProps {
+  label: string;
+  onRemove: () => void;
+}
+
+const FilterTag = ({ label, onRemove }: FilterTagProps) => (
+  <div className={`inline-flex items-center ${tipBg} ${tipText} text-xs font-medium py-1 pl-3 pr-1.5 rounded-full mr-2 mb-2 border ${tipBorder}`}>
+    {label}
+    <button
+      onClick={onRemove}
+      className={`ml-1.5 bg-yellow-100 hover:bg-yellow-200 rounded-full p-0.5 transition-colors`}
+      aria-label={`Remove ${label} filter`}
+    >
+      <X size={12} />
+    </button>
+  </div>
+);
+// --- End Filter Tag ---
+
+// --- Main Component Logic (Keep as is) ---
 function PackagesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // State for filters
   const [filters, setFilters] = useState<FiltersState>({
-    destination: searchParams.get('destination') || '',
     duration: searchParams.get('duration') || '',
     priceRange: searchParams.get('priceRange') || '',
-    // activities: searchParams.get('activities')?.split(',').filter(Boolean) || [] // Removed activities
+    searchQuery: searchParams.get('q') || ''
   });
-  const [showFilters, setShowFilters] = useState(false);
 
-  // State for pagination
+  const [showFilters, setShowFilters] = useState(false);
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page') || '1', 10));
   const [itemsPerPage] = useState(9);
   const [paginationInfo, setPaginationInfo] = useState<PaginationInfo | null>(null);
-
-  // State for packages
   const [packages, setPackages] = useState<Package[]>([]);
 
-  // --- Fetch Destinations for Filter ---
+  // Fetch destinations (keep logic, might be used elsewhere)
   const { data: destinationsResponse, status: destinationsStatus } =
-    useFetch<GetDestinationsApiResponse>('/api/destinations'); // Fetch destinations
+    useFetch<GetDestinationsApiResponse>('/api/destinations');
   const [destinationsList, setDestinationsList] = useState<Island[]>([]);
-
   useEffect(() => {
     if (destinationsStatus === 'success' && destinationsResponse?.data) {
       setDestinationsList(destinationsResponse.data);
     }
   }, [destinationsStatus, destinationsResponse]);
-  // --- End Fetch Destinations ---
 
-  // Fetch packages data
+  // Fetch packages
   const apiUrl = `/api/packages?page=${currentPage}&limit=${itemsPerPage}`;
   const { data: packagesApiResponse, error: packagesError, status: packagesStatus } =
     useFetch<GetPackagesApiResponse>(apiUrl);
 
-  // Update packages state
   useEffect(() => {
     if (packagesStatus === 'success' && packagesApiResponse) {
       setPackages(packagesApiResponse.packages || []);
@@ -178,17 +274,24 @@ function PackagesContent() {
     }
   }, [packagesStatus, packagesApiResponse]);
 
-  // Apply filters client-side (Destination filter still keyword based)
+  useEffect(() => {
+    setIsFilterApplied(
+      filters.duration !== '' ||
+      filters.priceRange !== '' ||
+      filters.searchQuery !== ''
+    );
+  }, [filters]);
+
+  // Apply filters client-side (Keep logic as is)
   const filteredPackages = useMemo(() => {
     let tempFiltered = [...packages];
-
-    // Destination keyword filter (improve when API supports ID filtering)
-    if (filters.destination) {
+    if (filters.searchQuery) {
+      const searchLower = filters.searchQuery.toLowerCase();
       tempFiltered = tempFiltered.filter(pkg =>
-        (pkg.name + (pkg.description || '')).toLowerCase().includes(filters.destination.toLowerCase())
+        pkg.name.toLowerCase().includes(searchLower) ||
+        (pkg.description && pkg.description.toLowerCase().includes(searchLower))
       );
     }
-    // Duration filter
     if (filters.duration) {
       tempFiltered = tempFiltered.filter(pkg => {
         const durationMatch = pkg.duration.match(/^(\d+)\s*D/i);
@@ -200,7 +303,6 @@ function PackagesContent() {
         return filters.duration.includes('+') ? pkgDays >= filterDays : pkgDays === filterDays;
       });
     }
-    // Price range filter
     if (filters.priceRange) {
       const range = filters.priceRange.split('-').map(Number);
       const min = range[0];
@@ -208,236 +310,400 @@ function PackagesContent() {
       if (!isNaN(min)) {
         tempFiltered = tempFiltered.filter(pkg => pkg.base_price >= min && pkg.base_price <= max);
       } else {
-        const singleVal = Number(filters.priceRange);
-        if (!isNaN(singleVal)) tempFiltered = tempFiltered.filter(pkg => pkg.base_price >= singleVal);
+        const singleVal = Number(filters.priceRange.replace('+', ''));
+        if (!isNaN(singleVal)) {
+          if (filters.priceRange.includes('+')) {
+            tempFiltered = tempFiltered.filter(pkg => pkg.base_price >= singleVal);
+          } else {
+            tempFiltered = tempFiltered.filter(pkg => pkg.base_price === singleVal);
+          }
+        }
       }
     }
-    // Activity filter removed
-
     return tempFiltered;
-    // Depends on filters and the currently fetched packages
   }, [filters, packages]);
 
-  // --- Handlers ---
+  // --- Handlers (Keep logic as is, update URL params) ---
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters({ ...filters, [name]: value });
-    // Reset to page 1 when filters change for consistency
-    handlePageChange(1, true); // Pass true to prevent URL push if already on page 1
-  };
-
-  // Removed handleActivityToggle
-
-  const handleClearFilters = () => {
-    setFilters({
-      destination: '',
-      duration: '',
-      priceRange: '',
-    });
-    // Reset to page 1
+    updateUrlParams({ ...filters, [name]: value });
     handlePageChange(1, true);
   };
 
-  // Handler for changing page
-  const handlePageChange = useCallback((newPage: number, calledByFilter = false) => {
-    if (newPage < 1 || (paginationInfo && newPage > paginationInfo.totalPages) || (newPage === currentPage && !calledByFilter)) {
-      return;
-    }
-    setCurrentPage(newPage);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFilters({ ...filters, searchQuery: value });
+    // Debounce URL update if needed, or update immediately
+    updateUrlParams({ ...filters, searchQuery: value });
+    handlePageChange(1, true);
+  };
 
-    // Only push history state if the page actually changes
+  const handleQuickDestinationSelect = (destinationName: string) => {
+    setFilters({ ...filters, searchQuery: destinationName });
+    updateUrlParams({ ...filters, searchQuery: destinationName });
+    handlePageChange(1, true);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({ duration: '', priceRange: '', searchQuery: '' });
+    updateUrlParams({ duration: '', priceRange: '', searchQuery: '' });
+    handlePageChange(1, true);
+  };
+
+  const handleRemoveFilter = (filterName: keyof FiltersState) => {
+    const newFilters = { ...filters, [filterName]: '' };
+    setFilters(newFilters);
+    updateUrlParams(newFilters);
+    handlePageChange(1, true);
+  };
+
+  const updateUrlParams = (currentFilters: FiltersState) => {
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    Object.entries(currentFilters).forEach(([key, value]) => {
+      if (value) {
+        if (key === 'searchQuery') current.set('q', value);
+        else current.set(key, value);
+      } else {
+        if (key === 'searchQuery') current.delete('q');
+        else current.delete(key);
+      }
+    });
+    if (currentPage > 1) current.set('page', currentPage.toString());
+    else current.delete('page');
+    router.push(`/packages?${current.toString()}`, { scroll: false });
+  };
+
+  const handlePageChange = useCallback((newPage: number, calledByFilter = false) => {
+    if (newPage < 1 || (paginationInfo && newPage > paginationInfo.totalPages) || (newPage === currentPage && !calledByFilter)) return;
+    setCurrentPage(newPage);
     if (newPage !== currentPage || calledByFilter) {
       const current = new URLSearchParams(Array.from(searchParams.entries()));
-      current.set('page', newPage.toString());
-      // Add current filters to URL? (Optional)
-      // if (filters.destination) current.set('destination', filters.destination);
-      // ... etc ...
-      router.push(`/packages?${current.toString()}`, { scroll: false }); // Prevent scroll jump
-      // Scroll manually after navigation
-      setTimeout(() => window.scrollTo({ top: 400, behavior: 'smooth' }), 100);
+      if (newPage > 1) current.set('page', newPage.toString());
+      else current.delete('page');
+      router.push(`/packages?${current.toString()}`, { scroll: false });
+      setTimeout(() => {
+        const packagesGrid = document.getElementById('packages-grid');
+        if (packagesGrid) packagesGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     }
-
-  }, [paginationInfo, currentPage, router, searchParams]); // Removed filters from deps for now
+  }, [paginationInfo, currentPage, router, searchParams]);
   // --- End Handlers ---
 
+  // Get active filter tags (Keep logic as is)
+  const activeFilterTags = useMemo(() => {
+    const tags = [];
+    if (filters.searchQuery) tags.push({ key: 'searchQuery', label: `Search: "${filters.searchQuery}"` });
+    if (filters.duration) tags.push({ key: 'duration', label: `Duration: ${filters.duration.replace('+', ' Days+')}` });
+    if (filters.priceRange) {
+      const range = filters.priceRange.split('-');
+      const label = range.length > 1 ? `Price: ₹${Number(range[0]).toLocaleString('en-IN')} - ₹${Number(range[1]).toLocaleString('en-IN')}` : `Price: ₹${Number(range[0].replace('+', '')).toLocaleString('en-IN')}+`;
+      tags.push({ key: 'priceRange', label });
+    }
+    return tags;
+  }, [filters]);
+
+  // --- Render Logic ---
   return (
-    <>
-      {/* --- Hero Section --- */}
-      <div className="relative bg-gradient-to-r from-cyan-600 to-blue-700 h-72 md:h-96">
-        {/* ... hero content (backgrounds, text, button) ... */}
-        <div className="absolute inset-0 bg-black/50 z-10"></div>
-        <div className="absolute inset-0 z-0">
-          <Image src="/images/packages-hero.jpg" alt="Andaman tour packages - Desktop" fill className="object-cover hidden md:block" priority />
-          <Image src="/images/packages-hero-mobile.jpg" alt="Andaman tour packages - Mobile" fill className="object-cover block md:hidden" priority />
-        </div>
-        <div className="container mx-auto px-4 h-full flex flex-col justify-center items-center relative z-20">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white text-center mb-3 md:mb-5 drop-shadow-lg">
-            Our Andaman Packages
-          </h1>
-          <p className="text-lg sm:text-xl text-white text-center max-w-2xl opacity-95 drop-shadow-md">
-            Find the perfect curated experience for your island getaway.
-          </p>
-          <Link href="#packages-grid" scroll={true} className="mt-6 bg-white text-blue-700 hover:bg-blue-50 font-semibold py-3 px-8 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-            Explore Packages
-          </Link>
-        </div>
-        {/* Wave */}
-        <div className="absolute bottom-0 left-0 right-0 h-12 md:h-16 overflow-hidden">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="absolute bottom-0 w-full h-auto"> <path fill="#f9fafb" fillOpacity="1" d="M0,224L48,213.3C96,203,192,181,288,181.3C384,181,480,203,576,224C672,245,768,267,864,261.3C960,256,1056,224,1152,197.3C1248,171,1344,149,1392,138.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path> </svg>
+    <div className={`bg-white ${neutralText}`}>
+      {/* Hero Section - Neutral */}
+      <div className="relative bg-gray-900 text-white py-20 md:py-32">
+        <Image
+          src="/images/packages-hero.jpg" // Replace with a suitable hero image
+          alt="Andaman Packages"
+          fill
+          style={{ objectFit: 'cover' }}
+          className="opacity-40"
+          priority
+        />
+        <div className="container mx-auto px-4 relative z-10 text-center">
+          <h1 className="text-4xl md:text-6xl font-bold mb-4">Find Your Perfect Andaman Package</h1>
+          <p className="text-xl md:text-2xl text-white/80 max-w-3xl mx-auto">Explore curated packages for every traveler. Adventure, relaxation, or romance - start your journey here.</p>
         </div>
       </div>
 
-      <div id="packages-grid" className="bg-gray-50 min-h-screen py-12 md:py-16">
+      {/* Filter Section - Neutral Background */}
+      <section className={`sticky top-0 z-30 bg-white/95 backdrop-blur-sm shadow-sm border-b ${neutralBorderLight} py-4`}>
         <div className="container mx-auto px-4">
-          {/* Section Header */}
-          <div className="flex items-center justify-center mb-10 md:mb-14">
-            <Package className="text-blue-600 mr-3 flex-shrink-0" size={24} />
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Find Your Perfect Package</h2>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-grow md:max-w-md">
+              <input
+                type="text"
+                name="searchQuery"
+                placeholder="Search packages (e.g., Honeymoon, Scuba, Havelock)"
+                value={filters.searchQuery}
+                onChange={handleSearchChange}
+                className={`w-full pl-10 pr-4 py-2.5 border ${neutralBorder} rounded-full focus:ring-2 focus:ring-gray-300 focus:border-gray-400 outline-none transition-colors text-sm`}
+              />
+              <Search size={18} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${neutralIconColor}`} />
+            </div>
+
+            {/* Filter Controls */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Duration Dropdown */}
+              <div className="relative">
+                <select
+                  name="duration"
+                  value={filters.duration}
+                  onChange={handleFilterChange}
+                  className={`appearance-none bg-white border ${neutralBorder} rounded-full pl-4 pr-10 py-2.5 text-sm focus:ring-2 focus:ring-gray-300 focus:border-gray-400 outline-none transition-colors cursor-pointer`}
+                >
+                  <option value="">Duration</option>
+                  <option value="3">3 Days</option>
+                  <option value="4">4 Days</option>
+                  <option value="5">5 Days</option>
+                  <option value="6">6 Days</option>
+                  <option value="7+">7+ Days</option>
+                </select>
+                <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 ${neutralIconColor} pointer-events-none`} />
+              </div>
+
+              {/* Price Dropdown */}
+              <div className="relative">
+                <select
+                  name="priceRange"
+                  value={filters.priceRange}
+                  onChange={handleFilterChange}
+                  className={`appearance-none bg-white border ${neutralBorder} rounded-full pl-4 pr-10 py-2.5 text-sm focus:ring-2 focus:ring-gray-300 focus:border-gray-400 outline-none transition-colors cursor-pointer`}
+                >
+                  <option value="">Price Range</option>
+                  <option value="0-15000">Under ₹15,000</option>
+                  <option value="15000-25000">₹15,000 - ₹25,000</option>
+                  <option value="25000-40000">₹25,000 - ₹40,000</option>
+                  <option value="40000+">₹40,000+</option>
+                </select>
+                <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 ${neutralIconColor} pointer-events-none`} />
+              </div>
+
+              {/* Clear Filters Button */}
+              {isFilterApplied && (
+                <button
+                  onClick={handleClearFilters}
+                  className={`text-sm ${neutralTextLight} hover:text-red-600 transition-colors flex items-center ml-2`}
+                  title="Clear all filters"
+                >
+                  <X size={14} className="mr-1" /> Clear All
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Mobile Filter Toggle */}
-          <div className="md:hidden mb-6 text-center">
-            <button onClick={() => setShowFilters(!showFilters)} className="...">
-              <Filter size={16} className="mr-2" /> {showFilters ? 'Hide Filters' : 'Show Filters'}
-            </button>
+          {/* Quick Destination Buttons */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className={`text-xs font-medium ${neutralTextLight} mr-2 mt-1`}>Popular:</span>
+            {['Havelock', 'Neil Island', 'Port Blair', 'Honeymoon', 'Family'].map(dest => (
+              <button
+                key={dest}
+                onClick={() => handleQuickDestinationSelect(dest)}
+                className={`text-xs px-3 py-1 rounded-full border ${neutralBorder} ${filters.searchQuery === dest ? `${primaryButtonBg} ${primaryButtonText} border-transparent` : `bg-white ${neutralText} hover:bg-gray-50`} transition-colors`}
+              >
+                {dest}
+              </button>
+            ))}
           </div>
 
-          {/* --- Filters Section (Modified) --- */}
-          <div className={`bg-white rounded-2xl shadow-lg p-5 md:p-7 mb-10 border border-gray-100 ${showFilters ? 'block' : 'hidden'} md:block`}>
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-800 flex items-center"><SlidersHorizontal className="text-blue-600 mr-2" size={20} /> Filter Packages</h2>
-              <button className="md:hidden ..." onClick={() => setShowFilters(false)}><X size={20} /></button>
+          {/* Active Filter Tags */}
+          {activeFilterTags.length > 0 && (
+            <div className="mt-3 pt-3 border-t ${neutralBorderLight}">
+              {activeFilterTags.map(tag => (
+                <FilterTag key={tag.key} label={tag.label} onRemove={() => handleRemoveFilter(tag.key as keyof FiltersState)} />
+              ))}
             </div>
-            {/* Updated Filter Grid (Removed Activities Column implicitly by reducing cols) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5"> {/* Adjusted grid cols */}
-              {/* Destination (Dynamic Options) */}
-              <div>
-                <label htmlFor="destination" className="block text-sm font-medium text-gray-700 mb-1.5">Destination</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 pointer-events-none" size={16} />
-                  <select
-                    id="destination"
-                    name="destination"
-                    value={filters.destination}
-                    onChange={handleFilterChange}
-                    className="pl-9 pr-8 py-2.5 w-full text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white hover:border-blue-300 transition-colors appearance-none disabled:bg-gray-100"
-                    disabled={destinationsStatus === 'loading'}
-                  >
-                    <option value="">
-                      {destinationsStatus === 'loading' ? 'Loading...' : 'All Destinations'}
-                    </option>
-                    {destinationsList.map(island => (
-                      <option key={island.id} value={island.name}> {/* Use name for value for now */}
-                        {island.name}
-                      </option>
-                    ))}
-                  </select>
-                  {destinationsStatus === 'error' && <p className="text-xs text-red-500 mt-1">Could not load destinations.</p>}
-                </div>
-                <p className="text-xs text-gray-400 mt-1 italic">Note: Filters by keyword match for now.</p>
-              </div>
-              {/* Duration */}
-              <div>
-                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1.5">Duration</label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 pointer-events-none" size={16} />
-                  <select id="duration" name="duration" value={filters.duration} onChange={handleFilterChange} className="pl-9 pr-8 py-2.5 w-full text-sm border border-gray-300 rounded-xl ... appearance-none">
-                    <option value="">Any Duration</option>
-                    <option value="3">3 Days</option>
-                    <option value="4">4 Days</option>
-                    <option value="5">5 Days</option>
-                    <option value="6">6 Days</option>
-                    <option value="7">7 Days</option>
-                    <option value="8+">8+ Days</option>
-                  </select>
-                </div>
-              </div>
-              {/* Price Range */}
-              <div>
-                <label htmlFor="priceRange" className="block text-sm font-medium text-gray-700 mb-1.5">Price Range</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 pointer-events-none" size={16} />
-                  <select id="priceRange" name="priceRange" value={filters.priceRange} onChange={handleFilterChange} className="pl-9 pr-8 py-2.5 w-full text-sm border border-gray-300 rounded-xl ... appearance-none">
-                    <option value="">Any Price</option>
-                    <option value="0-15000">Under ₹15k</option>
-                    <option value="15000-25000">₹15k - ₹25k</option>
-                    <option value="25000-40000">₹25k - ₹40k</option>
-                    <option value="40000">₹40k+</option>
-                  </select>
-                </div>
-              </div>
-              {/* Activities Filter Section Removed */}
-            </div>
-            {/* Clear Filters Button */}
-            <div className="mt-5 pt-4 border-t border-gray-100 flex justify-end">
-              <button onClick={handleClearFilters} className="..." disabled={!filters.destination && !filters.duration && !filters.priceRange}>
-                <RefreshCw size={14} className="mr-1" /> Clear Filters
+          )}
+        </div>
+      </section>
+
+      {/* Main Content Area */}
+      <div className={`${sectionPadding} ${neutralBgLight}`}>
+        <div className="container mx-auto px-4">
+          {/* Loading State */}
+          {packagesStatus === 'loading' && <LoadingSpinner />}
+
+          {/* Error State - Contextual Error Red */}
+          {packagesStatus === 'error' && (
+            <div className={`min-h-[40vh] flex flex-col justify-center items-center text-center p-8 rounded-2xl ${errorBg} border ${errorBorder}`}>
+              <AlertTriangle className={`w-16 h-16 ${errorIconColor} mb-6`} />
+              <h3 className={`text-2xl font-semibold ${errorText} mb-3`}>Oops! Something went wrong.</h3>
+              <p className={`${neutralTextLight} mb-6`}>We couldn't load the packages right now. Please try again later.</p>
+              <button onClick={() => window.location.reload()} className={buttonPrimaryStyle}>
+                <RefreshCw size={16} className="mr-2" /> Try Again
               </button>
             </div>
-          </div>
-          {/* --- End Filters Section --- */}
+          )}
 
-          {/* --- Display Area --- */}
-          {packagesStatus === 'loading' ? (
-            <LoadingSpinner message="Loading Packages..." />
-          ) : packagesStatus === 'error' ? (
-            <div className="text-center py-12 px-6 bg-red-50 ...">
-              <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-3" />
-              <p className="text-red-700 font-medium">Could not load packages.</p>
-              <p className="text-red-600 text-sm mt-1">{packagesError?.message || "An unknown error occurred."}</p>
-              <button onClick={() => window.location.reload()} className="..."> Try Again </button>
-            </div>
-          ) : (
+          {/* Success State */}
+          {packagesStatus === 'success' && (
             <>
               {filteredPackages.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                    {filteredPackages.map((pkg: Package) => ( // Added type annotation
+                  {/* Results Count and Sorting (UI only) */}
+                  <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+                    <p className={`${neutralTextLight} text-sm mb-4 md:mb-0`}>
+                      Showing <span className={`font-semibold ${neutralText}`}>{filteredPackages.length}</span> of <span className={`font-semibold ${neutralText}`}>{paginationInfo?.totalItems || packages.length}</span> packages
+                    </p>
+                    {/* Sorting Dropdown - Neutral */}
+                    <div className="relative">
+                      <select className={`appearance-none bg-white border ${neutralBorder} rounded-full pl-4 pr-10 py-2 text-sm focus:ring-2 focus:ring-gray-300 focus:border-gray-400 outline-none transition-colors cursor-pointer`}>
+                        <option>Sort by: Relevance</option>
+                        <option>Price: Low to High</option>
+                        <option>Price: High to Low</option>
+                        <option>Duration: Short to Long</option>
+                      </select>
+                      <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 ${neutralIconColor} pointer-events-none`} />
+                    </div>
+                  </div>
+
+                  {/* Packages Grid */}
+                  <div id="packages-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    {filteredPackages.map((pkg) => (
                       <PackageCard key={pkg.id} pkg={pkg} />
                     ))}
                   </div>
-                  {/* Pagination Controls */}
+
+                  {/* Pagination - Neutral */}
                   {paginationInfo && paginationInfo.totalPages > 1 && (
-                    <div className="flex justify-center items-center mt-10 md:mt-14 space-x-3">
-                      <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="..." aria-label="Previous Page"> <ChevronLeft size={20} /> </button>
-                      <span className="text-sm text-gray-700 font-medium"> Page {paginationInfo.currentPage} of {paginationInfo.totalPages} </span>
-                      <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === paginationInfo.totalPages} className="..." aria-label="Next Page"> <ChevronRight size={20} /> </button>
-                    </div>
+                    <nav className="mt-16 flex justify-center items-center space-x-2">
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className={`p-2 rounded-full border ${neutralBorder} ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : `hover:bg-gray-100`}`}
+                        aria-label="Previous Page"
+                      >
+                        <ChevronLeft size={20} className={neutralIconColor} />
+                      </button>
+                      {[...Array(paginationInfo.totalPages)].map((_, i) => {
+                        const pageNum = i + 1;
+                        // Logic to show limited page numbers (e.g., first, last, current +/- 2)
+                        const showPage = pageNum === 1 || pageNum === paginationInfo.totalPages || Math.abs(pageNum - currentPage) <= 1 || (currentPage <= 3 && pageNum <= 3) || (currentPage >= paginationInfo.totalPages - 2 && pageNum >= paginationInfo.totalPages - 2);
+                        const showEllipsis = Math.abs(pageNum - currentPage) === 2 && pageNum > 1 && pageNum < paginationInfo.totalPages && !(currentPage <= 3 && pageNum <= 3) && !(currentPage >= paginationInfo.totalPages - 2 && pageNum >= paginationInfo.totalPages - 2);
+
+                        if (showEllipsis) {
+                          return <span key={`ellipsis-${i}`} className={`px-2 ${neutralTextLight}`}>...</span>;
+                        }
+                        if (showPage) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => handlePageChange(pageNum)}
+                              className={`w-10 h-10 rounded-full text-sm font-medium border ${pageNum === currentPage ? `${primaryButtonBg} ${primaryButtonText} border-transparent shadow-sm` : `bg-white ${neutralText} ${neutralBorder} hover:bg-gray-100`} transition-colors`}
+                              aria-current={pageNum === currentPage ? 'page' : undefined}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        }
+                        return null;
+                      })}
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === paginationInfo.totalPages}
+                        className={`p-2 rounded-full border ${neutralBorder} ${currentPage === paginationInfo.totalPages ? 'opacity-50 cursor-not-allowed' : `hover:bg-gray-100`}`}
+                        aria-label="Next Page"
+                      >
+                        <ChevronRight size={20} className={neutralIconColor} />
+                      </button>
+                    </nav>
                   )}
                 </>
               ) : (
-                // No Results Found
-                <div className="text-center py-16 bg-white rounded-2xl ...">
-                  <Image src="/images/no-results.svg" alt="No packages found" width={150} height={150} className="mx-auto mb-6 opacity-80" />
-                  <h3 className="text-xl font-semibold mb-2 text-gray-800">No packages found</h3>
-                  <p className="text-gray-600 mb-6">Try adjusting your filters or check back later.</p>
-                  <button onClick={handleClearFilters} className="..."> Clear All Filters </button>
+                /* No Results State - Contextual Tip Yellow */
+                <div className={`min-h-[40vh] flex flex-col justify-center items-center text-center p-8 rounded-2xl ${tipBg} border ${tipBorder}`}>
+                  <Compass className={`w-16 h-16 ${tipIconColor} mb-6`} />
+                  <h3 className={`text-2xl font-semibold ${tipText} mb-3`}>No Packages Found</h3>
+                  <p className={`${neutralTextLight} mb-6`}>Try adjusting your filters or search terms. We couldn't find packages matching your current selection.</p>
+                  <button onClick={handleClearFilters} className={buttonPrimaryStyle}>
+                    <RefreshCw size={16} className="mr-2" /> Clear Filters
+                  </button>
                 </div>
               )}
             </>
           )}
-          {/* --- End Display Area --- */}
-
-
-          {/* --- Custom Package CTA (Still relevant) --- */}
-          <div className="mt-16 md:mt-20 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 md:p-10 text-center ...">
-            {/* ... CTA content ... */}
-            <div className="relative z-10">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-5">Can't find what you're looking for?</h2>
-              <p className="text-blue-100 mb-6 md:mb-8 max-w-2xl mx-auto"> Let us create a custom package tailored to your preferences, budget, and travel dates. </p>
-              <Link href="/custom-package" className="..."> Create Custom Package </Link>
-            </div>
-          </div>
-
-          {/* Testimonials and FAQ Sections Removed */}
-
         </div>
       </div>
-    </>
+
+      {/* --- REDESIGNED FAQ Section - Neutral Light Background --- */}
+      <section className={`${sectionPadding} ${neutralBgLight}`}> {/* Changed from tipBg to neutralBgLight */}
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center mb-10 md:mb-14">
+            <div className={`w-12 h-12 bg-white rounded-full flex items-center justify-center mr-4 border ${neutralBorderLight}`}>
+              <HelpCircle className={neutralIconColor} size={24} /> {/* Changed icon color */}
+            </div>
+            <h2 className={`${sectionHeadingStyle} ${neutralText}`}>Frequently Asked Questions</h2> {/* Changed text color */}
+          </div>
+          <div className="max-w-3xl mx-auto space-y-4">
+            {[1, 2, 3].map((i) => (
+              <details key={i} className={`bg-white p-5 rounded-xl shadow-md border ${neutralBorderLight} group transition-all duration-300 hover:shadow-lg`}>
+                <summary className={`flex justify-between items-center font-semibold ${neutralText} cursor-pointer list-none text-lg`}>
+                  <span>Question {i}: What is included in the package price?</span>
+                  <div className={`w-8 h-8 flex items-center justify-center rounded-full border ${neutralBorder} group-hover:bg-gray-100 transition-colors`}>
+                    <ChevronDown size={20} className={`transition-transform duration-300 group-open:rotate-180 ${neutralIconColor}`} />
+                  </div>
+                </summary>
+                <div className="overflow-hidden max-h-0 group-open:max-h-screen transition-all duration-500 ease-in-out">
+                  <p className={`mt-4 text-sm ${neutralTextLight} leading-relaxed border-t ${neutralBorderLight} pt-4`}>
+                    Answer {i}: Typically includes accommodation, specified meals, transfers, sightseeing, permits, and ferry tickets. Exclusions like airfare, personal expenses, and optional activities are listed separately.
+                  </p>
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* --- END REDESIGNED FAQ Section --- */}
+
+      {/* --- REDESIGNED Testimonials Section - White Background --- */}
+      <section className={`${sectionPadding} bg-white`}> {/* Changed from neutralBgLight to white */}
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center mb-10 md:mb-14">
+            <div className={`w-12 h-12 ${neutralBg} rounded-full flex items-center justify-center mr-4 border ${neutralBorder}`}>
+              <MessageSquare className={neutralIconColor} size={24} />
+            </div>
+            <h2 className={sectionHeadingStyle}>What Our Travelers Say</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className={`bg-white rounded-2xl p-6 border ${neutralBorderLight} shadow-lg flex flex-col text-center items-center transition-all duration-300 hover:shadow-xl hover:transform hover:-translate-y-2`}>
+                <Quote className={`w-10 h-10 ${neutralIconColor} opacity-30 mb-4`} />
+                <p className={`text-base italic ${neutralTextLight} mb-6 flex-grow`}>
+                  "Testimonial {i}: An amazing experience! Everything was well-organized, and the islands are breathtaking. Highly recommend this package."
+                </p>
+                <div className="flex items-center justify-center flex-col mt-auto pt-4 border-t ${neutralBorderLight} w-full">
+                  <Image src={`/images/avatar-${i}.jpg`} alt={`Traveler ${i}`} width={56} height={56} className="rounded-full mb-3 border-2 border-white shadow-md" />
+                  <p className={`font-semibold ${neutralText}`}>Traveler Name {i}</p>
+                  <div className="flex items-center mt-1">
+                    {[...Array(5)].map((_, s) => <Star key={s} size={16} className={`fill-current text-yellow-400`} />)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* --- END REDESIGNED Testimonials Section --- */}
+
+      {/* CTA Section - Contextual Info Blue */}
+      <section className={`${sectionPadding} ${infoBg}`}>
+        <div className="container mx-auto px-4 text-center">
+          <div className="flex items-center justify-center mb-6">
+            <div className={`w-12 h-12 bg-white rounded-full flex items-center justify-center mr-4 border ${neutralBorderLight}`}>
+              <Package className={infoIconColor} size={24} />
+            </div>
+            <h2 className={`${sectionHeadingStyle} ${infoText}`}>Can't Find the Perfect Package?</h2>
+          </div>
+          <p className={`${neutralTextLight} max-w-xl mx-auto mb-8`}>
+            Let us help you craft a custom itinerary tailored to your interests and budget. Contact our travel experts today!
+          </p>
+          <Link href="/contact" className={buttonPrimaryStyle}>
+            Request Custom Tour <Phone size={16} className="ml-2" />
+          </Link>
+        </div>
+      </section>
+    </div>
   );
 }
 
-// Wrap with Suspense
+// --- Main Export with Suspense ---
 export default function PackagesPage() {
   return (
     <Suspense fallback={<LoadingSpinner message="Loading Page..." />}>
@@ -445,3 +711,4 @@ export default function PackagesPage() {
     </Suspense>
   );
 }
+

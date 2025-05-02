@@ -22,12 +22,14 @@ import {
     Camera,
     Umbrella,
     Utensils,
-    Anchor, // Added for Neil Island Day 3
-    Bird, // Added for Chidiyatapu Day 4
-    Sailboat // Could use for ferry highlight
+    Anchor, // For Neil Island
+    Bird, // For Chidiyatapu / Sitapur
+    Sunset, // Added for Sunset Point explicitly if needed, covered by Bird for Chidiyatapu
+    ArrowRight // For buttons
 } from 'lucide-react';
 
-export default function AndamanPackagePage() {
+// Updated Component Name
+export default function AndamanPackagePage5D4N_Neil() {
     // State for accommodation tabs
     const [activeTab, setActiveTab] = useState('standard');
 
@@ -36,101 +38,141 @@ export default function AndamanPackagePage() {
         setActiveTab(tabId);
     };
 
+    // Placeholder image paths - Add/Update as needed
+    const placeholderImages = {
+        hero: '/images/andaman-hero.jpg',
+        feature1: '/images/andaman-beach-1.jpg',
+        feature2: '/images/andaman-beach-2.jpg',
+        feature3: '/images/andaman-beach-3.jpg',
+        cellularJail: '/images/cellular-jail.jpg',
+        radhanagar: '/images/radhanagar-beach.jpg',
+        neilIsland: '/images/neil-island.jpg', // Bharatpur Beach Image
+        chidiyatapu: '/images/chidiyatapu.jpg', // Sunset at Chidiyatapu/Mundapahad
+        portBlairAirport: '/images/port-blair-airport.jpg',
+        hotelStandard: '/images/hotel-standard.jpg',
+        hotelDeluxe: '/images/hotel-deluxe.jpg',
+        hotelPremium: '/images/hotel-premium.jpg',
+        hotelLuxury: '/images/hotel-luxury.jpg',
+        highlightCellular: '/images/cellular-jail-highlight.jpg',
+        highlightCorbyns: '/images/corbyns-cove.jpg',
+        highlightRadhanagar: '/images/radhanagar-highlight.jpg',
+        highlightNeil: '/images/neil-island-highlight.jpg', // Specific Neil Highlight
+        expectBeaches: '/images/beaches.jpg',
+        expectWater: '/images/water-activities.jpg',
+        expectHistorical: '/images/historical-sites.jpg',
+        diningSeafood: '/images/seafood.jpg',
+        diningLocal: '/images/local-cuisine.jpg',
+        gallery1: '/images/gallery-1.jpg', // Cellular Jail Exterior
+        gallery2: '/images/gallery-2.jpg', // Radhanagar Beach Aerial
+        gallery3: '/images/gallery-3.jpg', // Corbyn's Cove Beach Shoreline
+        gallery4: '/images/gallery-4.jpg', // Ferry approaching Havelock Island
+        gallery5: '/images/gallery-5.jpg', // Natural Bridge formation, Neil Island
+        gallery6: '/images/gallery-6.jpg', // Sunset view from Laxmanpur Beach
+        gallery7: '/images/gallery-7.jpg', // Typical Resort View in Andaman
+        gallery8: '/images/gallery-8.jpg', // Chidiyatapu Bird Sanctuary View
+        ctaBackground: '/images/andaman-beach.jpg' // Not used in refactored CTA
+    };
+
+
     return (
-        <main className="bg-gradient-to-b from-blue-50 to-white min-h-screen">
-            {/* Hero Section */}
+        // Changed background to plain white (matching sample)
+        <main className="bg-white min-h-screen">
+            {/* Hero Section - Matched sample styling */}
             <div className="relative">
                 <div className="relative h-[500px] w-full">
                     <Image
-                        src="/images/andaman-hero.jpg" // Placeholder image
-                        alt="Andaman Islands tropical beach"
+                        src={placeholderImages.hero}
+                        alt="Andaman Islands tropical beach and turquoise water"
                         fill
                         style={{ objectFit: 'cover' }}
                         priority
                     />
-                    {/* Dark overlay for better text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
                 </div>
-
-                {/* Hero content */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-white">
-                    <h1 className="text-3xl md:text-5xl font-bold mb-4 drop-shadow-lg">
-                        4 Nights 5 Days Andaman Tour Package
+                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-white z-10">
+                    <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3 sm:mb-4 drop-shadow-lg">
+                        4 Nights 5 Days Andaman Tour Package (with Neil Island)
                     </h1>
-                    <p className="text-lg md:text-xl text-white/90 max-w-3xl mb-6 drop-shadow-md">
+                    <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-3xl mb-5 sm:mb-6 drop-shadow-md">
                         Explore the wonders of Port Blair, Havelock (Swaraj Dweep), and Neil Island (Shaheed Dweep) with our comprehensive 5-day package. Discover history, relax on pristine beaches, and create lasting memories.
                     </p>
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                        Book This Package
+                    {/* Changed button color to dark gray (matching sample) */}
+                    <button className="bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 px-8 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center">
+                        Book This Package <ArrowRight className="ml-2 h-5 w-5" />
                     </button>
                 </div>
             </div>
 
-            {/* Features Section with Images */}
-            <section className="py-16 md:py-24">
+            {/* Features Section with Images - Matched sample styling */}
+            <section className="py-10 sm:py-16 md:py-24">
                 <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-center mb-10 md:mb-14">
-                        <Star className="text-blue-600 mr-3 flex-shrink-0" size={24} />
+                    <div className="flex items-center justify-center mb-8 sm:mb-10 md:mb-14">
+                        {/* Changed icon background/color (matching sample) */}
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
+                            <Star className="text-gray-700" size={24} />
+                        </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Why Choose Our Package</h2>
                     </div>
-                    <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">
+                    <p className="text-center text-gray-600 max-w-2xl mx-auto mb-8 sm:mb-12">
                         We ensure a safe, comfortable, and memorable experience for all our guests
                     </p>
 
-                    {/* Image gallery */}
+                    {/* Image gallery - Structure matches sample */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                        <div className="relative h-64 rounded-2xl overflow-hidden shadow-lg">
+                        <div className="relative h-64 rounded-2xl overflow-hidden shadow-lg group">
                             <Image
-                                src="/images/andaman-beach-1.jpg" // Placeholder image
+                                src={placeholderImages.feature1}
                                 alt="Beautiful Andaman Beach"
                                 fill
                                 style={{ objectFit: 'cover' }}
+                                className="transition-transform duration-500 group-hover:scale-110"
                             />
                         </div>
-                        <div className="relative h-64 rounded-2xl overflow-hidden shadow-lg">
+                        <div className="relative h-64 rounded-2xl overflow-hidden shadow-lg group">
                             <Image
-                                src="/images/andaman-beach-2.jpg" // Placeholder image
+                                src={placeholderImages.feature2}
                                 alt="Crystal Clear Waters of Andaman"
                                 fill
                                 style={{ objectFit: 'cover' }}
+                                className="transition-transform duration-500 group-hover:scale-110"
                             />
                         </div>
-                        <div className="relative h-64 rounded-2xl overflow-hidden shadow-lg">
+                        <div className="relative h-64 rounded-2xl overflow-hidden shadow-lg group">
                             <Image
-                                src="/images/andaman-beach-3.jpg" // Placeholder image
+                                src={placeholderImages.feature3}
                                 alt="Tropical Paradise in Andaman"
                                 fill
                                 style={{ objectFit: 'cover' }}
+                                className="transition-transform duration-500 group-hover:scale-110"
                             />
                         </div>
                     </div>
 
+                    {/* Feature Cards - Matched sample styling */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div className="bg-white rounded-2xl shadow-lg p-6 text-center transition-all duration-300 hover:shadow-xl hover:transform hover:-translate-y-2 border border-gray-100">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Car className="text-blue-600" size={28} />
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Car className="text-gray-700" size={28} />
                             </div>
-                            <h3 className="text-xl font-semibold mb-4 text-gray-800">Sanitized Vehicles</h3>
+                            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800">Sanitized Vehicles</h3>
                             <p className="text-gray-600">
                                 We make sure all the cabs we provide are sanitized before every trip to provide you a safe holiday experience.
                             </p>
                         </div>
-
                         <div className="bg-white rounded-2xl shadow-lg p-6 text-center transition-all duration-300 hover:shadow-xl hover:transform hover:-translate-y-2 border border-gray-100">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Hotel className="text-blue-600" size={28} />
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Hotel className="text-gray-700" size={28} />
                             </div>
-                            <h3 className="text-xl font-semibold mb-4 text-gray-800">Handpicked Hotels & Resorts</h3>
+                            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800">Handpicked Hotels & Resorts</h3>
                             <p className="text-gray-600">
-                                We personally visit the hotels and resorts before recommending to any of our guests visiting Andaman Islands.
+                                We personally visit the hotels and resorts before recommending them to any of our guests visiting Andaman Islands.
                             </p>
                         </div>
-
                         <div className="bg-white rounded-2xl shadow-lg p-6 text-center transition-all duration-300 hover:shadow-xl hover:transform hover:-translate-y-2 border border-gray-100">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Award className="text-blue-600" size={28} />
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Award className="text-gray-700" size={28} />
                             </div>
-                            <h3 className="text-xl font-semibold mb-4 text-gray-800">Verified Operators & Travel Partners</h3>
+                            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800">Verified Operators & Travel Partners</h3>
                             <p className="text-gray-600">
                                 We give you the best safe experience with our verified partners for water activities at each location.
                             </p>
@@ -139,44 +181,48 @@ export default function AndamanPackagePage() {
                 </div>
             </section>
 
-            {/* Itinerary Section with Images */}
-            <section className="py-16 md:py-24 bg-blue-50" id="itinerary">
+            {/* Itinerary Section - Matched sample styling */}
+            <section className="py-10 sm:py-16 md:py-24 bg-gray-50" id="itinerary">
                 <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-center mb-10 md:mb-14">
-                        <Route className="text-blue-600 mr-3 flex-shrink-0" size={24} />
+                    <div className="flex items-center justify-center mb-8 sm:mb-10 md:mb-14">
+                        {/* Changed icon background/color (matching sample) */}
+                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+                            <Route className="text-gray-700" size={24} />
+                        </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Your 5-Day Itinerary</h2>
                     </div>
-                    <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">
+                    <p className="text-center text-gray-600 max-w-2xl mx-auto mb-8 sm:mb-12">
                         A detailed plan for your unforgettable 5-day journey through the Andaman Islands.
                     </p>
 
                     {/* Day 1 */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-12">
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-12 border border-gray-100">
                         <div className="md:flex">
-                            <div className="md:w-1/2 relative">
+                            <div className="md:w-1/2 relative group">
                                 <div className="h-64 md:h-full relative">
                                     <Image
-                                        src="/images/cellular-jail.jpg" // Placeholder image
+                                        src={placeholderImages.cellularJail}
                                         alt="Cellular Jail, Port Blair"
                                         fill
                                         style={{ objectFit: 'cover' }}
+                                        className="transition-transform duration-500 group-hover:scale-110"
                                     />
                                 </div>
                             </div>
-                            <div className="p-6 md:w-1/2">
-                                <h3 className="flex items-center text-xl font-semibold text-blue-600 mb-4">
-                                    <Calendar className="mr-2 flex-shrink-0" size={20} />
-                                    <span>Day 1: Airport Pickup, Corbyn's Cove Beach & Cellular Jail Light and Sound Show</span>
+                            <div className="p-6 md:p-8 md:w-1/2">
+                                <h3 className="flex items-center text-xl font-semibold text-gray-800 mb-4">
+                                    <Calendar className="mr-2 flex-shrink-0 text-gray-500" size={20} />
+                                    <span>Day 1: Arrival, Corbyn's Cove & Cellular Jail Show</span>
                                 </h3>
-                                <div className="space-y-3 text-gray-600">
+                                <div className="space-y-4 text-gray-700">
                                     <p>
-                                        Upon arrival at the airport, you'll be greeted by a private driver who will escort you to your hotel. After checking in and resting, your cab will pick you up post-lunch for a visit to the historic Cellular Jail, also known as Kala Paani. This iconic site holds powerful stories of sacrifice and patriotism. Take your time exploring the architecture and learning about the harsh conditions endured by the prisoners.
+                                        Upon arrival, be greeted by our driver and transferred to your hotel. Post-lunch, visit the historic Cellular Jail (Kala Paani) to explore its architecture and poignant history.
                                     </p>
                                     <p>
-                                        Next, head to Corbyn's Cove Beach, one of the most attractive beaches in Port Blair. Indulge in thrilling water sports like jet skiing, speed boating, or parasailing to Snake Island for an exhilarating experience.
+                                        Next, head to Corbyn's Cove Beach for relaxation or optional water sports like jet skiing and speed boating.
                                     </p>
                                     <p>
-                                        In the evening, return to the Cellular Jail for the Light and Sound Show. For an hour, you'll be captivated by the moving retelling of the jail's history. After the show, your cab will take you back to the hotel, marking the end of Day 1.
+                                        In the evening, witness the moving Light and Sound Show at Cellular Jail, recounting the saga of freedom fighters. Return to your hotel.
                                     </p>
                                 </div>
                             </div>
@@ -184,32 +230,33 @@ export default function AndamanPackagePage() {
                     </div>
 
                     {/* Day 2 */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-12">
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-12 border border-gray-100">
                         <div className="md:flex flex-row-reverse">
-                            <div className="md:w-1/2 relative">
+                            <div className="md:w-1/2 relative group">
                                 <div className="h-64 md:h-full relative">
                                     <Image
-                                        src="/images/radhanagar-beach.jpg" // Placeholder image
+                                        src={placeholderImages.radhanagar}
                                         alt="Radhanagar Beach, Havelock Island"
                                         fill
                                         style={{ objectFit: 'cover' }}
+                                        className="transition-transform duration-500 group-hover:scale-110"
                                     />
                                 </div>
                             </div>
-                            <div className="p-6 md:w-1/2">
-                                <h3 className="flex items-center text-xl font-semibold text-blue-600 mb-4">
-                                    <Ship className="mr-2 flex-shrink-0" size={20} />
-                                    <span>Day 2: Explore Swaraj Dweep (Havelock) Island & Overnight Stay</span>
+                            <div className="p-6 md:p-8 md:w-1/2">
+                                <h3 className="flex items-center text-xl font-semibold text-gray-800 mb-4">
+                                    <Ship className="mr-2 flex-shrink-0 text-gray-500" size={20} />
+                                    <span>Day 2: Swaraj Dweep (Havelock) Exploration & Overnight Stay</span>
                                 </h3>
-                                <div className="space-y-3 text-gray-600">
+                                <div className="space-y-4 text-gray-700">
                                     <p>
-                                        Rise early as your cab will pick you up at 7:00 AM for an 8:00 AM boat ride to Swaraj Dweep (Havelock). You'll be dropped off at the Port Blair jetty by 7:15 AM. The scenic journey takes about two and a half hours. Upon arrival at Swaraj Dweep by 9:45 AM, a private AC cab will take you to your hotel. Check in, rest, and unwind.
+                                        Early morning transfer to Port Blair jetty for your cruise to Swaraj Dweep (Havelock). Enjoy the scenic ~2.5-hour journey. Upon arrival, check into your Havelock hotel.
                                     </p>
                                     <p>
-                                        Begin your day with a visit to the stunning Kalapathar Beach, known for its pristine blue waters. Spend quality time relaxing before heading back to your hotel or a local restaurant for lunch.
+                                        Visit the beautiful Kalapathar Beach. After lunch (own expense), proceed to the world-famous Radhanagar Beach, renowned as one of Asia's best.
                                     </p>
                                     <p>
-                                        After lunch, set off for Radhanagar Beach, ranked among Asia's best beaches. Stay until sunset for a mesmerizing experience. Once the sun dips below the horizon, return to your hotel and relax for the night.
+                                        Relax, swim, and witness a breathtaking sunset at Radhanagar Beach before returning to your hotel for an overnight stay.
                                     </p>
                                 </div>
                             </div>
@@ -217,32 +264,33 @@ export default function AndamanPackagePage() {
                     </div>
 
                     {/* Day 3 */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-12">
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-12 border border-gray-100">
                         <div className="md:flex">
-                            <div className="md:w-1/2 relative">
+                            <div className="md:w-1/2 relative group">
                                 <div className="h-64 md:h-full relative">
                                     <Image
-                                        src="/images/neil-island.jpg" // Placeholder image
+                                        src={placeholderImages.neilIsland}
                                         alt="Bharatpur Beach, Neil Island"
                                         fill
                                         style={{ objectFit: 'cover' }}
+                                        className="transition-transform duration-500 group-hover:scale-110"
                                     />
                                 </div>
                             </div>
-                            <div className="p-6 md:w-1/2">
-                                <h3 className="flex items-center text-xl font-semibold text-blue-600 mb-4">
-                                    <Anchor className="mr-2 flex-shrink-0" size={20} /> {/* Changed Icon */}
-                                    <span>Day 3: Journey to Shaheed Dweep (Neil Island) from Swaraj Dweep (Havelock)</span>
+                            <div className="p-6 md:p-8 md:w-1/2">
+                                <h3 className="flex items-center text-xl font-semibold text-gray-800 mb-4">
+                                    <Anchor className="mr-2 flex-shrink-0 text-gray-500" size={20} /> {/* Matched icon style */}
+                                    <span>Day 3: Journey to Shaheed Dweep (Neil Island)</span>
                                 </h3>
-                                <div className="space-y-3 text-gray-600">
+                                <div className="space-y-4 text-gray-700">
                                     <p>
-                                        Rise early, enjoy breakfast, and check out of the hotel. Head to the Swaraj Dweep (Havelock) jetty to board the 8:00 AM cruise for the 10:15 AM sailing to Shaheed Dweep (Neil Island). You'll arrive by 11:15 AM, where an air-conditioned cab will transfer you to your hotel for check-in.
+                                        After breakfast, check out and transfer to Havelock jetty for your cruise to Shaheed Dweep (Neil Island). Upon arrival, check into your Neil Island hotel.
                                     </p>
                                     <p>
-                                        After resting, head to Bharatpur Beach, one of Neil Island's finest. Indulge in exciting water sports like jet skiing or take a glass-bottom boat ride (on-site payment required).
+                                        Visit Bharatpur Beach, known for its coral reefs and clear waters, ideal for optional glass-bottom boat rides or jet skiing (payable on site).
                                     </p>
                                     <p>
-                                        As evening approaches, head to Laxmanpur Beach to witness a breathtaking sunset. Afterward, return to the hotel and retire for the night.
+                                        Later, proceed to Laxmanpur Beach (Beach No. 1) to witness a spectacular sunset. Return to your hotel for overnight stay.
                                     </p>
                                 </div>
                             </div>
@@ -250,32 +298,34 @@ export default function AndamanPackagePage() {
                     </div>
 
                     {/* Day 4 */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-12">
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-12 border border-gray-100">
                         <div className="md:flex flex-row-reverse">
-                            <div className="md:w-1/2 relative">
+                            <div className="md:w-1/2 relative group">
                                 <div className="h-64 md:h-full relative">
                                     <Image
-                                        src="/images/chidiyatapu.jpg" // Placeholder image
-                                        alt="Sunset at Chidiyatapu, Port Blair"
+                                        src={placeholderImages.chidiyatapu}
+                                        alt="Sunset at Mundapahad Beach near Chidiyatapu"
                                         fill
                                         style={{ objectFit: 'cover' }}
+                                        className="transition-transform duration-500 group-hover:scale-110"
                                     />
                                 </div>
                             </div>
-                            <div className="p-6 md:w-1/2">
-                                <h3 className="flex items-center text-xl font-semibold text-blue-600 mb-4">
-                                    <Bird className="mr-2 flex-shrink-0" size={20} /> {/* Changed Icon */}
-                                    <span>Day 4: Return from Shaheed Dweep (Neil Island) & Chidiyatapu Sunset Point</span>
+                            <div className="p-6 md:p-8 md:w-1/2">
+                                <h3 className="flex items-center text-xl font-semibold text-gray-800 mb-4">
+                                    <Bird className="mr-2 flex-shrink-0 text-gray-500" size={20} /> {/* Matched icon style */}
+                                    <Sunset className="mr-2 flex-shrink-0 text-gray-500" size={20} /> {/* Matched icon style */}
+                                    <span>Day 4: Neil Island Sunrise, Return & Chidiyatapu Sunset</span>
                                 </h3>
-                                <div className="space-y-3 text-gray-600">
+                                <div className="space-y-4 text-gray-700">
                                     <p>
-                                        Rise early at 4:00 AM and take a cab to Sitapur Beach, renowned for stunning sunrise views. After soaking in the morning beauty, return to your hotel for breakfast. Then, check out and head to Neil Jetty to board the 11:30 AM cruise back to Port Blair, arriving around 12:40 PM.
+                                        Optionally rise early (around 4:00 AM) for a cab visit to Sitapur Beach (Beach No. 5) for a stunning sunrise. Return for breakfast, check out, and transfer to Neil Jetty for your cruise back to Port Blair.
                                     </p>
                                     <p>
-                                        Upon arrival, you'll be transferred to your Port Blair hotel for check-in. After lunch and rest, visit Chidiyatapu, a serene bird sanctuary, and explore the nearby mini zoo.
+                                        Upon arrival in Port Blair, check into your hotel. After rest, visit Chidiyatapu - the "Bird Island" - known for its lush mangroves and diverse birdlife. Explore the biological park.
                                     </p>
                                     <p>
-                                        End the day at Mundapahad Beach, one of Port Blair's finest spots, to enjoy a breathtaking sunset before heading back to your hotel.
+                                        Conclude the day at Mundapahad Beach near Chidiyatapu, enjoying another mesmerizing sunset before returning to your hotel.
                                     </p>
                                 </div>
                             </div>
@@ -283,29 +333,30 @@ export default function AndamanPackagePage() {
                     </div>
 
                     {/* Day 5 */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                         <div className="md:flex">
-                            <div className="md:w-1/2 relative">
+                            <div className="md:w-1/2 relative group">
                                 <div className="h-64 md:h-full relative">
                                     <Image
-                                        src="/images/port-blair-airport.jpg" // Placeholder image
+                                        src={placeholderImages.portBlairAirport}
                                         alt="Port Blair Airport Departure"
                                         fill
                                         style={{ objectFit: 'cover' }}
+                                        className="transition-transform duration-500 group-hover:scale-110"
                                     />
                                 </div>
                             </div>
-                            <div className="p-6 md:w-1/2">
-                                <h3 className="flex items-center text-xl font-semibold text-blue-600 mb-4">
-                                    <PlaneTakeoff className="mr-2 flex-shrink-0" size={20} />
+                            <div className="p-6 md:p-8 md:w-1/2">
+                                <h3 className="flex items-center text-xl font-semibold text-gray-800 mb-4">
+                                    <PlaneTakeoff className="mr-2 flex-shrink-0 text-gray-500" size={20} />
                                     <span>Day 5: Departure with Fond Memories</span>
                                 </h3>
-                                <div className="space-y-3 text-gray-600">
+                                <div className="space-y-4 text-gray-700">
                                     <p>
-                                        Start your day early, and after breakfast, head to the airport according to your flight schedule.
+                                        Enjoy your final breakfast in the Andamans. Depending on your flight schedule, you will be transferred to Veer Savarkar International Airport.
                                     </p>
                                     <p>
-                                        If time allows, enjoy some last-minute shopping on the way to bring home a piece of the islands with you. Depart with beautiful memories of your Andaman adventure.
+                                        Take home cherished memories of the sun-kissed beaches, turquoise waters, and unique experiences of the Andaman Islands.
                                     </p>
                                 </div>
                             </div>
@@ -314,28 +365,30 @@ export default function AndamanPackagePage() {
                 </div>
             </section>
 
-            {/* Highlights Section */}
-            <section className="py-16 md:py-24">
+            {/* Highlights Section - Matched sample styling */}
+            <section className="py-10 sm:py-16 md:py-24">
                 <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-center mb-10 md:mb-14">
-                        <Camera className="text-blue-600 mr-3 flex-shrink-0" size={24} />
+                    <div className="flex items-center justify-center mb-8 sm:mb-10 md:mb-14">
+                        {/* Changed icon background/color (matching sample) */}
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
+                            <Camera className="text-gray-700" size={24} />
+                        </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Package Highlights</h2>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         {/* Highlight 1: Cellular Jail */}
-                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100">
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100 group">
                             <div className="h-48 relative">
                                 <Image
-                                    src="/images/cellular-jail-highlight.jpg" // Placeholder image
+                                    src={placeholderImages.highlightCellular}
                                     alt="Cellular Jail"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
+                                    fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                <div className="absolute bottom-3 left-3 text-white font-semibold">Cellular Jail & Show</div>
+                                <div className="absolute bottom-3 left-3 text-white font-semibold drop-shadow">Cellular Jail & Show</div>
                             </div>
-                            <div className="p-4">
+                            <div className="p-5"> {/* Padding matches sample */}
                                 <p className="text-gray-600 text-sm">
                                     Explore history at Cellular Jail and experience the moving Light & Sound Show.
                                 </p>
@@ -343,37 +396,35 @@ export default function AndamanPackagePage() {
                         </div>
 
                         {/* Highlight 2: Corbyn's Cove */}
-                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100">
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100 group">
                             <div className="h-48 relative">
                                 <Image
-                                    src="/images/corbyns-cove.jpg" // Placeholder image
+                                    src={placeholderImages.highlightCorbyns}
                                     alt="Corbyn's Cove Beach"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
+                                    fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                <div className="absolute bottom-3 left-3 text-white font-semibold">Corbyn's Cove Beach</div>
+                                <div className="absolute bottom-3 left-3 text-white font-semibold drop-shadow">Corbyn's Cove Beach</div>
                             </div>
-                            <div className="p-4">
+                            <div className="p-5">
                                 <p className="text-gray-600 text-sm">
-                                    Relax and enjoy water sports at this popular Port Blair beach.
+                                    Relax and enjoy optional water sports at this popular Port Blair beach.
                                 </p>
                             </div>
                         </div>
 
                         {/* Highlight 3: Radhanagar Beach */}
-                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100">
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100 group">
                             <div className="h-48 relative">
                                 <Image
-                                    src="/images/radhanagar-highlight.jpg" // Placeholder image
+                                    src={placeholderImages.highlightRadhanagar}
                                     alt="Radhanagar Beach"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
+                                    fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                <div className="absolute bottom-3 left-3 text-white font-semibold">Radhanagar Beach</div>
+                                <div className="absolute bottom-3 left-3 text-white font-semibold drop-shadow">Radhanagar Beach</div>
                             </div>
-                            <div className="p-4">
+                            <div className="p-5">
                                 <p className="text-gray-600 text-sm">
                                     Visit Havelock's world-renowned beach with pristine sands and turquoise waters.
                                 </p>
@@ -381,18 +432,17 @@ export default function AndamanPackagePage() {
                         </div>
 
                         {/* Highlight 4: Neil Island */}
-                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100">
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 border border-gray-100 group">
                             <div className="h-48 relative">
                                 <Image
-                                    src="/images/neil-island-highlight.jpg" // Placeholder image
+                                    src={placeholderImages.highlightNeil}
                                     alt="Neil Island Beaches"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
+                                    fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                <div className="absolute bottom-3 left-3 text-white font-semibold">Neil Island Gems</div>
+                                <div className="absolute bottom-3 left-3 text-white font-semibold drop-shadow">Neil Island Gems</div>
                             </div>
-                            <div className="p-4">
+                            <div className="p-5">
                                 <p className="text-gray-600 text-sm">
                                     Discover the beauty of Bharatpur, Laxmanpur, and Sitapur beaches on Neil Island.
                                 </p>
@@ -403,26 +453,29 @@ export default function AndamanPackagePage() {
             </section>
 
 
-            {/* Accommodation Section */}
-            <section className="py-16 md:py-24 bg-blue-50" id="accommodation">
+            {/* Accommodation Section - Matched sample styling */}
+            <section className="py-16 md:py-24 bg-gray-50" id="accommodation">
                 <div className="container mx-auto px-4">
                     <div className="flex items-center justify-center mb-10 md:mb-14">
-                        <Bed className="text-blue-600 mr-3 flex-shrink-0" size={24} />
+                        {/* Changed icon background/color (matching sample) */}
+                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+                            <Bed className="text-gray-700" size={24} />
+                        </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Accommodation Options</h2>
                     </div>
                     <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">
-                        Choose from our carefully selected hotels across Port Blair, Havelock & Neil Island to suit your preferences and budget (based on 2 Adults).
+                        Choose from selected hotels in Port Blair (2N), Havelock (1N) & Neil Island (1N) for 2 Adults.
                     </p>
 
-                    {/* Tabs */}
+                    {/* Tabs - Matched sample styling */}
                     <div className="flex flex-wrap justify-center gap-2 mb-8">
                         {['standard', 'deluxe', 'premium', 'luxury'].map((tabId) => (
                             <button
                                 key={tabId}
                                 onClick={() => handleTabChange(tabId)}
-                                className={`px-6 py-2 rounded-full font-medium transition-all duration-300 capitalize ${activeTab === tabId
-                                    ? 'bg-blue-600 text-white shadow-md'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                className={`px-6 py-3 rounded-full font-medium transition-all duration-300 capitalize ${activeTab === tabId
+                                    ? 'bg-gray-800 text-white shadow-md'
+                                    : 'bg-white text-gray-700 hover:bg-gray-100 hover:text-gray-900 border border-gray-200'
                                     }`}
                             >
                                 {tabId}
@@ -430,34 +483,33 @@ export default function AndamanPackagePage() {
                         ))}
                     </div>
 
-                    {/* Tab Content */}
+                    {/* Tab Content - Matched sample styling */}
                     <div className="mt-8">
                         {/* Standard Tab */}
                         {activeTab === 'standard' && (
                             <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-100">
                                 <div className="md:flex">
-                                    <div className="md:w-1/3 h-64 md:h-auto relative">
+                                    <div className="md:w-1/3 h-64 md:h-auto relative group">
                                         <Image
-                                            src="/images/hotel-standard.jpg" // Placeholder image
-                                            alt="Standard Accommodation"
-                                            fill
-                                            style={{ objectFit: 'cover' }}
+                                            src={placeholderImages.hotelStandard}
+                                            alt="Standard Accommodation Example"
+                                            fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110"
                                         />
                                     </div>
-                                    <div className="p-6 md:w-2/3">
+                                    <div className="p-6 md:p-8 md:w-2/3">
                                         <h3 className="text-2xl font-semibold text-gray-800 mb-4">Standard Hotels</h3>
-                                        <div className="space-y-3 text-gray-600 mb-6">
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Port Blair:</strong> Sea Gull (Deluxe AC) / The Pearl / Blue Marlin or similar</p>
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Havelock:</strong> Blue Island Beach Resort (Bamboo Cottage) / Eldorado / Radhakrishna or similar</p>
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Neil:</strong> CS Empire (Standard Room) / Coral Garden or similar</p>
+                                        <div className="space-y-2 text-gray-700 mb-6"> {/* Adjusted spacing */}
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Port Blair (2N):</strong> Sea Gull (Deluxe AC) / The Pearl / Blue Marlin or similar</p>
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Havelock (1N):</strong> Blue Island Beach Resort (Bamboo Cottage) / Eldorado / Radhakrishna or similar</p>
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Neil (1N):</strong> CS Empire (Standard Room) / Coral Garden or similar</p>
                                         </div>
-                                        <div className="flex items-center justify-between mt-auto">
-                                            <div className="text-2xl font-bold text-blue-600">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-auto">
+                                            <div className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">
                                                 ₹36,465/-
                                                 <span className="text-sm font-normal text-gray-600 block">for 2 Adults (incl. GST, Stay, Transfers, Sightseeing)</span>
                                             </div>
-                                            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300">
-                                                Select Package
+                                            <button className="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 shadow hover:shadow-md flex items-center">
+                                                Select Package <ArrowRight className="ml-1.5 h-4 w-4" />
                                             </button>
                                         </div>
                                     </div>
@@ -469,28 +521,27 @@ export default function AndamanPackagePage() {
                         {activeTab === 'deluxe' && (
                             <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-100">
                                 <div className="md:flex">
-                                    <div className="md:w-1/3 h-64 md:h-auto relative">
+                                    <div className="md:w-1/3 h-64 md:h-auto relative group">
                                         <Image
-                                            src="/images/hotel-deluxe.jpg" // Placeholder image
-                                            alt="Deluxe Accommodation"
-                                            fill
-                                            style={{ objectFit: 'cover' }}
+                                            src={placeholderImages.hotelDeluxe}
+                                            alt="Deluxe Accommodation Example"
+                                            fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110"
                                         />
                                     </div>
-                                    <div className="p-6 md:w-2/3">
+                                    <div className="p-6 md:p-8 md:w-2/3">
                                         <h3 className="text-2xl font-semibold text-gray-800 mb-4">Deluxe Hotels</h3>
-                                        <div className="space-y-3 text-gray-600 mb-6">
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Port Blair:</strong> Bay Walk By Sea Side (Premium AC) / Andaman Galley / Marina Manor or similar</p>
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Havelock:</strong> Blue Island Beach Resort (Andaman Cottage) / Shangrilas / Blue Bird Resort or similar</p>
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Neil:</strong> Tango Beach Resort (Tango Premium Room) or similar</p>
+                                        <div className="space-y-2 text-gray-700 mb-6">
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Port Blair (2N):</strong> Bay Walk By Sea Side (Premium AC) / Andaman Galley / Marina Manor or similar</p>
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Havelock (1N):</strong> Blue Island Beach Resort (Andaman Cottage) / Shangrilas / Blue Bird Resort or similar</p>
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Neil (1N):</strong> Tango Beach Resort (Tango Premium Room) or similar</p>
                                         </div>
-                                        <div className="flex items-center justify-between mt-auto">
-                                            <div className="text-2xl font-bold text-blue-600">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-auto">
+                                            <div className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">
                                                 ₹42,735/-
                                                 <span className="text-sm font-normal text-gray-600 block">for 2 Adults (incl. GST, Stay, Transfers, Sightseeing)</span>
                                             </div>
-                                            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300">
-                                                Select Package
+                                            <button className="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 shadow hover:shadow-md flex items-center">
+                                                Select Package <ArrowRight className="ml-1.5 h-4 w-4" />
                                             </button>
                                         </div>
                                     </div>
@@ -502,28 +553,27 @@ export default function AndamanPackagePage() {
                         {activeTab === 'premium' && (
                             <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-100">
                                 <div className="md:flex">
-                                    <div className="md:w-1/3 h-64 md:h-auto relative">
+                                    <div className="md:w-1/3 h-64 md:h-auto relative group">
                                         <Image
-                                            src="/images/hotel-premium.jpg" // Placeholder image
-                                            alt="Premium Accommodation"
-                                            fill
-                                            style={{ objectFit: 'cover' }}
+                                            src={placeholderImages.hotelPremium}
+                                            alt="Premium Accommodation Example"
+                                            fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110"
                                         />
                                     </div>
-                                    <div className="p-6 md:w-2/3">
+                                    <div className="p-6 md:p-8 md:w-2/3">
                                         <h3 className="text-2xl font-semibold text-gray-800 mb-4">Premium Hotels</h3>
-                                        <div className="space-y-3 text-gray-600 mb-6">
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Port Blair:</strong> Hotel Shompen (Deluxe AC) / Olive Hotel / Luxor or similar</p>
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Havelock:</strong> Aquays Beach Resort / Havelock Plaza Holiday / Hotel Haywizz or similar</p>
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Neil:</strong> Pearl Park Beach Resort (Standard AC Garden View) or similar</p>
+                                        <div className="space-y-2 text-gray-700 mb-6">
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Port Blair (2N):</strong> Hotel Shompen (Deluxe AC) / Olive Hotel / Luxor or similar</p>
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Havelock (1N):</strong> Aquays Beach Resort / Havelock Plaza Holiday / Hotel Haywizz or similar</p>
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Neil (1N):</strong> Pearl Park Beach Resort (Standard AC Garden View) or similar</p>
                                         </div>
-                                        <div className="flex items-center justify-between mt-auto">
-                                            <div className="text-2xl font-bold text-blue-600">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-auto">
+                                            <div className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">
                                                 ₹50,435/-
                                                 <span className="text-sm font-normal text-gray-600 block">for 2 Adults (incl. GST, Stay, Transfers, Sightseeing)</span>
                                             </div>
-                                            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300">
-                                                Select Package
+                                            <button className="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 shadow hover:shadow-md flex items-center">
+                                                Select Package <ArrowRight className="ml-1.5 h-4 w-4" />
                                             </button>
                                         </div>
                                     </div>
@@ -535,28 +585,27 @@ export default function AndamanPackagePage() {
                         {activeTab === 'luxury' && (
                             <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-100">
                                 <div className="md:flex">
-                                    <div className="md:w-1/3 h-64 md:h-auto relative">
+                                    <div className="md:w-1/3 h-64 md:h-auto relative group">
                                         <Image
-                                            src="/images/hotel-luxury.jpg" // Placeholder image
-                                            alt="Luxury Accommodation"
-                                            fill
-                                            style={{ objectFit: 'cover' }}
+                                            src={placeholderImages.hotelLuxury}
+                                            alt="Luxury Accommodation Example"
+                                            fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110"
                                         />
                                     </div>
-                                    <div className="p-6 md:w-2/3">
+                                    <div className="p-6 md:p-8 md:w-2/3">
                                         <h3 className="text-2xl font-semibold text-gray-800 mb-4">Luxury Hotels</h3>
-                                        <div className="space-y-3 text-gray-600 mb-6">
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Port Blair:</strong> Mansha Regency (Deluxe Room) / Sand Heaven / The Escape (Farm Villa) or similar</p>
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Havelock:</strong> Symphony Palms Beach Resort (Cottage) / Sands Marina or similar</p>
-                                            <p><MapPin size={16} className="inline mr-1 text-blue-600" /> <strong>Neil:</strong> Summer Sand / Casa Earthor or similar</p>
+                                        <div className="space-y-2 text-gray-700 mb-6">
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Port Blair (2N):</strong> Mansha Regency (Deluxe Room) / Sand Heaven / The Escape (Farm Villa) or similar</p>
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Havelock (1N):</strong> Symphony Palms Beach Resort (Cottage) / Sands Marina or similar</p>
+                                            <p><MapPin size={16} className="inline mr-1 text-gray-500" /> <strong>Neil (1N):</strong> Summer Sand / Casa Earthor or similar</p>
                                         </div>
-                                        <div className="flex items-center justify-between mt-auto">
-                                            <div className="text-2xl font-bold text-blue-600">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-auto">
+                                            <div className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">
                                                 ₹62,535/-
                                                 <span className="text-sm font-normal text-gray-600 block">for 2 Adults (incl. GST, Stay, Transfers, Sightseeing)</span>
                                             </div>
-                                            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300">
-                                                Select Package
+                                            <button className="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 shadow hover:shadow-md flex items-center">
+                                                Select Package <ArrowRight className="ml-1.5 h-4 w-4" />
                                             </button>
                                         </div>
                                     </div>
@@ -567,62 +616,60 @@ export default function AndamanPackagePage() {
                 </div>
             </section>
 
-            {/* What to Expect Section */}
-            <section className="py-16 md:py-24">
+            {/* What to Expect Section - Matched sample styling */}
+            <section className="py-10 sm:py-16 md:py-24">
                 <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-center mb-10 md:mb-14">
-                        <Umbrella className="text-blue-600 mr-3 flex-shrink-0" size={24} />
+                    <div className="flex items-center justify-center mb-8 sm:mb-10 md:mb-14">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
+                            <Umbrella className="text-gray-700" size={24} />
+                        </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">What to Expect</h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                        {/* Card structure matches sample info cards */}
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                             <div className="h-48 relative">
                                 <Image
-                                    src="/images/beaches.jpg" // Placeholder image
-                                    alt="Pristine Beaches"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
+                                    src={placeholderImages.expectBeaches}
+                                    alt="Pristine Beaches of Andaman"
+                                    fill style={{ objectFit: 'cover' }}
                                 />
                             </div>
                             <div className="p-5">
                                 <h3 className="text-xl font-semibold mb-3 text-gray-800">Pristine Beaches</h3>
                                 <p className="text-gray-600">
-                                    Relax on world-class beaches like Radhanagar, Kalapathar, Bharatpur, Laxmanpur, and Corbyn's Cove.
+                                    Relax on world-class beaches like Radhanagar, Bharatpur, Laxmanpur, and Corbyn's Cove.
                                 </p>
                             </div>
                         </div>
-
-                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                             <div className="h-48 relative">
                                 <Image
-                                    src="/images/water-activities.jpg" // Placeholder image
-                                    alt="Water Activities"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
+                                    src={placeholderImages.expectWater}
+                                    alt="Scenic Ferry Rides and Water Activities"
+                                    fill style={{ objectFit: 'cover' }}
                                 />
                             </div>
                             <div className="p-5">
-                                <h3 className="text-xl font-semibold mb-3 text-gray-800">Island Adventures</h3>
+                                <h3 className="text-xl font-semibold mb-3 text-gray-800">Island Hopping Fun</h3>
                                 <p className="text-gray-600">
-                                    Enjoy scenic ferry rides between islands and opportunities for water sports like jet skiing and boat rides.
+                                    Enjoy comfortable ferry rides between Port Blair, Havelock, and Neil Island. Opportunities for water sports.
                                 </p>
                             </div>
                         </div>
-
-                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                             <div className="h-48 relative">
                                 <Image
-                                    src="/images/historical-sites.jpg" // Placeholder image
-                                    alt="Historical & Natural Sites"
-                                    fill
-                                    style={{ objectFit: 'cover' }}
+                                    src={placeholderImages.expectHistorical}
+                                    alt="Historical Sites and Natural Beauty"
+                                    fill style={{ objectFit: 'cover' }}
                                 />
                             </div>
                             <div className="p-5">
-                                <h3 className="text-xl font-semibold mb-3 text-gray-800">Historical & Natural Sites</h3>
+                                <h3 className="text-xl font-semibold mb-3 text-gray-800">History & Nature</h3>
                                 <p className="text-gray-600">
-                                    Explore Cellular Jail's history, witness stunning sunrises/sunsets, and visit the Chidiyatapu bird sanctuary.
+                                    Explore Cellular Jail's past, witness stunning sunrises/sunsets, and visit Chidiyatapu bird sanctuary.
                                 </p>
                             </div>
                         </div>
@@ -630,62 +677,62 @@ export default function AndamanPackagePage() {
                 </div>
             </section>
 
-            {/* Package Details Section */}
-            <section className="py-16 md:py-24 bg-blue-50" id="details">
+            {/* Package Details Section - Matched sample styling */}
+            <section className="py-16 md:py-24 bg-gray-50" id="details">
                 <div className="container mx-auto px-4">
                     <div className="flex items-center justify-center mb-10 md:mb-14">
-                        <ClipboardList className="text-blue-600 mr-3 flex-shrink-0" size={24} />
+                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+                            <ClipboardList className="text-gray-700" size={24} />
+                        </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Package Details</h2>
                     </div>
                     <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">
-                        Here's what your 4 Nights / 5 Days package includes and excludes.
+                        Here's what your 4 Nights / 5 Days package (including Neil Island) includes and excludes.
                     </p>
 
                     <div className="grid md:grid-cols-2 gap-8">
                         {/* Inclusions */}
-                        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 border border-gray-100">
                             <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-                                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                                    <Check className="text-green-600" size={20} />
-                                </div>
+                                <Check className="text-green-500 mr-3 flex-shrink-0" size={24} />
                                 What's Included
                             </h3>
-                            <ul className="space-y-3">
+                            <ul className="space-y-3 text-gray-700">
                                 {[
-                                    'Hotel Stay: 2N Port Blair, 1N Havelock (Swaraj Dweep), 1N Neil (Shaheed Dweep) in selected category with Complimentary Breakfast.',
-                                    'Private AC Cab for all airport/jetty transfers and sightseeing within city limits as per itinerary.',
-                                    'Specific Transfers: Hotel to Cellular Jail, Corbyn\'s Cove, PB Jetty; Havelock Jetty to Hotel, Radhanagar, Elephant Beach P&D point, back to Jetty; Neil Jetty to Hotel, Laxmanpur, Bharatpur, Sitapur, back to Jetty; PB Jetty to Hotel, Airport Drop.',
-                                    'Tickets & Activities: Cellular Jail Entry, Cellular Jail Light & Sound Show, Cruise Port Blair <> Havelock, Elephant Beach Boat Ride Ticket, Cruise Havelock <> Neil, Cruise Neil <> Port Blair.',
+                                    'Hotel Stay: 2N Port Blair, 1N Havelock, 1N Neil Island in selected category with Breakfast.',
+                                    'Private AC Cab: Airport/Jetty transfers & sightseeing per itinerary (city limits).',
+                                    'Transfers: Hotel-Jail-Corbyn-Jetty (PB); Jetty-Hotel-Radhanagar-Jetty (Havelock); Jetty-Hotel-Beaches-Jetty (Neil); Jetty-Hotel-Chidiyatapu-Hotel (PB); Hotel-Airport Drop.',
+                                    'Tickets: Cellular Jail Entry & Light/Sound Show.',
+                                    'Cruise Tickets: Port Blair <> Havelock, Havelock <> Neil, Neil <> Port Blair.',
                                     'All applicable taxes (GST included).'
                                 ].map((item, index) => (
                                     <li key={index} className="flex items-start">
                                         <Check className="text-green-500 mr-2 mt-1 flex-shrink-0" size={16} />
-                                        <span className="text-gray-700">{item}</span>
+                                        <span>{item}</span>
                                     </li>
                                 ))}
                             </ul>
                         </div>
 
                         {/* Exclusions */}
-                        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 border border-gray-100">
                             <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-                                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
-                                    <X className="text-red-600" size={20} />
-                                </div>
+                                <X className="text-red-500 mr-3 flex-shrink-0" size={24} />
                                 What's Not Included
                             </h3>
-                            <ul className="space-y-3">
+                            <ul className="space-y-3 text-gray-700">
                                 {[
                                     'Flight Tickets.',
                                     'Lunch and dinner.',
-                                    'Water sports activities not mentioned in inclusions (e.g., Jet Ski, Glass Bottom Boat at Bharatpur).',
-                                    'Anything which is not mentioned in inclusions.',
-                                    'Any expense arising due to unforeseen circumstances.',
-                                    'Personal expenses. Room service and special orders. Alcoholic and non-alcoholic beverages.'
+                                    'Water sports activities not mentioned (e.g., Jet Ski, Glass Bottom Boat).',
+                                    'Camera fees (still or video).',
+                                    'Personal expenses (tips, laundry, calls, etc.).',
+                                    'Anything not explicitly mentioned in inclusions.',
+                                    'Expenses due to unforeseen circumstances (delays, cancellations, etc.).'
                                 ].map((item, index) => (
                                     <li key={index} className="flex items-start">
                                         <X className="text-red-500 mr-2 mt-1 flex-shrink-0" size={16} />
-                                        <span className="text-gray-700">{item}</span>
+                                        <span>{item}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -694,118 +741,116 @@ export default function AndamanPackagePage() {
                 </div>
             </section>
 
-            {/* Dining Experience Section */}
-            <section className="py-16 md:py-24">
+            {/* Dining Experience Section - Matched sample styling */}
+            <section className="py-10 sm:py-16 md:py-24">
                 <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-center mb-10 md:mb-14">
-                        <Utensils className="text-blue-600 mr-3 flex-shrink-0" size={24} />
+                    <div className="flex items-center justify-center mb-8 sm:mb-10 md:mb-14">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
+                            <Utensils className="text-gray-700" size={24} />
+                        </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Dining Experience</h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                        <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden shadow-lg">
-                            <Image
-                                src="/images/seafood.jpg" // Placeholder image
-                                alt="Fresh Seafood"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
+                        {/* Image cards match sample highlight structure */}
+                        <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden shadow-lg group">
+                            <Image src={placeholderImages.diningSeafood} alt="Fresh Seafood Platter" fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                            <div className="absolute bottom-6 left-6 text-white">
-                                <h3 className="text-xl font-semibold mb-2">Fresh Seafood</h3>
-                                <p className="text-sm text-white/80">
-                                    Savor the delicious and fresh catch from the Andaman Sea.
-                                </p>
+                            <div className="absolute bottom-6 left-6 text-white drop-shadow">
+                                <h3 className="text-xl font-semibold mb-2">Fresh Seafood Delights</h3>
+                                <p className="text-sm text-white/90">Savor the delicious and fresh catch from the Andaman Sea.</p>
                             </div>
                         </div>
-
-                        <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden shadow-lg">
-                            <Image
-                                src="/images/local-cuisine.jpg" // Placeholder image
-                                alt="Local Cuisine"
-                                fill
-                                style={{ objectFit: 'cover' }}
-                            />
+                        <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden shadow-lg group">
+                            <Image src={placeholderImages.diningLocal} alt="Local Andaman Cuisine" fill style={{ objectFit: 'cover' }} className="transition-transform duration-500 group-hover:scale-110" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                            <div className="absolute bottom-6 left-6 text-white">
+                            <div className="absolute bottom-6 left-6 text-white drop-shadow">
                                 <h3 className="text-xl font-semibold mb-2">Local & Varied Cuisine</h3>
-                                <p className="text-sm text-white/80">
-                                    Explore local flavors or find familiar Indian and continental dishes.
-                                </p>
+                                <p className="text-sm text-white/90">Explore local flavors or find familiar Indian and continental dishes.</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-                        <p className="text-gray-600 mb-4">
-                            While lunch and dinner are not included in the package, Port Blair, Havelock, and Neil Island offer diverse dining options, from budget-friendly local eateries to fine dining restaurants.
+                    {/* Text card matches sample card style */}
+                    <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 border border-gray-100 max-w-3xl mx-auto">
+                        <p className="text-gray-700 mb-4">
+                            While breakfast is included, lunch and dinner are yours to explore. Port Blair, Havelock, and Neil Island offer diverse dining options, from budget-friendly local eateries to upscale restaurants.
                         </p>
-                        <p className="text-gray-600">
-                            Seafood is a must-try! Your driver or hotel can provide recommendations based on your culinary preferences and budget.
+                        <p className="text-gray-700">
+                            Seafood is a must-try! Ask your driver or hotel staff for recommendations tailored to your taste and budget.
                         </p>
                     </div>
                 </div>
             </section>
 
-            {/* Cancellation Policy Section */}
-            <section className="py-16 md:py-24 bg-blue-50" id="cancellation">
+            {/* Cancellation Policy Section - Matched sample styling */}
+            <section className="py-16 md:py-24 bg-gray-50" id="cancellation">
                 <div className="container mx-auto px-4">
                     <div className="flex items-center justify-center mb-10 md:mb-14">
-                        <AlertTriangle className="text-blue-600 mr-3 flex-shrink-0" size={24} />
+                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+                            <AlertTriangle className="text-gray-700" size={24} />
+                        </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Cancellation Policy</h2>
                     </div>
                     <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">
                         Please review our cancellation terms carefully before booking your trip.
                     </p>
 
-                    <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 max-w-3xl mx-auto">
-                        <ul className="space-y-4">
+                    {/* Card styling matches sample */}
+                    <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 max-w-3xl mx-auto border border-gray-100">
+                        <ul className="space-y-3 text-gray-700">
                             {[
-                                'Cancellation charge of rupees 2500 per person is applicable any time after the advance is paid.',
-                                'No refund, if cancellation is received less than 10 days before arrival.',
-                                '50% of the total package amount is applicable if cancellation is received between 11 - 20 days before arrival.',
-                                '25% of the total package amount is applicable if cancellation is received between 21 - 30 days before arrival.',
-                                '100% cancellation charges is applicable any time after the advance is paid for the arrivals between 15 Dec - 15 Jan.'
+                                { text: 'Cancellation charge of ₹2500 per person applicable any time after advance payment.', color: 'yellow' },
+                                { text: 'No refund if cancellation is received less than 10 days before arrival.', color: 'red' },
+                                { text: '50% of total package cost applicable if cancellation is 11-20 days before arrival.', color: 'yellow' },
+                                { text: '25% of total package cost applicable if cancellation is 21-30 days before arrival.', color: 'yellow' },
+                                { text: '100% cancellation charge applicable for arrivals between 15 Dec - 15 Jan (Post Advance).', color: 'red' }
                             ].map((item, index) => (
                                 <li key={index} className="flex items-start">
-                                    <AlertTriangle className="text-amber-500 mr-3 mt-1 flex-shrink-0" size={18} />
-                                    <span className="text-gray-700">{item}</span>
+                                    <AlertTriangle className={`${item.color === 'red' ? 'text-red-500' : 'text-yellow-500'} mr-2 mt-1 flex-shrink-0`} size={16} />
+                                    <span>{item.text}</span>
                                 </li>
                             ))}
+                            <li className="flex items-start">
+                                <AlertTriangle className="text-yellow-500 mr-2 mt-1 flex-shrink-0" size={16} />
+                                <span>In case of unforeseen weather/government restrictions, operator will try to provide alternatives, but no refund is provided for cancelled activities.</span>
+                            </li>
                         </ul>
                     </div>
                 </div>
             </section>
 
-            {/* Photo Gallery Section */}
-            <section className="py-16 md:py-24">
+            {/* Photo Gallery Section - Matched sample styling */}
+            <section className="py-10 sm:py-16 md:py-24">
                 <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-center mb-10 md:mb-14">
-                        <Camera className="text-blue-600 mr-3 flex-shrink-0" size={24} />
+                    <div className="flex items-center justify-center mb-8 sm:mb-10 md:mb-14">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mr-4">
+                            <Camera className="text-gray-700" size={24} />
+                        </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Photo Gallery</h2>
                     </div>
-                    <p className="text-center text-gray-600 max-w-2xl mx-auto mb-12">
-                        Glimpses of the beautiful locations and experiences awaiting you in Andaman.
+                    <p className="text-center text-gray-600 max-w-2xl mx-auto mb-8 sm:mb-12">
+                        Glimpses of the beautiful locations and experiences awaiting you.
                     </p>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {/* Grid and image styling matches sample's image grids */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         {[
-                            { src: '/images/gallery-1.jpg', alt: 'Cellular Jail Exterior' }, // Placeholder image
-                            { src: '/images/gallery-2.jpg', alt: 'Radhanagar Beach Aerial' }, // Placeholder image
-                            { src: '/images/gallery-3.jpg', alt: 'Corbyn\'s Cove Beach Shoreline' }, // Placeholder image
-                            { src: '/images/gallery-4.jpg', alt: 'Ferry approaching Havelock Island' }, // Placeholder image
-                            { src: '/images/gallery-5.jpg', alt: 'Natural Bridge formation, Neil Island' }, // Placeholder image (Update alt text)
-                            { src: '/images/gallery-6.jpg', alt: 'Sunset view from Laxmanpur Beach' }, // Placeholder image (Update alt text)
-                            { src: '/images/gallery-7.jpg', alt: 'Typical Resort View in Andaman' }, // Placeholder image (Update alt text)
-                            { src: '/images/gallery-8.jpg', alt: 'Chidiyatapu Bird Sanctuary View' } // Placeholder image (Update alt text)
+                            { src: placeholderImages.gallery1, alt: 'Cellular Jail Exterior' },
+                            { src: placeholderImages.gallery2, alt: 'Radhanagar Beach Aerial' },
+                            { src: placeholderImages.gallery3, alt: 'Corbyn\'s Cove Beach Shoreline' },
+                            { src: placeholderImages.gallery4, alt: 'Ferry approaching Havelock Island' },
+                            { src: placeholderImages.gallery5, alt: 'Natural Bridge formation, Neil Island' },
+                            { src: placeholderImages.gallery6, alt: 'Sunset view from Laxmanpur Beach' },
+                            { src: placeholderImages.gallery7, alt: 'Typical Resort View in Andaman' },
+                            { src: placeholderImages.gallery8, alt: 'Chidiyatapu Bird Sanctuary View' }
                         ].map((image, index) => (
-                            <div key={index} className="relative h-48 md:h-64 rounded-2xl overflow-hidden">
+                            <div key={index} className="relative h-48 md:h-64 rounded-2xl overflow-hidden group">
                                 <Image
                                     src={image.src}
                                     alt={image.alt}
                                     fill
                                     style={{ objectFit: 'cover' }}
-                                    className="transition-all duration-500 hover:scale-110"
+                                    className="transition-transform duration-500 group-hover:scale-110"
                                 />
                             </div>
                         ))}
@@ -813,34 +858,25 @@ export default function AndamanPackagePage() {
                 </div>
             </section>
 
-            {/* CTA Section */}
-            <section className="relative py-16 md:py-24" id="contact">
-                <div className="absolute inset-0 z-0">
-                    <Image
-                        src="/images/andaman-beach.jpg" // Placeholder image
-                        alt="Andaman Beach Sunset"
-                        fill
-                        style={{ objectFit: 'cover' }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-900/90 to-blue-600/80"></div>
-                </div>
-
-                <div className="container mx-auto px-4 relative z-10">
-                    <div className="max-w-2xl mx-auto text-center text-white">
-                        <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Book Your 5-Day Andaman Adventure?</h2>
-                        <p className="text-lg mb-8">
-                            Contact our travel experts today to customize and secure your booking for an unforgettable island getaway.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <a href="tel:+91XXXXXXXXXX" // Replace with actual phone number
-                                className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 rounded-full font-semibold transition-all duration-300 flex items-center justify-center">
-                                <Phone className="mr-2" size={18} />
-                                Call Us Now
-                            </a>
-                            <button className="bg-blue-600 text-white border-2 border-white hover:bg-blue-700 px-8 py-3 rounded-full font-semibold transition-all duration-300">
-                                Book Online
-                            </button>
-                        </div>
+            {/* CTA Section - Matched sample styling */}
+            <section className="relative py-20 md:py-32 bg-gray-100">
+                <div className="container mx-auto px-4 relative z-10 text-center">
+                    <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6 drop-shadow-sm">
+                        Ready for Your 5-Day Andaman Adventure (with Neil)?
+                    </h2>
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-10 drop-shadow-sm">
+                        Contact our travel experts today to customize and book your unforgettable island getaway covering Port Blair, Havelock, and Neil Island.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button className="bg-gray-800 text-white hover:bg-gray-700 font-semibold py-4 px-10 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center">
+                            Book This Package Now <ArrowRight className="ml-2 h-5 w-5" />
+                        </button>
+                        <Link
+                            href="/contact" // Use appropriate contact link
+                            className="bg-transparent border-2 border-gray-700 text-gray-700 hover:bg-gray-200 font-semibold py-4 px-10 rounded-full transition-all duration-300 flex items-center justify-center"
+                        >
+                            <Phone className="mr-2 h-5 w-5" /> Contact Us
+                        </Link>
                     </div>
                 </div>
             </section>
