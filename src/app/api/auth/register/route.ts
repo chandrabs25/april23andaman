@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'// Path: .\src\app\api\auth\register\route.ts
 import { NextRequest, NextResponse } from 'next/server';
-// --- FIX: Import getDatabase ---
-import { getDatabase } from '@/lib/database';
+// --- FIX: Import DatabaseService ---
+import { DatabaseService } from '@/lib/database';
 // --- End of FIX ---
 import * as jose from 'jose'; // Keep if needed for auto-login, though not used directly here
 import * as bcrypt from 'bcryptjs';
@@ -32,8 +32,8 @@ interface User {
 // Register a new user
 export async function POST(request: NextRequest) {
   try {
-    // --- FIX: Get database instance ---
-    const db = await getDatabase();
+    // --- FIX: Instantiate DatabaseService ---
+    const databaseService = new DatabaseService();
     // --- End of FIX ---
 
     // Parse request body with type assertion
@@ -67,11 +67,9 @@ export async function POST(request: NextRequest) {
     const firstName = nameParts[0];
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''; // Handle cases with only first name
 
-    // Check if user already exists using D1 syntax
-    const existingUser = await db // Use obtained db instance
-      .prepare('SELECT id FROM users WHERE email = ?')
-      .bind(email)
-      .first<{ id: number }>(); // Check if any user with that email exists
+    // --- FIX: Check if user already exists using DatabaseService ---
+    const existingUser = await databaseService.getUserByEmail(email);
+    // --- End of FIX ---
 
     if (existingUser) {
       return NextResponse.json(
@@ -87,21 +85,16 @@ export async function POST(request: NextRequest) {
     // Get the role_id for 'user' (assuming it's 2 based on your migration)
     const userRoleId = 2; // Replace with actual ID if different (Role 1 is Admin, Role 3 is Vendor)
 
-    // Insert user into database using D1 syntax and correct schema fields
-    const result = await db // Use obtained db instance
-      .prepare(`
-        INSERT INTO users (first_name, last_name, email, password_hash, phone, role_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      `)
-      .bind(
-        firstName,      // Use firstName
-        lastName,       // Use lastName
-        email,
-        hashedPassword, // Use the bcrypt hashed password
-        phone || null,  // Use phone or null if undefined
-        userRoleId      // Use the role_id
-      )
-      .run(); // Use run() for INSERT
+    // --- FIX: Insert user into database using DatabaseService ---
+    const result = await databaseService.createUser({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        password_hash: hashedPassword,
+        phone: phone || null,
+        role_id: userRoleId
+    });
+    // --- End of FIX ---
 
     const lastRowId = result.meta?.last_row_id;
 
@@ -114,24 +107,30 @@ export async function POST(request: NextRequest) {
         );
     }
 
-     // --- FIX: Optionally fetch the created user to return more data ---
+     // --- FIX: Optionally fetch the created user using DatabaseService ---
      // This adds an extra query but provides better feedback/data for auto-login
-     const createdUser = await db
-       .prepare('SELECT id, email, first_name, last_name, role_id FROM users WHERE id = ?')
-       .bind(lastRowId)
-       .first<Omit<User, 'password_hash'>>(); // Fetch relevant fields, exclude hash
+     const createdUser = await databaseService.getUserById(lastRowId);
+     // --- End of FIX ---
 
      if (!createdUser) {
+         // Log a warning, but don't necessarily fail the request if the insert succeeded
          console.warn(`Could not fetch newly created user with ID: ${lastRowId}`);
      }
-     // --- End of FIX ---
 
 
     return NextResponse.json({
       success: true,
       message: 'User registered successfully',
       // --- FIX: Return created user data (excluding password) ---
-      data: createdUser || { id: lastRowId } // Return fetched user or just ID if fetch failed
+      // Selectively return fields, excluding password_hash
+      data: createdUser ? {
+          id: createdUser.id,
+          email: createdUser.email,
+          first_name: createdUser.first_name,
+          last_name: createdUser.last_name,
+          role_id: createdUser.role_id,
+          phone: createdUser.phone
+      } : { id: lastRowId } // Fallback to just ID if fetch failed
       // --- End of FIX ---
     }, { status: 201 });
 

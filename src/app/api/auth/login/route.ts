@@ -1,8 +1,8 @@
 // Path: .\src\app\api\auth\login\route.ts
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
-// --- FIX: Import getDatabase ---
-import { getDatabase } from '@/lib/database';
+// --- FIX: Import DatabaseService ---
+import { DatabaseService } from '@/lib/database';
 // --- End of FIX ---
 import * as jose from 'jose';
 import * as bcrypt from 'bcryptjs';
@@ -21,13 +21,13 @@ import { getJwtSecret } from '@/lib/auth';
 export async function POST(request: NextRequest) {
   console.log("--- POST /api/auth/login Request Started ---");
   try {
-    // --- FIX: Get database instance ---
-    const db = await getDatabase();
+    // --- FIX: Instantiate DatabaseService ---
+    const databaseService = new DatabaseService();
     // --- End of FIX ---
-    console.log("Login: DB handle obtained.");
+    console.log("Login: DatabaseService instantiated.");
     // Parse request body with type assertion
     const { email, password } = await request.json() as LoginRequestBody;
-     console.log(`Login attempt for email: ${email}`); 
+     console.log(`Login attempt for email: ${email}`);
     // Validation
     if (!email || !password) {
       return NextResponse.json(
@@ -36,12 +36,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user using D1 syntax
-    const user = await db // Use the obtained db instance
-      .prepare('SELECT * FROM users WHERE email = ?')
-      .bind(email)
-      .first<any>(); // Use <any> or a specific User type if defined
-     console.log("User found:", user ? `ID ${user.id}` : 'No user found'); 
+    // --- FIX: Find user using DatabaseService ---
+    const user = await databaseService.getUserByEmail(email);
+    // --- End of FIX ---
+
+     console.log("User found:", user ? `ID ${user.id}` : 'No user found');
     if (!user) {
       return NextResponse.json(
         { success: false, message: 'Invalid credentials' },
@@ -50,8 +49,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check password - Ensure user.password_hash exists and is the correct field name
+    // Assuming DatabaseService returns the full user object including password_hash
     if (!user.password_hash) {
-      console.log("Login failed: Invalid credentials (user not found or no hash)."); 
+      console.log("Login failed: Invalid credentials (user not found or no hash).");
       // Handle cases where user might exist but has no password (e.g., OAuth user)
       return NextResponse.json(
         { success: false, message: 'Invalid credentials (no password set)' },

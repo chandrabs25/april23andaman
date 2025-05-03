@@ -35,12 +35,12 @@ PRAGMA foreign_keys=OFF; -- Temporarily disable FK checks during seeding
 -- Note: Passwords here use a placeholder hash for 'password'.
 -- Replace 'placeholder_bcrypt_hash_for_password' with a real hash if needed for login testing,
 -- or update them after creation via an API or direct DB command.
--- A common hash for 'password' (cost 10) is: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+-- A common hash for 'password' (cost 10) is: $2b$10$/McUJV1/0CQOVf6JXppp4.zyJn0A5VkdLTtADPQm8hw9NHHWCaZ0S
 -- =============================================
 INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role_id) VALUES
-  (2, 'testuser@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Test', 'User', '9876543210', 2),
-  (3, 'scubavendor@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Scuba', 'Vendor', '9876543211', 3),
-  (4, 'hotelvendor@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Hotel', 'Manager', '9876543212', 3);
+  (2, 'testuser@example.com', '$2b$10$/McUJV1/0CQOVf6JXppp4.zyJn0A5VkdLTtADPQm8hw9NHHWCaZ0S', 'Test', 'User', '9876543210', 2),
+  (3, 'scubavendor@example.com', '$2b$10$/McUJV1/0CQOVf6JXppp4.zyJn0A5VkdLTtADPQm8hw9NHHWCaZ0S', 'Scuba', 'Vendor', '9876543211', 3),
+  (4, 'hotelvendor@example.com', '$2b$10$/McUJV1/0CQOVf6JXppp4.zyJn0A5VkdLTtADPQm8hw9NHHWCaZ0S', 'Hotel', 'Manager', '9876543212', 3);
 
 -- =============================================
 -- Islands

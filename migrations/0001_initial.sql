@@ -230,4 +230,4 @@ INSERT INTO roles (name, description, permissions) VALUES
 
 -- Insert admin user
 INSERT INTO users (email, password_hash, first_name, last_name, role_id) VALUES 
-  ('admin@andamantravel.com', 'placeholder_hash_to_be_replaced', 'Admin', 'User', 1);
+  ('admin@reachandaman.com', '$2b$10$/McUJV1/0CQOVf6JXppp4.zyJn0A5VkdLTtADPQm8hw9NHHWCaZ0S', 'Admin', 'User', 1);

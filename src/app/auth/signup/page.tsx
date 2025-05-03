@@ -25,6 +25,7 @@ interface SignupFormErrors {
   password?: string;
   confirmPassword?: string;
   agreeTerms?: string;
+  phone?: string;
 }
 
 
@@ -82,8 +83,8 @@ export default function SignupPage() {
     }
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
     }
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
@@ -97,6 +98,8 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { // Add type annotation
     e.preventDefault();
+    setErrors({}); // Clear previous errors
+    setSubmitError(''); // Clear previous submit error
 
     const formErrors = validateForm();
     if (Object.keys(formErrors).length > 0) {
@@ -105,32 +108,39 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
-    setSubmitError('');
 
     try {
        console.log("Submitting registration:", formData); // Debug log
-      // Simulate API call - In real app, call your /api/auth/register
-      // const response = await fetch('/api/auth/register', {
-      //    method: 'POST',
-      //    headers: { 'Content-Type': 'application/json' },
-      //    body: JSON.stringify({
-      //       name: `${formData.firstName} ${formData.lastName}`, // Combine names for API
-      //       email: formData.email,
-      //       password: formData.password,
-      //       phone: formData.phone || null
-      //    })
-      // });
-      // const data = await response.json();
-      // if (!response.ok) throw new Error(data.message || 'Registration failed');
+      const response = await fetch('/api/auth/register', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+            name: `${formData.firstName} ${formData.lastName}`, // Combine names for API
+            email: formData.email,
+            password: formData.password,
+            phone: formData.phone || undefined // Send undefined if empty, API handles null
+         })
+      });
 
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
+      interface ApiResponse {
+        success: boolean;
+        message?: string;
+      }
+
+      const data: ApiResponse = await response.json();
+
+      if (!response.ok || !data.success) {
+          // Use the message from the API response, or a default error
+          throw new Error(data.message || `Registration failed with status: ${response.status}`);
+      }
 
       // Redirect to login page on success
-       console.log("Simulated registration successful."); // Debug log
-      window.location.href = '/auth/signin?registered=true';
+       console.log("Registration successful:", data); // Debug log
+      window.location.href = '/auth/signin?registered=true'; // Redirect on success
+
     } catch (err) {
        console.error("Registration submission error:", err); // Debug log
-      setSubmitError(err instanceof Error ? err.message : 'An error occurred during registration. Please try again.');
+       setSubmitError(err instanceof Error ? err.message : 'An unknown error occurred during registration. Please try again.');
     } finally {
       setIsLoading(false);
     }
