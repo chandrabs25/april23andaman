@@ -9,27 +9,27 @@ import { Loader2 } from 'lucide-react';
 // Define interface for form data state
 interface VendorFormData {
   businessName: string;
-  ownerName: string;
+  firstName: string; // Added
+  lastName: string; // Added
   email: string;
   phone: string;
   password: string;
   confirmPassword: string;
   businessType: string; // Can refine with specific types later if needed
   address: string;
-  description: string;
 }
 
 export default function VendorRegisterPage() {
   const [formData, setFormData] = useState<VendorFormData>({ // Type the state
     businessName: '',
-    ownerName: '',
+    firstName: '', // Added
+    lastName: '', // Added
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
     businessType: 'tour_operator', // Default value
     address: '',
-    description: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,35 +73,54 @@ export default function VendorRegisterPage() {
         setError('You must agree to the Terms and Conditions to register.');
         return; // Stop submission
     }
+    // Add validation for firstName and lastName if needed
+    if (!formData.firstName || !formData.lastName) {
+        setError('First name and last name are required.');
+        return;
+    }
 
     setLoading(true); // Set loading state
 
     try {
-      // Simulate API call - Replace with actual fetch to your API endpoint
+      // Actual API call
       console.log('Submitting Vendor Registration:', formData);
-      // const response = await fetch('/api/vendors', { // Or your vendor registration endpoint
-      //    method: 'POST',
-      //    headers: { 'Content-Type': 'application/json' },
-      //    body: JSON.stringify({
-      //       // Map formData to the structure your API expects
-      //       // e.g., user_id might need separate handling or session data
-      //       business_name: formData.businessName,
-      //       // ownerName might go into users table?
-      //       // email/password/phone likely handled by user registration first
-      //       type: formData.businessType,
-      //       address: formData.address,
-      //       // description might not be directly in service_providers?
-      //       // Add other required fields like license_no, bank_details if applicable
-      //    })
-      // });
-      // const data = await response.json();
-      // if (!response.ok) {
-      //    throw new Error(data.message || 'Registration failed');
-      // }
+      const response = await fetch('/api/vendor/register', { // Example endpoint
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+            // Send all necessary fields from formData
+            email: formData.email,
+            password: formData.password, // Hashing happens server-side
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phone: formData.phone,
+            businessName: formData.businessName,
+            businessType: formData.businessType,
+            address: formData.address,
+         })
+      });
 
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
+      // Check if the request was successful
+      if (!response.ok) {
+        // Try to parse the error message from the response body
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (typeof errorData === 'object' && errorData !== null && 'message' in errorData && typeof (errorData as any).message === 'string') {
+            errorMessage = (errorData as { message: string }).message || errorMessage; // Use message from API if available
+          }
+        } catch (jsonError) {
+          // If parsing JSON fails, use the default HTTP error message
+          console.error("Failed to parse error JSON:", jsonError);
+        }
+        throw new Error(errorMessage); // Throw an error to be caught below
+      }
 
-      console.log("Simulated vendor registration successful."); // Debug log
+      // Handle successful response (optional: parse success message)
+      // const result = await response.json();
+      // console.log("Vendor registration successful:", result); // Debug log
+
+      console.log("Vendor registration API call successful."); // Debug log
       setSuccess(true); // Show success message
 
       // Redirect after a delay
@@ -111,6 +130,7 @@ export default function VendorRegisterPage() {
 
     } catch (err) {
       console.error('Vendor registration error:', err);
+      // Set the error state with the message from the caught error
       setError(err instanceof Error ? err.message : 'An error occurred during registration. Please try again.');
     } finally {
       setLoading(false); // Clear loading state
@@ -148,19 +168,22 @@ export default function VendorRegisterPage() {
               {/* Form Fields */}
                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                  <div> <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 mb-1"> Business Name </label> <input type="text" id="businessName" name="businessName" value={formData.businessName} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
-                 <div> <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 mb-1"> Owner Name </label> <input type="text" id="ownerName" name="ownerName" value={formData.ownerName} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
+                 {/* Changed Owner Name to First Name and Last Name */}
+                 <div> <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1"> Owner's First Name </label> <input type="text" id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                 <div> <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1"> Owner's Last Name </label> <input type="text" id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
                  <div> <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1"> Email Address </label> <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required placeholder="you@company.com" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
-                 <div> <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1"> Phone Number </label> <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                 <div> <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1"> Phone Number </label> <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
                  <div> <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1"> Password </label> <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} required minLength={8} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
-                 <div> <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1"> Confirm Password </label> <input type="password" id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required minLength={8} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
                </div>
-               <div> <label htmlFor="businessType" className="block text-sm font-medium text-gray-700 mb-1"> Business Type </label> <select id="businessType" name="businessType" value={formData.businessType} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"> <option value="tour_operator">Tour Operator</option> <option value="hotel">Hotel / Resort</option> <option value="activity_provider">Activity Provider</option> <option value="transport">Transportation Service</option> <option value="restaurant">Restaurant</option> <option value="other">Other</option> </select> </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                 <div> <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1"> Confirm Password </label> <input type="password" id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required minLength={8} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
+                 <div> <label htmlFor="businessType" className="block text-sm font-medium text-gray-700 mb-1"> Business Type </label> <select id="businessType" name="businessType" value={formData.businessType} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"> <option value="tour_operator">Tour Operator</option> <option value="hotel">Hotel / Resort</option> <option value="activity_provider">Activity Provider</option> <option value="transport">Transportation Service</option> <option value="restaurant">Restaurant</option> <option value="other">Other</option> </select> </div>
+               </div>
                <div> <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1"> Business Address </label> <input type="text" id="address" name="address" value={formData.address} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/> </div>
-               <div> <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1"> Business Description </label> <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={3} required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea> </div>
               {/* Terms Checkbox */}
               <div className="flex items-center">
                 <input

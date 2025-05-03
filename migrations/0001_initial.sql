@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS services (
   images TEXT,
   amenities TEXT,
   cancellation_policy TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (provider_id) REFERENCES service_providers(id),
@@ -110,7 +111,7 @@ CREATE TABLE IF NOT EXISTS packages (
   FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- Bookings table
+-- Bookings packages table
 CREATE TABLE IF NOT EXISTS bookings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
@@ -223,11 +224,12 @@ CREATE INDEX idx_ferry_schedules_destination_id ON ferry_schedules(destination_i
 CREATE INDEX idx_permits_island_id ON permits(island_id);
 
 -- Insert initial roles
-INSERT INTO roles (name, description, permissions) VALUES 
+INSERT INTO roles (name, description, permissions) VALUES
   ('admin', 'Administrator with full access', 'all'),
   ('user', 'Regular user/traveler', 'basic'),
   ('vendor', 'Service provider/vendor', 'vendor');
 
 -- Insert admin user
-INSERT INTO users (email, password_hash, first_name, last_name, role_id) VALUES 
+INSERT INTO users (email, password_hash, first_name, last_name, role_id) VALUES
   ('admin@reachandaman.com', '$2b$10$/McUJV1/0CQOVf6JXppp4.zyJn0A5VkdLTtADPQm8hw9NHHWCaZ0S', 'Admin', 'User', 1);
+

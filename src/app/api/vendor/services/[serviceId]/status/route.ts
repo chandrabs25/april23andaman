@@ -10,16 +10,16 @@ interface RouteContext {
   };
 }
 
-// Helper function to check ownership (can be moved to a shared lib)
+// Helper function to check ownership (can be shared or redefined)
 async function checkServiceOwnership(db: DatabaseService, userId: number | string, serviceId: number): Promise<boolean> {
     const serviceProvider = await db.getServiceProviderByUserId(Number(userId));
     if (!serviceProvider || !serviceProvider.id) return false;
 
     const service = await db.getServiceById(serviceId);
-    return service?.provider_id === serviceProvider.id;
+    return service !== null && service?.provider_id === serviceProvider.id;
 }
 
-// PATCH: Update the active status of a service
+// PATCH: Update the active status of a specific service
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const authResponse = await requireAuth(request, [3]); // Vendor role
   if (authResponse) return authResponse;
@@ -35,31 +35,53 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
+    const body = await request.json() as { isActive: boolean };
+    const isActive = body.isActive; // Expecting { "isActive": boolean }
+
+    if (typeof isActive !== 'boolean') {
+      return NextResponse.json({ success: false, message: 'Invalid request body: "isActive" must be a boolean.' }, { status: 400 });
+    }
+
     const db = new DatabaseService();
 
     // Verify ownership
     const isOwner = await checkServiceOwnership(db, user.id, serviceId);
     if (!isOwner) {
-        return NextResponse.json({ success: false, message: 'Permission denied: You do not own this service.' }, { status: 403 });
+        // Return 404 to prevent revealing service existence
+        return NextResponse.json({ success: false, message: 'Service not found or permission denied.' }, { status: 404 });
     }
 
-    const body = await request.json();
-    const isActive = body.isActive; // Expecting { "isActive": boolean }
-
-    if (typeof isActive !== 'boolean') {
-      return NextResponse.json({ success: false, message: 'Invalid request body: "isActive" (boolean) is required.' }, { status: 400 });
-    }
-
+    // Update the status using the dedicated DB method
     const result = await db.updateServiceStatus(serviceId, isActive);
 
     if (!result.success) {
         throw new Error(result.error || 'Failed to update service status in database');
     }
-     if (result.meta?.changes === 0) {
-        return NextResponse.json({ success: false, message: 'Service not found.' }, { status: 404 });
+
+    if (result.meta?.changes === 0) {
+        // This might happen if the service was deleted between the ownership check and update,
+        // or if the status was already the target value.
+        // Check current status to confirm if it's already set
+        const currentService = await db.getServiceById(serviceId);
+        if (!currentService) {
+             return NextResponse.json({ success: false, message: 'Service not found.' }, { status: 404 });
+        }
+        // Check if status is already what was requested
+        if ((isActive && currentService.is_active === 1) || (!isActive && currentService.is_active === 0)) {
+             return NextResponse.json({ success: true, message: `Service status was already ${isActive ? 'active' : 'inactive'}.` });
+        }
+        // If status is different but changes=0, something else went wrong
+        return NextResponse.json({ success: false, message: 'Service not found or failed to update status.' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, message: `Service status updated to ${isActive ? 'active' : 'inactive'}.` });
+    // Optionally fetch the updated service to return it
+    const updatedService = await db.getServiceById(serviceId);
+
+    return NextResponse.json({
+        success: true,
+        message: `Service status updated successfully to ${isActive ? 'active' : 'inactive'}.`,
+        data: updatedService // Return updated service data
+    });
 
   } catch (error) {
     console.error(`Error updating status for service ${serviceId}:`, error);

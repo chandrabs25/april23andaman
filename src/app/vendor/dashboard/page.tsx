@@ -127,24 +127,27 @@ function VendorDashboardContent() {
   const userId = authUser?.id;
 
   // --- Fetch Vendor Specific Data ---
-  // TODO: Replace placeholders with actual API endpoints when ready
-  const profileApiUrl = userId ? `/api/vendors/profile?userId=${userId}` : null; // Placeholder
-  const statsApiUrl = userId ? `/api/vendors/stats?userId=${userId}` : null; // Placeholder
-  const servicesApiUrl = userId ? `/api/services?providerUserId=${userId}&limit=5` : null; // Placeholder
-  const bookingsApiUrl = userId ? `/api/bookings?vendorUserId=${userId}&limit=5` : null; // Placeholder
-  const reviewsApiUrl = userId ? `/api/reviews?vendorUserId=${userId}&limit=3` : null; // Placeholder
+  const profileApiUrl = userId ? `/api/vendors/profile?userId=${userId}` : null;
+  const statsApiUrl = userId ? `/api/vendors/stats?userId=${userId}` : null;
+  const servicesApiUrl = userId ? `/api/vendors/services?providerUserId=${userId}&limit=5` : null;
+  const bookingsApiUrl = userId ? `/api/vendors/bookings?vendorUserId=${userId}&limit=5` : null;
+  const reviewsApiUrl = userId ? `/api/vendors/reviews?vendorUserId=${userId}&limit=3` : null;
 
-  const { data: profileResponse, error: profileError, status: profileStatus } = useFetch<GetVendorProfileResponse>(profileApiUrl);
-  const { data: statsResponse, error: statsError, status: statsStatus } = useFetch<GetVendorStatsResponse>(statsApiUrl);
-  const { data: servicesResponse, error: servicesError, status: servicesStatus } = useFetch<GetVendorServicesResponse>(servicesApiUrl);
-  const { data: bookingsResponse, error: bookingsError, status: bookingsStatus } = useFetch<GetVendorBookingsResponse>(bookingsApiUrl);
-  const { data: reviewsResponse, error: reviewsError, status: reviewsStatus } = useFetch<GetVendorReviewsResponse>(reviewsApiUrl);
+  // Destructure the 'data' property from useFetch and rename it to avoid confusion
+  const { data: profileApiResponse, error: profileError, status: profileStatus } = useFetch<GetVendorProfileResponse>(profileApiUrl);
+  const { data: statsApiResponse, error: statsError, status: statsStatus } = useFetch<GetVendorStatsResponse>(statsApiUrl);
+  const { data: servicesApiResponse, error: servicesError, status: servicesStatus } = useFetch<GetVendorServicesResponse>(servicesApiUrl);
+  const { data: bookingsApiResponse, error: bookingsError, status: bookingsStatus } = useFetch<GetVendorBookingsResponse>(bookingsApiUrl);
+  const { data: reviewsApiResponse, error: reviewsError, status: reviewsStatus } = useFetch<GetVendorReviewsResponse>(reviewsApiUrl);
 
-  const vendorProfile = profileResponse?.data;
-  const vendorStats = statsResponse?.data ?? { totalServices: 0, activeBookings: 0, totalEarnings: 0, reviewScore: null };
-  const vendorServices = servicesResponse?.data || [];
-  const vendorBookings = bookingsResponse?.data || [];
-  const vendorReviews = reviewsResponse?.data || [];
+
+  // --- CORRECTED: Access the 'data' property within the ApiResponse ---
+  const vendorProfile = profileApiResponse?.data; // Access .data here
+  const vendorStats = statsApiResponse?.data ?? { totalServices: 0, activeBookings: 0, totalEarnings: 0, reviewScore: null }; // Access .data here
+  const vendorServices = servicesApiResponse?.data || []; // Access .data here
+  const vendorBookings = bookingsApiResponse?.data || []; // Access .data here
+  const vendorReviews = reviewsApiResponse?.data || []; // Access .data here
+
 
   // --- Authorization Check ---
   useEffect(() => {
@@ -155,18 +158,23 @@ function VendorDashboardContent() {
 
   // --- Loading State ---
   const isLoading = authLoading || profileStatus === 'loading' || statsStatus === 'loading';
-  const fetchError = profileError || statsError;
+  // Correct error check: Check if the API response itself exists and has an error status, or if useFetch caught an error
+  const fetchError = profileError || (profileStatus === 'error' ? new Error(profileApiResponse?.message || 'Failed to load profile') : null) || (statsStatus === 'error' ? new Error(statsApiResponse?.message || 'Failed to load stats') : null);
+
 
   if (isLoading) { return <LoadingSpinner text="Loading Vendor Dashboard..." />; }
 
   // Handle critical errors (auth/profile fetch)
-  if (!isAuthenticated || !authUser || (profileStatus === 'error' && profileApiUrl) || (statsStatus === 'error' && statsApiUrl)) {
+  // Check profileStatus/statsStatus for 'error' OR if the API response indicates failure (!profileApiResponse?.success)
+  if (!isAuthenticated || !authUser || profileStatus === 'error' || statsStatus === 'error' ) {
+      // Use the specific error from useFetch if available, otherwise use API message or default
+      const displayError = fetchError || new Error(profileApiResponse?.message || statsApiResponse?.message || "Could not load essential vendor data or invalid permissions.");
       return (
           <div className="min-h-screen flex flex-col items-center justify-center text-center px-4 py-10">
              <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
              <h2 className="text-2xl font-semibold text-red-600 mb-4">Access Denied or Error</h2>
              <p className="text-gray-700 mb-6">
-                 {fetchError?.message || "Could not load essential vendor data or invalid permissions."}
+                 {displayError.message}
              </p>
              <button onClick={logout} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
               Logout and Sign In
@@ -183,7 +191,7 @@ function VendorDashboardContent() {
       case 'overview':
         return (
           <div>
-            {/* Stats Display - FIX: Restored JSX content */}
+            {/* Stats Display - No change needed here as vendorStats is now correctly typed */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {/* Total Services */}
               <div className="bg-white p-6 rounded-lg shadow-md">
@@ -226,7 +234,9 @@ function VendorDashboardContent() {
               <div className="bg-white p-6 rounded-lg shadow-md">
                  <h3 className="text-lg font-semibold mb-4">Recent Bookings</h3>
                  {bookingsStatus === 'loading' && <LoadingSpinner text="Loading bookings..."/>}
-                 {bookingsStatus === 'error' && <p className="text-sm text-red-600">Error: {bookingsError?.message}</p>}
+                 {/* Use bookingsError from useFetch */}
+                 {bookingsStatus === 'error' && <p className="text-sm text-red-600">Error: {bookingsError?.message || bookingsApiResponse?.message}</p>}
+                 {/* Check vendorBookings directly (already extracted) */}
                  {bookingsStatus === 'success' && vendorBookings.length > 0 ? (
                      <>
                          <div className="overflow-x-auto -mx-6">
@@ -237,7 +247,8 @@ function VendorDashboardContent() {
                                          <tr key={booking.id} className="border-b text-sm hover:bg-gray-50">
                                          <td className="py-2 px-6 font-medium truncate max-w-[150px]">{booking.serviceOrPackageName}</td>
                                          <td className="py-2 px-6">{formatDate(booking.start_date)}</td>
-                                         <td className="py-2 px-6">₹{booking.net_amount?.toLocaleString('en-IN') ?? booking.total_amount?.toLocaleString('en-IN')}</td>
+                                         {/* Use optional chaining and nullish coalescing for safety */}
+                                         <td className="py-2 px-6">₹{(booking.net_amount ?? booking.total_amount ?? 0).toLocaleString('en-IN')}</td>
                                          <td className="py-2 px-6"><span className={`px-2 py-0.5 rounded-full text-xs ${getBookingStatusColor(booking.status)}`}>{booking.status}</span></td>
                                          </tr>
                                      ))}
@@ -253,7 +264,9 @@ function VendorDashboardContent() {
               <div className="bg-white p-6 rounded-lg shadow-md">
                  <h3 className="text-lg font-semibold mb-4">Recent Reviews</h3>
                   {reviewsStatus === 'loading' && <LoadingSpinner text="Loading reviews..."/>}
-                  {reviewsStatus === 'error' && <p className="text-sm text-red-600">Error: {reviewsError?.message}</p>}
+                  {/* Use reviewsError from useFetch */}
+                  {reviewsStatus === 'error' && <p className="text-sm text-red-600">Error: {reviewsError?.message || reviewsApiResponse?.message}</p>}
+                  {/* Check vendorReviews directly (already extracted) */}
                   {reviewsStatus === 'success' && vendorReviews.length > 0 ? (
                      <>
                          <div className="space-y-4">
@@ -278,19 +291,31 @@ function VendorDashboardContent() {
       case 'reviews':
         return <div className="text-center py-10 text-gray-500">(Reviews Management UI - Placeholder)</div>;
       case 'profile':
-        // Use optional chaining for safety as vendorProfile might be null briefly
+        // The main component loading/error handling already covers 'loading' and 'error' for profileStatus
+        // by the time this function is called (assuming auth is valid).
+        // We only need to handle the 'success' or 'idle' state here.
         return (
             <div className="bg-white p-6 rounded-lg shadow-md">
                  <h2 className="text-xl font-bold mb-6">Business Profile</h2>
-                 <div className="space-y-4 text-sm">
-                     <div><label className="font-medium text-gray-500 block mb-1">Business Name</label><p className="text-gray-800">{vendorProfile?.business_name || 'N/A'}</p></div>
-                     <div><label className="font-medium text-gray-500 block mb-1">Type</label><p className="text-gray-800">{vendorProfile?.type || 'N/A'}</p></div>
-                     <div><label className="font-medium text-gray-500 block mb-1">Email</label><p className="text-gray-800">{vendorProfile?.email || authUser?.email || 'N/A'}</p></div>
-                     <div><label className="font-medium text-gray-500 block mb-1">Phone</label><p className="text-gray-800">{vendorProfile?.phone || 'N/A'}</p></div>
-                     <div><label className="font-medium text-gray-500 block mb-1">Address</label><p className="text-gray-800">{vendorProfile?.address || 'Not Provided'}</p></div>
-                     <div><label className="font-medium text-gray-500 block mb-1">Status</label><p>{vendorProfile?.verified ? <span className="text-green-600 font-medium inline-flex items-center"><Shield size={14} className="mr-1"/>Verified</span> : <span className="text-yellow-600 font-medium">Pending Verification</span>}</p></div>
-                     <div className="pt-4 text-right border-t mt-4"><button className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">Edit Profile</button></div>
-                 </div>
+                 {/* Removed loading check: {profileStatus === 'loading' && <LoadingSpinner text="Loading profile..." />} */}
+                 {/* Removed error check: {profileStatus === 'error' && <p className="text-red-600">Error loading profile: {profileError?.message || profileApiResponse?.message}</p>} */}
+
+                 {/* Handle success state (vendorProfile might still be null if fetch succeeded but returned no data) */}
+                 {(profileStatus === 'success' || profileStatus === 'idle') && vendorProfile && (
+                     <div className="space-y-4 text-sm">
+                         <div><label className="font-medium text-gray-500 block mb-1">Business Name</label><p className="text-gray-800">{vendorProfile?.business_name || 'N/A'}</p></div>
+                         <div><label className="font-medium text-gray-500 block mb-1">Type</label><p className="text-gray-800">{vendorProfile?.type || 'N/A'}</p></div>
+                         <div><label className="font-medium text-gray-500 block mb-1">Email</label><p className="text-gray-800">{vendorProfile?.email || authUser?.email || 'N/A'}</p></div>
+                         <div><label className="font-medium text-gray-500 block mb-1">Phone</label><p className="text-gray-800">{vendorProfile?.phone || 'N/A'}</p></div>
+                         <div><label className="font-medium text-gray-500 block mb-1">Address</label><p className="text-gray-800">{vendorProfile?.address || 'Not Provided'}</p></div>
+                         <div><label className="font-medium text-gray-500 block mb-1">Status</label><p>{vendorProfile?.verified ? <span className="text-green-600 font-medium inline-flex items-center"><Shield size={14} className="mr-1"/>Verified</span> : <span className="text-yellow-600 font-medium">Pending Verification</span>}</p></div>
+                         <div className="pt-4 text-right border-t mt-4"><button className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">Edit Profile</button></div>
+                     </div>
+                 )}
+                 {/* Handle case where fetch succeeded/idle but no profile data exists */}
+                 {(profileStatus === 'success' || profileStatus === 'idle') && !vendorProfile && (
+                    <p className="text-gray-500">Profile data not available or not yet loaded.</p>
+                 )}
             </div>
         );
       default:

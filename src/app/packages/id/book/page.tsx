@@ -1,4 +1,3 @@
-
 'use client';
 
 // Path: .\src\app\packages\[id]\book\page.tsx
@@ -209,9 +208,9 @@ export default function BookingPage() {
 
           try {
               console.log("Submitting Booking Payload:", payload);
-              // --- FIX: Add 'as any' assertion as a workaround ---
-              // This tells TypeScript to ignore the type check for this specific call
-              await (submit as any)(payload);
+              // --- FIX: Remove specific type assertion ---
+              // Let TypeScript infer the type from the useSubmit hook
+              await submit(payload);
               // --- End FIX ---
           }
           catch (err) {

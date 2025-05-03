@@ -12,30 +12,63 @@ export default function VendorLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // --- FIX: Add type annotation for event 'e' ---
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  // --- End FIX ---
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
-      // Simulate API call (replace with actual API call later)
-      console.log("Attempting vendor login:", { email }); // Debug log
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log("Attempting vendor login via API:", { email }); // Debug log
 
-      // For demo purposes, hardcode a vendor login
-      // In real app, fetch from /api/vendor/auth/login or similar
-      if (email === 'vendor@example.com' && password === 'password') {
-         console.log("Vendor login successful (simulation)"); // Debug log
-        window.location.href = '/vendor/dashboard'; // Redirect on success
-      } else {
-        console.log("Vendor login failed (simulation): Invalid credentials"); // Debug log
-        setError('Invalid email or password');
+      // --- Call the actual API endpoint ---
+      const response = await fetch('/api/vendor/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      interface ApiResponse {
+        message?: string;
+        token?: string;
+        user?: object;
       }
+
+      const data: ApiResponse = await response.json();
+
+      if (!response.ok) {
+        // Use the message from the API response if available, otherwise provide a default
+        const errorMessage = data?.message || `Login failed with status: ${response.status}`;
+        console.log("Vendor login failed:", errorMessage); // Debug log
+        throw new Error(errorMessage);
+      }
+
+      // --- Handle successful login ---
+      console.log("Vendor login successful (API):", data); // Debug log
+
+      // Store the token (e.g., in localStorage - consider security implications)
+      // For more robust solutions, use state management (Context, Zustand, Redux)
+      // or secure HttpOnly cookies handled server-side.
+      if (data.token) {
+        localStorage.setItem('vendorAuthToken', data.token); // Example: using localStorage
+        // Optionally store user info as well
+        if (data.user) {
+            localStorage.setItem('vendorUserInfo', JSON.stringify(data.user));
+        }
+      } else {
+          console.warn("No token received in successful login response.");
+          // Handle this case if necessary, maybe show an error
+      }
+
+
+      // Redirect to the vendor dashboard
+      window.location.href = '/vendor/dashboard'; // Simple redirect
+
     } catch (err) {
       console.error("Vendor login error:", err); // Debug log
-      setError('An error occurred. Please try again.');
+      // Set the error state with the message from the caught error
+      setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }

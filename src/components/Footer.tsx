@@ -70,6 +70,11 @@ const Footer = () => {
                   Contact Us
                 </Link>
               </li>
+              <li>
+                <Link href="/vendor/register" className={footerLinkStyle}>
+                  Vendor Registration
+                </Link>
+              </li>
             </ul>
           </div>
 

@@ -256,8 +256,8 @@ export class DatabaseService {
   async updateServiceStatus(serviceId: number, isActive: boolean) {
     const db = await getDatabase();
     return db
-      .prepare('UPDATE services SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-      .bind(isActive ? 1 : 0, serviceId) // Use 1 for true, 0 for false
+      .prepare('UPDATE services SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?') // Tries to update 'is_active'
+      .bind(isActive ? 1 : 0, serviceId)
       .run();
   }
 
@@ -511,6 +511,34 @@ export class DatabaseService {
       .all();
   }
 
+  /**
+   * Retrieves reviews for all services belonging to a specific vendor (user).
+   * @param userId The user ID of the vendor.
+   * @param limit Max number of reviews to return.
+   * @returns Promise<D1Result<ReviewWithUser[]>>
+   */
+  async getReviewsForVendor(userId: number, limit = 3) {
+    const db = await getDatabase();
+    // Join reviews -> services -> service_providers -> users
+    // Assumes reviews are linked to services, and services to providers, and providers to users.
+    return db
+      .prepare(`
+        SELECT r.id, r.rating, r.comment, r.images, r.created_at,
+               u_reviewer.first_name AS customerName, -- User who wrote the review
+               s.name AS serviceName
+        FROM reviews r
+        JOIN services s ON r.service_id = s.id
+        JOIN service_providers sp ON s.provider_id = sp.id
+        JOIN users u_reviewer ON r.user_id = u_reviewer.id
+        WHERE sp.user_id = ?
+        ORDER BY r.created_at DESC
+        LIMIT ?
+      `)
+      .bind(userId, limit)
+      .all(); // Adjust the expected return type if needed
+  }
+
+
   // --- Ferry Methods ---
   async getFerrySchedules(
     originId: number,
@@ -573,6 +601,125 @@ export class DatabaseService {
       )
       .run(); // Returns Promise<D1Result>
   }
+
+  /**
+   * Calculates statistics for a specific vendor.
+   * @param userId The user ID of the vendor.
+   * @returns Promise<{ totalServices: number; activeBookings: number; totalEarnings: number; reviewScore: number | null }>
+   */
+  async getVendorStats(userId: number) {
+    const db = await getDatabase();
+
+    // 1. Get Provider ID
+    const provider = await this.getServiceProviderByUserId(userId);
+    if (!provider) {
+      throw new Error('Vendor not found');
+    }
+    const providerId = provider.id;
+
+    // 2. Get Total Services
+    const servicesCountResult = await db
+      .prepare('SELECT COUNT(*) as count FROM services WHERE provider_id = ?')
+      .bind(providerId)
+      .first<{ count: number }>();
+    const totalServices = servicesCountResult?.count ?? 0;
+
+    // 3. Get Active Bookings (Requires joining through services/packages)
+    // This query assumes bookings are linked via packages created by the user OR services linked to the provider
+    // Adjust join logic based on your exact schema relationship (package vs service booking)
+    // Using 'confirmed' or 'pending' as active statuses.
+    const activeBookingsResult = await db
+      .prepare(`
+        SELECT COUNT(b.id) as count
+        FROM bookings b
+        LEFT JOIN packages p ON b.package_id = p.id
+        LEFT JOIN booking_services bs ON b.id = bs.booking_id -- If bookings can contain individual services
+        LEFT JOIN services s ON bs.service_id = s.id
+        WHERE (p.created_by = ? OR s.provider_id = ?)
+          AND b.status IN ('pending', 'confirmed')
+      `)
+      .bind(userId, providerId) // Check package creator OR service provider
+      .first<{ count: number }>();
+    const activeBookings = activeBookingsResult?.count ?? 0;
+
+
+    // 4. Get Total Earnings (Sum net amount from completed/confirmed bookings)
+    // Adjust status and amount field (total_amount vs net_amount) as needed
+    const totalEarningsResult = await db
+      .prepare(`
+        SELECT SUM(b.total_amount) as total -- Use total_amount or a calculated net_amount if available
+        FROM bookings b
+        LEFT JOIN packages p ON b.package_id = p.id
+        LEFT JOIN booking_services bs ON b.id = bs.booking_id
+        LEFT JOIN services s ON bs.service_id = s.id
+        WHERE (p.created_by = ? OR s.provider_id = ?)
+          AND b.status IN ('completed', 'confirmed') -- Consider which statuses count towards earnings
+          AND b.payment_status = 'paid' -- Ensure payment was successful
+      `)
+      .bind(userId, providerId)
+      .first<{ total: number | null }>();
+    const totalEarnings = totalEarningsResult?.total ?? 0;
+
+    // 5. Get Average Review Score
+    const reviewScoreResult = await db
+      .prepare(`
+        SELECT AVG(r.rating) as average
+        FROM reviews r
+        JOIN services s ON r.service_id = s.id
+        WHERE s.provider_id = ?
+      `)
+      .bind(providerId)
+      .first<{ average: number | null }>();
+    const reviewScore = reviewScoreResult?.average ?? null;
+
+
+    return {
+      totalServices,
+      activeBookings,
+      totalEarnings,
+      reviewScore,
+    };
+  }
+
+  /**
+   * Retrieves bookings associated with a vendor's services or packages.
+   * @param userId The user ID of the vendor.
+   * @param limit Max number of bookings to return.
+   * @returns Promise<D1Result<any[]>> - Define a specific Booking type later
+   */
+  async getBookingsForVendor(userId: number, limit = 5) {
+    const db = await getDatabase();
+    // This query needs refinement based on how bookings relate to vendors.
+    // Option A: Bookings for packages created by the vendor user.
+    // Option B: Bookings containing services offered by the vendor provider.
+    // This example combines both, adjust as needed.
+    // It also tries to get customer name (if registered user) or guest name.
+    return db
+      .prepare(`
+        SELECT
+          b.id,
+          COALESCE(p.name, s.name, 'Service/Package') AS serviceOrPackageName, -- Get name from package or service
+          COALESCE(u.first_name || ' ' || u.last_name, b.guest_name, 'Guest') AS customerName,
+          b.start_date,
+          b.end_date,
+          b.total_people,
+          b.total_amount,
+          b.total_amount AS net_amount, -- Placeholder for net amount, calculate if needed
+          b.status
+        FROM bookings b
+        LEFT JOIN users u ON b.user_id = u.id -- Join to get registered customer name
+        LEFT JOIN packages p ON b.package_id = p.id AND p.created_by = ? -- Link via package creator
+        LEFT JOIN booking_services bs ON b.id = bs.booking_id -- Link via booked services
+        LEFT JOIN services s ON bs.service_id = s.id
+        LEFT JOIN service_providers sp ON s.provider_id = sp.id AND sp.user_id = ? -- Link via service provider
+        WHERE p.created_by = ? OR sp.user_id = ? -- Filter bookings linked to this vendor user
+        ORDER BY b.created_at DESC
+        LIMIT ?
+      `)
+      .bind(userId, userId, userId, userId, limit) // Bind userId multiple times as needed by the query
+      .all();
+  }
+
 
   // --- Admin Methods ---
 

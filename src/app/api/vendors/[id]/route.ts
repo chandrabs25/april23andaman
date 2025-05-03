@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
 
-// Add Edge Runtime configuration
+
 
 
 export async function GET(

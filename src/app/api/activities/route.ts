@@ -17,6 +17,9 @@ interface Activity {
   amenities: string | null
   cancellation_policy: string | null
   island_name: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export async function GET(request: Request) {
@@ -39,7 +42,7 @@ export async function GET(request: Request) {
         i.name AS island_name
       FROM services s
       JOIN islands i ON s.island_id = i.id
-      WHERE s.type LIKE ?`
+      WHERE s.type LIKE ? AND s.is_active = TRUE` // Added s.is_active = TRUE
 
     const queryParams: (string | number)[] = ['%activity%']
 
