@@ -1,5 +1,5 @@
 // Path: src/app/destinations/havelock-island/page.tsx // Renamed for clarity (or swaraj-dweep)
-// Theme: Neutral with Contextual Background Colors (Applied based on Baratang sample)
+// Theme: Neutral with Contextual Background Colors (Applied based on Baratang/Diglipur samples)
 
 'use client';
 
@@ -13,13 +13,13 @@ import {
     Calendar,
     Bed,        // Use Bed instead of Home for Accommodation consistency
     Utensils,
-    Compass,
-    Users,
-    Shield,
+    Compass,    // Use for Attractions/Exploration
+    Users,      // Keep for cultural aspects if needed, or general info
+    Shield,     // Consistent Safety icon
     Leaf,
     ChevronRight,
     Star,
-    Navigation, // Use Navigation instead of Route
+    Navigation, // Consistent Travel icon
     ArrowRight,
     MessageCircle,
     Camera,
@@ -27,11 +27,11 @@ import {
     Bike,       // Relevant for Havelock transport
     Waves,      // Relevant for beaches/diving
     Sun,        // Relevant for beaches/weather
-    LifeBuoy,   // For Safety section consistency
+    LifeBuoy,   // Consistent Safety icon
     Sparkles    // Could use for Bioluminescence or special experiences
 } from 'lucide-react';
 
-// --- Define Common Styles (Copied from Baratang Sample - Neutral Theme with Contextual Colors) ---
+// --- Define Common Styles (Copied from Diglipur Sample - Neutral Theme with Contextual Colors) ---
 const primaryButtonBg = 'bg-gray-800';
 const primaryButtonHoverBg = 'hover:bg-gray-900';
 const primaryButtonText = 'text-white';
@@ -120,10 +120,10 @@ export default function HavelockIslandPage() {
 
     return (
         <main className={`bg-white ${neutralText}`}>
-            {/* Hero Section - Matches Baratang Structure */}
+            {/* Hero Section - Matches Diglipur Structure */}
             <div className="relative h-[70vh] w-full">
                 <Image
-                    src="/images/havelock/hero.jpg" // Use specific Havelock hero image
+                    src="/images/havelock/hero.webp" // Use specific Havelock hero image
                     alt="Stunning aerial view of Havelock Island (Swaraj Dweep) coastline"
                     fill
                     priority

@@ -1,5 +1,4 @@
-// Path: src/app/destinations/port-blair/page.tsx // Renamed for clarity
-// Theme: Neutral with Contextual Background Colors (Applied based on Baratang sample)
+// Path: src/app/destinations/port-blair/page.tsx
 
 'use client';
 
@@ -11,27 +10,27 @@ import {
     Check,
     Info,
     Calendar,
-    Clock,
+    // Clock, // Removed as less relevant than specific transport icons
     Bed,
     Utensils,
-    Compass,
-    Users,
-    Shield,
+    Compass,    // Keep for general Exploration/Attractions section title
+    Users,      // Keep for Anthropological museum context or general info
+    Shield,     // Consistent Safety icon
     Leaf,
     ChevronRight,
     Star,
-    Navigation, // Use Navigation instead of Route for consistency
+    Navigation, // Consistent Travel icon
     ArrowRight,
     MessageCircle,
     Camera,
-    Plane,      // Added for Port Blair context
-    Ship,       // Added for Port Blair context
-    Landmark,   // Added for Port Blair context
-    Waves,      // Added for Port Blair context (Corbyn's Cove)
-    LifeBuoy    // Added for Port Blair context (Safety)
+    Plane,      // Specific to Port Blair (Airport)
+    Ship,       // Specific to Port Blair (Ferries/Ships)
+    Landmark,   // Specific to Port Blair (Historical Sites like Cellular Jail)
+    Waves,      // Specific to Port Blair (Beaches like Corbyn's Cove)
+    LifeBuoy    // Consistent Safety icon
 } from 'lucide-react';
 
-// --- Define Common Styles (Copied from Baratang Sample - Neutral Theme with Contextual Colors) ---
+// --- Define Common Styles (Copied from Baratang/Diglipur Sample - Neutral Theme with Contextual Colors) ---
 const primaryButtonBg = 'bg-gray-800';
 const primaryButtonHoverBg = 'hover:bg-gray-900';
 const primaryButtonText = 'text-white';
@@ -120,10 +119,10 @@ export default function PortBlairPage() {
 
     return (
         <main className={`bg-white ${neutralText}`}>
-            {/* Hero Section - Matches Baratang Structure */}
+            {/* Hero Section - Matches Structure */}
             <div className="relative h-[70vh] w-full">
                 <Image
-                    src="/images/portblair/hero.jpg" // Use specific Port Blair hero image
+                    src="/images/portblair/hero.jpg" // Specific Port Blair hero image
                     alt="Aerial view of Port Blair harbor and Cellular Jail"
                     fill
                     priority
@@ -150,11 +149,10 @@ export default function PortBlairPage() {
                         <h1 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-md">Port Blair</h1>
                         <p className="text-xl md:text-2xl max-w-3xl mb-6 text-white/90">The vibrant capital and gateway to the Andaman Islands, rich in history and natural beauty.</p>
                         <div className="flex flex-wrap gap-4 items-center">
-                            <button className={buttonPrimaryStyle}>
+                            <Link href="#overview" className={buttonPrimaryStyle}> {/* Link to an ID */}
                                 Explore Port Blair <ArrowRight size={18} className="ml-2" />
-                            </button>
-                            {/* Placeholder for a specific gallery link/modal trigger if needed */}
-                            <button className={buttonSecondaryStyleHero}>
+                            </Link>
+                            <button className={buttonSecondaryStyleHero} onClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })}> {/* Scroll to gallery */}
                                 <Camera size={18} className="mr-2" /> View Gallery
                             </button>
                         </div>
@@ -192,11 +190,11 @@ export default function PortBlairPage() {
                         </div>
                         <div className="flex items-start">
                             <div className={`bg-white p-2 rounded-full shadow-sm mr-3 border ${neutralBorderLight}`}>
-                                <Plane className={infoIconColor} size={18} /> {/* More relevant than Clock */}
+                                <Plane className={infoIconColor} size={18} /> {/* Using Plane icon */}
                             </div>
                             <div>
                                 <h3 className={`font-medium ${neutralText}`}>Gateway</h3>
-                                <p className={`text-sm ${neutralTextLight}`}>Primary entry point via Veer Savarkar Int'l Airport (IXZ)</p>
+                                <p className={`text-sm ${neutralTextLight}`}>Primary entry via Veer Savarkar Int'l Airport (IXZ)</p>
                             </div>
                         </div>
                     </div>
@@ -223,9 +221,9 @@ export default function PortBlairPage() {
                 </div>
 
                 {/* Image Gallery - Neutral Theme */}
-                <div className="mb-16">
+                <div id="gallery" className="mb-16 scroll-mt-20"> {/* Added ID for scroll target */}
                     <div className={`relative h-[50vh] w-full rounded-2xl overflow-hidden shadow-lg mb-4 border ${neutralBorderLight}`}>
-                        <Image src={galleryImages[activeImage].src} alt={galleryImages[activeImage].alt} fill style={{ objectFit: 'cover' }} />
+                        <Image src={galleryImages[activeImage].src} alt={galleryImages[activeImage].alt} fill style={{ objectFit: 'cover' }} quality={90} />
                         <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/70 to-transparent">
                             <p className="text-white text-lg drop-shadow">{galleryImages[activeImage].caption}</p>
                         </div>
@@ -234,10 +232,10 @@ export default function PortBlairPage() {
                         {galleryImages.map((image, index) => (
                             <div
                                 key={index}
-                                className={`relative h-20 w-32 rounded-lg overflow-hidden cursor-pointer transition-all ${activeImage === index ? `ring-4 ${primaryButtonBg}` : 'opacity-70 hover:opacity-100'}`}
+                                className={`relative h-20 w-32 rounded-lg overflow-hidden cursor-pointer transition-all ${activeImage === index ? `ring-4 ring-offset-2 ${primaryButtonBg}` : 'opacity-70 hover:opacity-100'}`} // Added ring offset
                                 onClick={() => setActiveImage(index)}
                             >
-                                <Image src={image.src} alt={image.alt} fill style={{ objectFit: 'cover' }} />
+                                <Image src={image.src} alt={image.alt} fill style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 100vw, 128px" />
                             </div>
                         ))}
                     </div>
@@ -248,7 +246,7 @@ export default function PortBlairPage() {
                     // Brief Guide Content - Neutral Theme with Contextual Colors
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2 space-y-10">
-                            <section>
+                            <section id="overview"> {/* Added ID for scroll target */}
                                 <h2 className={sectionHeadingStyle}>
                                     <Info className={`mr-3 ${neutralIconColor}`} size={24} /> Overview
                                 </h2>
@@ -313,19 +311,19 @@ export default function PortBlairPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Attraction Cards - Remain Neutral */}
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Cellular Jail</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Landmark size={18} className={`mr-2 ${neutralIconColor}`} /> Cellular Jail</h3>
                                         <p className={`text-sm ${neutralTextLight}`}>Historic prison, now a National Memorial. Don't miss the Light & Sound Show.</p>
                                     </div>
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Ross Island</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Landmark size={18} className={`mr-2 ${neutralIconColor}`} /> Ross Island</h3>
                                         <p className={`text-sm ${neutralTextLight}`}>Former British HQ with scenic ruins, deer, peacocks. Short boat ride.</p>
                                     </div>
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Corbyn's Cove</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Waves size={18} className={`mr-2 ${neutralIconColor}`} /> Corbyn's Cove</h3>
                                         <p className={`text-sm ${neutralTextLight}`}>Popular city beach for swimming and light water sports.</p>
                                     </div>
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Museums</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Users size={18} className={`mr-2 ${neutralIconColor}`} /> Museums</h3>
                                         <p className={`text-sm ${neutralTextLight}`}>Samudrika (Naval Marine) & Anthropological museums offer cultural insights.</p>
                                     </div>
                                 </div>
@@ -383,7 +381,7 @@ export default function PortBlairPage() {
                     // Comprehensive Guide Content - Neutral Theme with Contextual Colors
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2 space-y-12">
-                            <section>
+                            <section id="overview-comprehensive"> {/* Added ID */}
                                 <h2 className={sectionHeadingStyle}>
                                     <Info className={`mr-3 ${neutralIconColor}`} size={24} /> Detailed Overview
                                 </h2>
@@ -412,7 +410,7 @@ export default function PortBlairPage() {
                                             <li className={neutralTextLight}><strong className={neutralText}>Taxis:</strong> Tourist taxis (usually cars/SUVs) can be hired for point-to-point transfers or full-day/half-day sightseeing tours (approx. ₹2000-₹3000 for a full day). Available at the airport, jetties, and major hotels.</li>
                                             <li className={neutralTextLight}><strong className={neutralText}>Two-Wheeler Rentals:</strong> Scooters and motorcycles are available for rent (approx. ₹400-600 per day). Ideal for independent exploration but requires an Indian driving license and cautious driving on hilly roads. Helmets are mandatory.</li>
                                             <li className={neutralTextLight}><strong className={neutralText}>Local Buses:</strong> State Transport Service (STS) buses connect various parts of the city and nearby areas like Wandoor, Chidiya Tapu, and Corbyn's Cove. Very economical but can be crowded. Main bus terminal is at Mohanpura.</li>
-                                            <li className={neutralTextLight}><strong className={neutralText}>Ferries/Boats:</strong> Essential for island hopping. Private ferries (Makruzz, Green Ocean, etc.) and government ferries operate from Phoenix Bay Jetty to Havelock (Swaraj Dweep) and Neil (Shaheed Dweep). Boats to Ross Island and North Bay depart from Aberdeen Jetty (Rajiv Gandhi Water Sports Complex).</li>
+                                            <li className={neutralTextLight}><strong className={neutralText}>Ferries/Boats:</strong> Essential for island hopping. Private ferries (Makruzz, Green Ocean, etc.) and government ferries operate from Phoenix Bay Jetty (Haddo Wharf) to Havelock (Swaraj Dweep) and Neil (Shaheed Dweep). Boats to Ross Island and North Bay depart from Aberdeen Jetty (Rajiv Gandhi Water Sports Complex).</li>
                                         </ul>
                                     </div>
                                 </div>
@@ -420,32 +418,32 @@ export default function PortBlairPage() {
 
                             <section>
                                 <h2 className={sectionHeadingStyle}>
-                                    <Landmark className={`mr-3 ${neutralIconColor}`} size={24} /> Exploring the Attractions
+                                    <Compass className={`mr-3 ${neutralIconColor}`} size={24} /> Exploring Attractions & Activities
                                 </h2>
                                 <div className="space-y-6">
                                     {/* Attraction Cards - Remain Neutral */}
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Cellular Jail National Memorial</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Landmark size={18} className={`mr-2 ${neutralIconColor}`} /> Cellular Jail National Memorial</h3>
                                         <p className={`text-base leading-relaxed ${neutralTextLight}`}>A must-visit historical site. Explore the grim cells, central tower, gallows, and museum documenting the lives of freedom fighters imprisoned here ('Kala Pani'). The poignant Light and Sound show held every evening narrates its history. Closed on Mondays and national holidays.</p>
                                     </div>
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Ross Island (Netaji Subhas Chandra Bose Dweep)</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Landmark size={18} className={`mr-2 ${neutralIconColor}`} /> Ross Island (Netaji Subhas Chandra Bose Dweep)</h3>
                                         <p className={`text-base leading-relaxed ${neutralTextLight}`}>The former administrative headquarters of the British. Now features atmospheric ruins (church, bakery, commissioner's bungalow) entwined with massive tree roots. Home to friendly deer and peacocks. Accessible via a short boat ride from Aberdeen Jetty. Features a sound and light show in the evenings. Closed on Wednesdays.</p>
                                     </div>
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Corbyn's Cove Beach</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Waves size={18} className={`mr-2 ${neutralIconColor}`} /> Corbyn's Cove Beach</h3>
                                         <p className={`text-base leading-relaxed ${neutralTextLight}`}>The closest beach to Port Blair city (approx. 7 km). A crescent-shaped, coconut palm-fringed beach suitable for swimming and relaxing. Offers water sports like jet skiing and speed boat rides. Several snack bars and changing rooms are available. Can get crowded, especially on weekends.</p>
                                     </div>
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Samudrika Naval Marine Museum</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Ship size={18} className={`mr-2 ${neutralIconColor}`} /> Samudrika Naval Marine Museum</h3>
                                         <p className={`text-base leading-relaxed ${neutralTextLight}`}>Managed by the Indian Navy, this museum provides an excellent overview of the Andaman's geography, marine life, tribal communities, and ecosystems. Includes displays of corals, shells, and a small aquarium. Located near the Teal House. Closed on Mondays.</p>
                                     </div>
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Anthropological Museum</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Users size={18} className={`mr-2 ${neutralIconColor}`} /> Anthropological Museum</h3>
                                         <p className={`text-base leading-relaxed ${neutralTextLight}`}>Focuses on the indigenous tribes of the Andaman and Nicobar Islands, including the Jarawas, Sentinelese, Onges, and Nicobarese. Displays artifacts, tools, clothing, and models depicting their traditional way of life. Provides valuable insight into the islands' original inhabitants. Located in Phoenix Bay. Closed on Mondays.</p>
                                     </div>
                                     <div className={cardBaseStyle}>
-                                        <h3 className={`font-semibold ${neutralText} mb-2`}>Chatham Saw Mill</h3>
+                                        <h3 className={`font-semibold ${neutralText} mb-2 flex items-center`}><Landmark size={18} className={`mr-2 ${neutralIconColor}`} /> Chatham Saw Mill</h3>
                                         <p className={`text-base leading-relaxed ${neutralTextLight}`}>One of the oldest and largest sawmills in Asia, established by the British in 1883. Connected to Port Blair by a bridge. Visitors can take a guided tour to see the wood processing operations. A Forest Museum within the complex showcases local timber varieties and woodcrafts. Closed on Sundays.</p>
                                     </div>
                                     <div className={cardBaseStyle}>
@@ -546,8 +544,8 @@ export default function PortBlairPage() {
                         <Link href="/packages?destination=port-blair" className={buttonPrimaryStyle}>
                             View Port Blair Packages <ArrowRight className="ml-2" size={18} />
                         </Link>
-                        <Link href="/contact" className={`inline-flex items-center justify-center bg-white text-gray-700 border ${neutralBorder} hover:bg-gray-50 font-semibold px-6 py-3 rounded-full transition-all duration-300`}>
-                            Contact Us
+                        <Link href="/contact" className={`inline-flex items-center justify-center bg-white text-gray-700 border ${neutralBorder} hover:bg-gray-50 font-semibold px-6 py-3 rounded-full transition-all duration-300 shadow-sm hover:shadow-md`}> {/* Added shadow */}
+                            Get Travel Assistance
                         </Link>
                     </div>
                 </section>

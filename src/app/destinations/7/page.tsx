@@ -122,7 +122,7 @@ export default function DiglipurPage() {
             {/* Hero Section - Matches Baratang Structure */}
             <div className="relative h-[70vh] w-full">
                 <Image
-                    src="/images/diglipur/hero.jpg" // Use specific Diglipur hero image
+                    src="/images/diglipur/hero.webp" // Use specific Diglipur hero image
                     alt="Scenic coastline near Diglipur, North Andaman"
                     fill
                     priority

@@ -46,11 +46,11 @@ INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role_
 -- Islands
 -- =============================================
 INSERT INTO islands (id, name, description, permit_required, images) VALUES
-  (1, 'Port Blair', 'The capital city and entry point to the Andaman Islands, known for its historical significance and cellular jail.', 0, '/images/port_blair.jpg'),
-  (2, 'Havelock Island (Swaraj Dweep)', 'Famous for its stunning beaches like Radhanagar Beach (Beach No. 7) and clear waters ideal for water sports.', 0, '/images/havelock.jpg'),
-  (3, 'Neil Island (Shaheed Dweep)', 'A smaller, quieter island known for its relaxed vibe, natural bridge formations, and beautiful beaches like Laxmanpur and Bharatpur.', 0, '/images/neil.jpg'),
-  (4, 'Baratang Island', 'Known for its unique mangrove creeks, limestone caves, and mud volcanoes. Requires permits.', 1, '/images/baratang.jpg');
-
+  (1, 'Port Blair', 'The capital city and entry point to the Andaman Islands, known for its historical significance and cellular jail.', 0, '/images/portblair/hero.webp'),
+  (2, 'Havelock Island (Swaraj Dweep)', 'Famous for its stunning beaches like Radhanagar Beach (Beach No. 7) and clear waters ideal for water sports.', 0, '/images/havelock/hero.webp'),
+  (3, 'Neil Island (Shaheed Dweep)', 'A smaller, quieter island known for its relaxed vibe, natural bridge formations, and beautiful beaches like Laxmanpur and Bharatpur.', 0, '/images/neil/hero.webp'),
+  (4, 'Baratang Island', 'Known for its unique mangrove creeks, limestone caves, and mud volcanoes. Requires permits.', 1, '/images/baratang/hero.webp');
+  
 -- =============================================
 -- Service Providers (Link users with role 'vendor' to businesses)
 -- Assume user IDs: 3=scubavendor, 4=hotelvendor
@@ -245,11 +245,11 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
 
 
   INSERT INTO islands (id, name, description, permit_required, images) VALUES
-  (5, 'Rangat', 'A tranquil town in Middle Andaman offering India’s longest mangrove boardwalk at Dhani Nallah, eco-parks like Amkunj Beach, and secluded turtle-nesting beaches.', 0, '/images/rangat.jpg'),
-  (6, 'Mayabundar', 'The administrative hub of North & Middle Andaman, notable for its cultural mix of Karen and Bengali communities, turtle-nesting Karmatang Beach, and nearby mangrove creeks.', 0, '/images/mayabundar.jpg'),
-  (7, 'Diglipur', 'The northern frontier town famed for the twin-islands of Ross & Smith, Saddle Peak National Park treks, limestone caves, mud volcanoes, and seasonal turtle nesting.', 0, '/images/diglipur.jpg'),
-  (8, 'Little Andaman', 'A remote southern island known for Butler Bay surf breaks, pristine beaches, White Surf and Whisper Wave waterfalls, and lush rainforest trails.', 0, '/images/little_andaman.jpg');
-
+  (5, 'Rangat', 'A tranquil town in Middle Andaman offering India’s longest mangrove boardwalk at Dhani Nallah, eco-parks like Amkunj Beach, and secluded turtle-nesting beaches.', 0, '/images/rangat/hero.webp'),
+  (6, 'Mayabundar', 'The administrative hub of North & Middle Andaman, notable for its cultural mix of Karen and Bengali communities, turtle-nesting Karmatang Beach, and nearby mangrove creeks.', 0, '/images/mayabundar/hero.webp'),
+  (7, 'Diglipur', 'The northern frontier town famed for the twin-islands of Ross & Smith, Saddle Peak National Park treks, limestone caves, mud volcanoes, and seasonal turtle nesting.', 0, '/images/diglipur/hero.webp'),
+  (8, 'Little Andaman', 'A remote southern island known for Butler Bay surf breaks, pristine beaches, White Surf and Whisper Wave waterfalls, and lush rainforest trails.', 0, '/images/little-andaman/hero.webp');
+ 
 
 INSERT INTO bookings (user_id, package_id, total_people, start_date, end_date, status, total_amount, payment_status)
 VALUES (2, 1, 2, '2025-07-10', '2025-07-15', 'confirmed', 30000, 'paid');

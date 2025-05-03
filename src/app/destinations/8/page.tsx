@@ -122,7 +122,7 @@ export default function LittleAndamanPage() {
             {/* Hero Section - Matches Baratang Structure */}
             <div className="relative h-[70vh] w-full">
                 <Image
-                    src="/images/little-andaman/hero.jpg" // Use specific Little Andaman hero image
+                    src="/images/little-andaman/hero.webp" // Use specific Little Andaman hero image
                     alt="Scenic beach view of Little Andaman"
                     fill
                     priority
