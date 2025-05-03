@@ -152,6 +152,115 @@ export class DatabaseService {
       .all();
   }
 
+  /**
+   * Creates a new service for a provider.
+   * @param serviceData Data for the new service.
+   * @returns Promise<D1Result>
+   */
+  async createService(serviceData: {
+    name: string;
+    description: string | null;
+    type: string;
+    provider_id: number;
+    island_id: number; // Assuming island_id is required or handled
+    price: number;
+    availability: string | null; // JSON string
+    images: string | null; // Comma-separated string or single URL
+    amenities: string | null;
+    cancellation_policy: string | null;
+    is_active?: boolean; // Added is_active
+  }) {
+    const db = await getDatabase();
+    return db
+      .prepare(`
+        INSERT INTO services (
+          name, description, type, provider_id, island_id, price,
+          availability, images, amenities, cancellation_policy, is_active,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `)
+      .bind(
+        serviceData.name,
+        serviceData.description,
+        serviceData.type,
+        serviceData.provider_id,
+        serviceData.island_id, // Make sure this is provided or handled
+        serviceData.price,
+        serviceData.availability,
+        serviceData.images,
+        serviceData.amenities,
+        serviceData.cancellation_policy,
+        serviceData.is_active === undefined ? 1 : (serviceData.is_active ? 1 : 0) // Default to active (1)
+      )
+      .run();
+  }
+
+  /**
+   * Updates an existing service.
+   * @param serviceId The ID of the service to update.
+   * @param serviceData The data to update.
+   * @returns Promise<D1Result>
+   */
+  async updateService(serviceId: number, serviceData: {
+    name: string;
+    description: string | null;
+    type: string;
+    island_id: number; // Assuming island_id can be updated
+    price: number;
+    availability: string | null; // JSON string
+    images: string | null;
+    amenities: string | null;
+    cancellation_policy: string | null;
+  }) {
+    const db = await getDatabase();
+    return db
+      .prepare(`
+        UPDATE services SET
+          name = ?, description = ?, type = ?, island_id = ?, price = ?,
+          availability = ?, images = ?, amenities = ?, cancellation_policy = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `)
+      .bind(
+        serviceData.name,
+        serviceData.description,
+        serviceData.type,
+        serviceData.island_id,
+        serviceData.price,
+        serviceData.availability,
+        serviceData.images,
+        serviceData.amenities,
+        serviceData.cancellation_policy,
+        serviceId
+      )
+      .run();
+  }
+
+  /**
+   * Deletes a service.
+   * @param serviceId The ID of the service to delete.
+   * @returns Promise<D1Result>
+   */
+  async deleteService(serviceId: number) {
+    const db = await getDatabase();
+    // Consider adding checks for related bookings before deleting
+    return db.prepare('DELETE FROM services WHERE id = ?').bind(serviceId).run();
+  }
+
+  /**
+   * Updates the active status of a service.
+   * @param serviceId The ID of the service.
+   * @param isActive The new active status (boolean).
+   * @returns Promise<D1Result>
+   */
+  async updateServiceStatus(serviceId: number, isActive: boolean) {
+    const db = await getDatabase();
+    return db
+      .prepare('UPDATE services SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .bind(isActive ? 1 : 0, serviceId) // Use 1 for true, 0 for false
+      .run();
+  }
+
   // --- Package Methods ---
 
   /**
