@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService } from '@/lib/database'; // Assuming database service is correctly set up
 import * as bcrypt from 'bcryptjs';
 import * as jose from 'jose'; // For JWT generation
+import { cookies } from 'next/headers'; // Import cookies
 
 // Define expected request body structure
 interface LoginRequestBody {
@@ -29,6 +30,7 @@ interface ServiceProvider {
 // Environment variable for JWT secret (ensure this is set in your .env or Cloudflare secrets)
 const JWT_SECRET = process.env.JWT_SECRET;
 const VENDOR_ROLE_ID = 3; // Define the role ID for vendors
+const CORRECT_AUTH_COOKIE_NAME = 'auth_token'; // Define the correct cookie name
 
 export async function POST(request: NextRequest) {
   if (!JWT_SECRET) {
@@ -99,30 +101,30 @@ export async function POST(request: NextRequest) {
         console.log(`Service provider FOUND for user ID: ${user.id}. Provider ID: ${serviceProvider.id}, Business: ${serviceProvider.business_name}`); // Added log
     }
 
-    // --- Generate JWT Token ---
+    // --- Generate JWT Token FOR COOKIE ---
+    // Use payload expected by verifyAuth (sub, email, role_id)
     const secretKey = new TextEncoder().encode(JWT_SECRET);
     const token = await new jose.SignJWT({
-        userId: user.id,
+        sub: String(user.id), // Use 'sub' for user ID (subject)
         email: user.email,
-        roleId: user.role_id,
-        providerId: serviceProvider.id, // Include provider ID
-        businessName: serviceProvider.business_name // Include business name
-        // Add other relevant claims like first_name if needed
+        role_id: user.role_id, // Use 'role_id'
+        // You can add other non-sensitive info if verifyAuth uses it
+        // providerId: serviceProvider.id, // Optional: Add if verifyAuth expects/uses it
+        // businessName: serviceProvider.business_name // Optional: Add if verifyAuth expects/uses it
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('1h') // Set token expiration (e.g., 1 hour)
       .sign(secretKey);
 
-    console.log(`Vendor login successful for ${email}`);
+    console.log(`Vendor login successful for ${email}, setting '${CORRECT_AUTH_COOKIE_NAME}' cookie.`);
 
-    // --- Return Success Response with Token ---
+    // --- Create Success Response (NO TOKEN IN BODY) ---
     const response = NextResponse.json({
       success: true,
       message: 'Login successful',
-      token: token, // Send the token back to the client
-      // Optionally include some non-sensitive user data
-      user: {
+      // NO token here
+      user: { // Return basic user info (optional, but can be useful)
           id: user.id,
           email: user.email,
           roleId: user.role_id,
@@ -131,14 +133,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Optionally set the token in an HttpOnly cookie for better security
-    // response.cookies.set('authToken', token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV !== 'development', // Use secure cookies in production
-    //   sameSite: 'strict',
-    //   maxAge: 3600, // 1 hour (in seconds)
-    //   path: '/',
-    // });
+    // --- Set HttpOnly Cookie ---
+    cookies().set(CORRECT_AUTH_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'development', // Use secure cookies in production
+      sameSite: 'strict',
+      maxAge: 3600, // 1 hour (in seconds)
+      path: '/',
+    });
 
     return response;
 

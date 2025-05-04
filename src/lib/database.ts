@@ -45,16 +45,16 @@ let _db: CloudflareEnv['DB'] | undefined;
 // Asynchronous function to get the D1 Database binding
 export async function getDatabase(): Promise<CloudflareEnv['DB']> {
   if (_db) {
-    console.log("Returning cached DB instance."); // Added log for debugging
+    // console.log("Returning cached DB instance."); // Added log for debugging
     return _db;
   }
 
-  console.log("Attempting to get Cloudflare context for DB..."); // Added log for debugging
+  // console.log("Attempting to get Cloudflare context for DB..."); // Added log for debugging
   try {
     // Fetch the async context which contains the environment variables including bindings
     const ctx = await getCloudflareContext<CloudflareEnv>({ async: true });
     const { env } = ctx;
-    console.log("Cloudflare context obtained."); // Added log for debugging
+    // console.log("Cloudflare context obtained."); // Added log for debugging
 
     if (!env || !env.DB) {
       console.error("D1 binding 'DB' not found in Cloudflare environment."); // Added log for debugging
@@ -63,7 +63,7 @@ export async function getDatabase(): Promise<CloudflareEnv['DB']> {
       );
     }
 
-    console.log("D1 binding 'DB' found. Caching instance."); // Added log for debugging
+    // console.log("D1 binding 'DB' found. Caching instance."); // Added log for debugging
     _db = env.DB;
     return _db;
   } catch (error) {
@@ -574,11 +574,11 @@ export class DatabaseService {
   async createServiceProvider(providerData: {
     user_id: number;
     business_name: string;
-    type: string; // e.g., 'hotel', 'ferry', 'activity'
+    type: string; // This parameter receives the businessType from the API
     license_no?: string | null;
     address?: string | null;
-    verification_documents?: string | null; // JSON array of doc URLs?
-    bank_details?: string | null; // Consider encrypting or storing securely
+    verification_documents?: string | null;
+    bank_details?: string | null;
   }) {
     const db = await getDatabase();
     return db
@@ -593,10 +593,10 @@ export class DatabaseService {
       .bind(
         providerData.user_id,
         providerData.business_name,
-        providerData.type,
+        providerData.type, // The value passed here is inserted into the 'type' column
         providerData.license_no ?? null,
         providerData.address ?? null,
-        providerData.verification_documents ?? null, // Stringify JSON if needed
+        providerData.verification_documents ?? null,
         providerData.bank_details ?? null
       )
       .run(); // Returns Promise<D1Result>
@@ -754,4 +754,368 @@ export class DatabaseService {
       .bind(providerId)
       .run();
   }
+
+  // --- Hotel & Room Management Methods (CORRECTED) ---
+
+  /**
+   * Retrieves a single hotel's details by joining services and hotels tables.
+   * @param serviceId The service ID of the hotel.
+   * @returns Promise<any | null> - Define a specific HotelDetail interface later
+   */
+  async getHotelById(serviceId: number) {
+    const db = await getDatabase();
+    // Join services and hotels table
+    return db
+      .prepare(`
+        SELECT
+          s.id AS service_id, s.name, s.description, s.type, s.provider_id, s.island_id,
+          s.price, s.availability, s.images, s.amenities AS service_amenities, s.cancellation_policy,
+          s.is_active, s.created_at AS service_created_at, s.updated_at AS service_updated_at,
+          h.star_rating, h.check_in_time, h.check_out_time, h.facilities, h.policies,
+          h.extra_images AS hotel_extra_images, h.total_rooms, h.street_address, h.geo_lat, h.geo_lng,
+          h.meal_plans, h.pets_allowed, h.children_allowed, h.accessibility,
+          h.created_at AS hotel_created_at, h.updated_at AS hotel_updated_at
+        FROM services s
+        JOIN hotels h ON s.id = h.service_id
+        WHERE s.id = ? AND s.type = 'hotel'
+      `)
+      .bind(serviceId)
+      .first(); // Define a proper interface for the joined result
+  }
+
+  /**
+   * Retrieves all hotels for a specific service provider.
+   * @param providerId The ID of the service provider.
+   * @returns Promise<D1Result<any[]>> - Define a specific HotelListItem interface later
+   */
+  async getHotelsByProvider(providerId: number) {
+    const db = await getDatabase();
+    // Join services and hotels table for the specific provider
+    return db
+      .prepare(`
+        SELECT
+          s.id AS service_id, s.name, s.island_id, s.price, s.is_active,
+          h.star_rating, h.street_address
+        FROM services s
+        JOIN hotels h ON s.id = h.service_id
+        WHERE s.provider_id = ? AND s.type = 'hotel'
+        ORDER BY s.name ASC
+      `)
+      .bind(providerId)
+      .all(); // Define a proper interface for the list item result
+  }
+
+  /**
+   * Creates a new hotel (service entry + hotel entry).
+   * Note: D1 doesn't have robust transactions like traditional SQL. This performs sequential inserts.
+   * Consider using batch operations if atomicity is critical and supported for this case.
+   * @param serviceData Data for the services table.
+   * @param hotelData Data for the hotels table.
+   * @returns Promise<{ success: boolean; serviceId?: number; error?: string }>
+   */
+  async createHotel(serviceData: any, hotelData: any) {
+    const db = await getDatabase();
+    try {
+      // 1. Create the service entry
+      const serviceResult = await db
+        .prepare(`
+          INSERT INTO services (
+            name, description, type, provider_id, island_id, price,
+            availability, images, amenities, cancellation_policy, is_active,
+            created_at, updated_at
+          ) VALUES (?, ?, 'hotel', ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `)
+        .bind(
+          serviceData.name,
+          serviceData.description,
+          serviceData.provider_id,
+          serviceData.island_id,
+          serviceData.price,
+          serviceData.availability, // Should be null for hotels?
+          serviceData.images,
+          serviceData.amenities, // Should be null for hotels?
+          serviceData.cancellation_policy,
+          serviceData.is_active === undefined ? 1 : (serviceData.is_active ? 1 : 0)
+        )
+        .run();
+
+      if (!serviceResult.success || !serviceResult.meta?.last_row_id) {
+        throw new Error('Failed to create service entry for hotel: ' + (serviceResult.error || 'Unknown error'));
+      }
+      const serviceId = serviceResult.meta.last_row_id;
+
+      // 2. Create the hotel entry
+      const hotelResult = await db
+        .prepare(`
+          INSERT INTO hotels (
+            service_id, star_rating, check_in_time, check_out_time, facilities, policies,
+            extra_images, total_rooms, street_address, geo_lat, geo_lng, meal_plans,
+            pets_allowed, children_allowed, accessibility, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `)
+        .bind(
+          serviceId,
+          hotelData.star_rating,
+          hotelData.check_in_time,
+          hotelData.check_out_time,
+          hotelData.facilities, // Expects stringified JSON
+          hotelData.policies, // Provide null or default if not used
+          hotelData.extra_images, // Provide null or default if not used
+          hotelData.total_rooms,
+          hotelData.street_address,
+          hotelData.geo_lat,
+          hotelData.geo_lng,
+          hotelData.meal_plans, // Expects stringified JSON
+          hotelData.pets_allowed ? 1 : 0,
+          hotelData.children_allowed ? 1 : 0,
+          hotelData.accessibility // Corrected field name
+        )
+        .run();
+
+      if (!hotelResult.success) {
+        // Attempt to rollback service creation? Difficult without transactions.
+        console.error('Failed to create hotel entry after creating service. Service ID: ', serviceId);
+        // Consider deleting the service entry here if possible
+        // await db.prepare('DELETE FROM services WHERE id = ?').bind(serviceId).run();
+        throw new Error('Failed to create hotel entry: ' + (hotelResult.error || 'Unknown error'));
+      }
+
+      return { success: true, serviceId: serviceId };
+
+    } catch (error) {
+      console.error('Error in createHotel transaction simulation:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  /**
+   * Updates an existing hotel (service and hotel entries).
+   * Note: Sequential updates without true transaction.
+   * @param serviceId The service ID of the hotel to update.
+   * @param serviceUpdateData Data to update in the services table.
+   * @param hotelUpdateData Data to update in the hotels table.
+   * @returns Promise<{ success: boolean; error?: string }>
+   */
+  async updateHotel(serviceId: number, serviceUpdateData: any, hotelUpdateData: any) {
+    const db = await getDatabase();
+    try {
+      // 1. Update the service entry
+      const serviceResult = await db
+        .prepare(`
+          UPDATE services SET
+            name = ?, description = ?, island_id = ?, price = ?, images = ?,
+            cancellation_policy = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ? AND type = 'hotel'
+        `)
+        .bind(
+          serviceUpdateData.name,
+          serviceUpdateData.description,
+          serviceUpdateData.island_id,
+          serviceUpdateData.price,
+          serviceUpdateData.images,
+          serviceUpdateData.cancellation_policy,
+          serviceId
+        )
+        .run();
+
+      // Check if the service update affected any row (it might fail if ID doesn't exist or type isn't hotel)
+      if (!serviceResult.success || serviceResult.meta.changes === 0) {
+        // If changes is 0, it means the WHERE clause didn't match (likely wrong ID or type)
+        const message = serviceResult.meta.changes === 0 ? 'Hotel service not found or type mismatch.' : (serviceResult.error || 'Failed to update service entry.');
+        // Only throw error if there was a DB error, not just if no rows matched
+        if (serviceResult.meta.changes === 0 && serviceResult.success) {
+          console.warn(`UpdateHotel: Service with ID ${serviceId} not found or not a hotel.`);
+          // Don't necessarily throw an error if service wasn't found, maybe hotel update is still valid?
+          // Or maybe we should throw? Depends on desired behavior.
+          // For now, let's proceed but log it.
+        } else if (!serviceResult.success) {
+          throw new Error(message);
+        }
+      }
+
+      // 2. Update the hotel entry
+      const hotelResult = await db
+        .prepare(`
+          UPDATE hotels SET
+            star_rating = ?, check_in_time = ?, check_out_time = ?, facilities = ?, total_rooms = ?,
+            street_address = ?, geo_lat = ?, geo_lng = ?, meal_plans = ?, pets_allowed = ?,
+            children_allowed = ?, accessibility = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE service_id = ?
+        `)
+        .bind(
+          hotelUpdateData.star_rating,
+          hotelUpdateData.check_in_time,
+          hotelUpdateData.check_out_time,
+          hotelUpdateData.facilities, // Expects stringified JSON
+          hotelUpdateData.total_rooms,
+          hotelUpdateData.street_address,
+          hotelUpdateData.geo_lat,
+          hotelUpdateData.geo_lng,
+          hotelUpdateData.meal_plans, // Expects stringified JSON
+          hotelUpdateData.pets_allowed ? 1 : 0,
+          hotelUpdateData.children_allowed ? 1 : 0,
+          hotelUpdateData.accessibility, // Corrected field name
+          serviceId
+        )
+        .run();
+
+      // Check if hotel update succeeded (it might fail if service_id doesn't exist in hotels)
+      if (!hotelResult.success) {
+        // Rollback is difficult here. Log the error.
+        console.error('Failed to update hotel entry after updating service. Service ID: ', serviceId);
+        throw new Error('Failed to update hotel entry: ' + (hotelResult.error || 'Unknown error'));
+      }
+      // Check if either update made changes
+      if (serviceResult.meta.changes === 0 && hotelResult.meta.changes === 0) {
+        // If neither service nor hotel was updated, report no changes
+        return { success: true, error: 'No changes detected or hotel not found.' }; // Changed to success: true, as no DB error occurred
+      }
+
+      return { success: true };
+
+    } catch (error) {
+      console.error('Error in updateHotel transaction simulation:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  /**
+   * Deletes a hotel by deleting its service entry.
+   * Relies on ON DELETE CASCADE constraint on hotels.service_id.
+   * @param serviceId The service ID of the hotel to delete.
+   * @returns Promise<D1Result>
+   */
+  async deleteHotel(serviceId: number) {
+    const db = await getDatabase();
+    // Deleting the service should cascade to the hotels table
+    return db.prepare("DELETE FROM services WHERE id = ? AND type = 'hotel'").bind(serviceId).run();
+  }
+
+  // --- Room Type Methods ---
+
+  /**
+   * Retrieves a specific room type by its ID.
+   * @param roomId The ID of the room type.
+   * @returns Promise<any | null> - Define RoomType interface later
+   */
+  async getRoomTypeById(roomId: number) {
+    const db = await getDatabase();
+    // Renaming columns to match expected API structure (e.g., service_id -> hotel_service_id)
+    // Note: Schema uses 'service_id', 'room_type', 'quantity', 'extra_images'
+    return db
+      .prepare(`
+        SELECT
+          id, service_id AS hotel_service_id, room_type AS room_type_name,
+          base_price, max_guests, quantity AS quantity_available,
+          amenities, extra_images AS images
+        FROM hotel_room_types
+        WHERE id = ?
+      `)
+      .bind(roomId)
+      .first(); // Define a proper interface
+  }
+
+  /**
+   * Retrieves all room types for a specific hotel service ID.
+   * @param hotelServiceId The service ID of the parent hotel.
+   * @returns Promise<D1Result<any[]>> - Define RoomType interface later
+   */
+  async getRoomTypesByHotelServiceId(hotelServiceId: number) {
+    const db = await getDatabase();
+    // Renaming columns to match expected API structure
+    return db
+      .prepare(`
+        SELECT
+          id, service_id AS hotel_service_id, room_type AS room_type_name,
+          base_price, max_guests, quantity AS quantity_available,
+          amenities, extra_images AS images
+        FROM hotel_room_types
+        WHERE service_id = ?
+        ORDER BY room_type ASC
+      `)
+      .bind(hotelServiceId)
+      .all(); // Define a proper interface
+  }
+
+  /**
+   * Creates a new room type for a hotel.
+   * @param roomTypeData Data for the new room type.
+   * @returns Promise<D1Result>
+   */
+  async createRoomType(roomTypeData: any) {
+    const db = await getDatabase();
+    // Map API names to schema names
+    return db
+      .prepare(`
+        INSERT INTO hotel_room_types (
+          service_id, room_type, base_price, max_guests, quantity,
+          amenities, extra_images, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `)
+      .bind(
+        roomTypeData.hotel_service_id, // API uses hotel_service_id
+        roomTypeData.room_type_name, // API uses room_type_name
+        roomTypeData.base_price,
+        roomTypeData.max_guests,
+        roomTypeData.quantity_available, // API uses quantity_available
+        roomTypeData.amenities, // Expects stringified JSON
+        roomTypeData.images // API uses images
+      )
+      .run();
+  }
+
+  /**
+   * Updates an existing room type.
+   * @param roomId The ID of the room type to update.
+   * @param roomTypeUpdateData Data to update.
+   * @returns Promise<D1Result & { error?: string }>
+   */
+  async updateRoomType(roomId: number, roomTypeUpdateData: any): Promise<D1Result & { error?: string }> {
+    const db = await getDatabase();
+    // Map API names to schema names
+    const result = await db
+      .prepare(`
+        UPDATE hotel_room_types SET
+          room_type = ?, base_price = ?, max_guests = ?, quantity = ?,
+          amenities = ?, extra_images = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `)
+      .bind(
+        roomTypeUpdateData.room_type_name,
+        roomTypeUpdateData.base_price,
+        roomTypeUpdateData.max_guests,
+        roomTypeUpdateData.quantity_available,
+        roomTypeUpdateData.amenities, // Expects stringified JSON
+        roomTypeUpdateData.images,
+        roomId
+      )
+      .run();
+
+    // D1Result doesn't directly expose error messages on failure sometimes.
+    // We add a check for changes to detect 'not found' or 'no change'.
+    if (result.success && result.meta.changes === 0) {
+      // Check if the record actually exists
+      const exists = await this.getRoomTypeById(roomId);
+      if (!exists) {
+        // If it doesn't exist, return a failure similar to a 404
+        return { ...result, success: false, error: 'Room type not found.' };
+      } else {
+        // If it exists but no changes were made, return specific message
+        return { ...result, success: true, error: 'No changes detected.' }; // Still success, but indicate no change
+      }
+    }
+    return result; // Return original result if changes > 0 or if there was a DB error
+  }
+
+  /**
+   * Deletes a room type.
+   * @param roomId The ID of the room type to delete.
+   * @returns Promise<D1Result>
+   */
+  async deleteRoomType(roomId: number) {
+    const db = await getDatabase();
+    return db.prepare('DELETE FROM hotel_room_types WHERE id = ?').bind(roomId).run();
+  }
+
 }
+

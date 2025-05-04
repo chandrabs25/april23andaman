@@ -3,8 +3,6 @@ import { DatabaseService } from '@/lib/database';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import type { CloudflareEnv } from '../../../../../cloudflare-env'; // Adjust path as needed
 
-
-
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const userIdParam = searchParams.get('userId');
@@ -19,48 +17,40 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Initialize DatabaseService - context might be needed if getDatabase relies on it implicitly
-    // If getDatabase() works standalone in edge runtime, this context fetch might be optional here
-    // but good practice if bindings are needed directly or for other Cloudflare services.
-    // const context = getCloudflareContext<CloudflareEnv>();
     const dbService = new DatabaseService();
 
+    // Fetch the service provider profile first
     const profile = await dbService.getServiceProviderByUserId(userId);
 
-    // Optionally fetch user details like email/phone if not in service_providers
+    // If the specific service provider profile doesn't exist for this user ID
+    if (!profile) {
+      // Check if the base user exists just for logging/debugging, but return profile not found
+      const userExists = await dbService.getUserById(userId);
+      if (userExists) {
+          console.warn(`User ${userId} exists, but no corresponding service_provider entry found.`);
+      } else {
+          console.warn(`Neither user nor service_provider found for ID ${userId}.`);
+          // You could return 404 here if the user *must* exist
+          // return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+      }
+      // Return success: true but data: null, as expected by the dashboard check
+      return NextResponse.json({ success: true, data: null }, { status: 200 });
+    }
+
+    // Profile exists, now fetch user details to potentially supplement
     const user = await dbService.getUserById(userId);
 
-    if (!profile && !user) {
-        return NextResponse.json({ success: false, message: 'Vendor profile or user not found' }, { status: 404 });
-    }
-
-    // Combine data - prioritize profile data, supplement with user data
-    const combinedData = {
-        ...(profile || {}), // Spread profile data if exists
-        user_id: userId, // Ensure user_id is present
-        email: user?.email ?? profile?.email, // Example: Get email from user table if available
-        phone: user?.phone ?? profile?.phone, // Example: Get phone from user table if available
-        // Add other fields as needed
-    };
-
-
-    if (!profile) {
-      // If only user exists but no service_provider entry, maybe return a specific message or limited data
-       console.warn(`User ${userId} found, but no service provider profile linked.`);
-       // Decide response: return 404, or return basic user info?
-       // Returning basic info for now:
-       return NextResponse.json({ success: true, data: { user_id: userId, email: user?.email, phone: user?.phone, business_name: 'Profile Not Set Up', type: 'N/A', verified: 0 } }, { status: 200 });
-       // Or return 404:
-       // return NextResponse.json({ success: false, message: 'Vendor profile not found' }, { status: 404 });
-    }
-
-    // Add user email/phone to profile data if they aren't already columns there
+    // Combine data - prioritize profile data, supplement with user data if needed
+    // Ensure required fields expected by the frontend are present
     const responseData = {
         ...profile,
-        email: profile.email || user?.email, // Assuming profile might have an email column
-        phone: profile.phone || user?.phone, // Assuming profile might have a phone column
+        // Add user email/phone if they aren't already columns in service_providers
+        // and if the user record was found
+        email: profile.email || user?.email, // Adjust if 'email' is actually in service_providers
+        phone: profile.phone || user?.phone, // Adjust if 'phone' is actually in service_providers
+        // Ensure all fields expected by VendorProfile interface are included
+        // Add default/null values for any potentially missing optional fields if necessary
     };
-
 
     return NextResponse.json({ success: true, data: responseData }, { status: 200 });
   } catch (error) {

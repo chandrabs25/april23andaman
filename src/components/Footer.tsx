@@ -71,8 +71,13 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/vendor/register" className={footerLinkStyle}>
+                <Link href="/register" className={footerLinkStyle}>
                   Vendor Registration
+                </Link>
+              </li>
+              <li>
+                <Link href="/login" className={footerLinkStyle}>
+                  Vendor Login
                 </Link>
               </li>
             </ul>

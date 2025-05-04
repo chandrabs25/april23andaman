@@ -10,17 +10,24 @@ interface RouteContext {
   };
 }
 
-// Helper function to check ownership
-async function checkServiceOwnership(db: DatabaseService, userId: number | string, serviceId: number): Promise<boolean> {
+// Helper function to check ownership and verification status
+async function checkServiceOwnershipAndVerification(db: DatabaseService, userId: number | string, serviceId: number): Promise<{ isOwner: boolean; isVerified: boolean; isHotel: boolean; serviceProviderId: number | null }> {
     const serviceProvider = await db.getServiceProviderByUserId(Number(userId));
-    if (!serviceProvider || !serviceProvider.id) return false;
+    if (!serviceProvider || !serviceProvider.id) {
+        return { isOwner: false, isVerified: false, isHotel: false, serviceProviderId: null };
+    }
+
+    const isVerified = serviceProvider.verified === 1;
+    const isHotel = serviceProvider.type === 'hotel';
+    const serviceProviderId = serviceProvider.id;
 
     const service = await db.getServiceById(serviceId);
-    // Also check if the service exists at all
-    return service !== null && service?.provider_id === serviceProvider.id;
+    const isOwner = service !== null && service?.provider_id === serviceProvider.id;
+
+    return { isOwner, isVerified, isHotel, serviceProviderId };
 }
 
-// GET: Fetch a specific service by ID (owned by the vendor)
+// GET: Fetch a specific service by ID (owned by the verified vendor)
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const authResponse = await requireAuth(request, [3]); // Vendor role
   if (authResponse) return authResponse;
@@ -38,25 +45,27 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const db = new DatabaseService();
 
-    // Verify ownership before fetching details
-    const isOwner = await checkServiceOwnership(db, user.id, serviceId);
-    if (!isOwner) {
-        // Return 404 instead of 403 to avoid revealing existence of the service to non-owners
-        return NextResponse.json({ success: false, message: 'Service not found or permission denied.' }, { status: 404 });
-    }
+    // Verify ownership and verification
+    const { isOwner, isVerified } = await checkServiceOwnershipAndVerification(db, user.id, serviceId);
 
-    // Fetch the service details since ownership is confirmed
+    if (!isOwner) {
+        // Return 404 instead of 403 to avoid revealing existence
+        return NextResponse.json({ success: false, message: 'Service not found or permission denied.' }, { status: 404 });
+    }    // --- Verification Check Removed for GET as per requirements ---
+    // Sticking to requirement: only verified vendors manage services.
+    // if (!isVerified) {
+    //     return NextResponse.json({ success: false, message: \"Vendor account not verified. Cannot view service details.\" }, { status: 403 });
+    // }
+    // --- End Check ---
+    // Fetch the service details since ownership & verification are confirmed
     const service = await db.getServiceById(serviceId);
 
-    // Although checkServiceOwnership implies service exists, double-check here
     if (!service) {
-        // This case should technically be covered by isOwner check, but good to be safe
+        // Should be caught by isOwner check, but for safety
         return NextResponse.json({ success: false, message: 'Service not found.' }, { status: 404 });
     }
 
-    // Note: JSON fields like 'availability' are returned as strings from the DB.
-    // The frontend should handle parsing if needed.
-
+    // Frontend needs to parse JSON fields like 'amenities', 'availability', 'cancellation_policy'
     return NextResponse.json({ success: true, data: service });
 
   } catch (error) {
@@ -66,7 +75,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   }
 }
 
-// PUT: Update a specific service
+// PUT: Update a specific service (Rentals/Activities)
 export async function PUT(request: NextRequest, { params }: RouteContext) {
   const authResponse = await requireAuth(request, [3]); // Vendor role
   if (authResponse) return authResponse;
@@ -84,36 +93,95 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   try {
     const db = new DatabaseService();
 
-    // Verify ownership
-    const isOwner = await checkServiceOwnership(db, user.id, serviceId);
+    // Verify ownership, verification, and type
+    const { isOwner, isVerified, isHotel } = await checkServiceOwnershipAndVerification(db, user.id, serviceId);
+
     if (!isOwner) {
         return NextResponse.json({ success: false, message: 'Permission denied: You do not own this service.' }, { status: 403 });
     }
-
-    interface ServiceUpdateBody {
-      name: string;
-      description?: string;
-      type: string;
-      island_id: number;
-      price: number;
-      availability?: any; // Consider using a more specific type
-      images?: any;       // Consider using a more specific type
-      amenities?: any;    // Consider using a more specific type
-      cancellation_policy?: any; // Consider using a more specific type
+    if (!isVerified) {
+        return NextResponse.json({ success: false, message: 'Vendor account not verified. Cannot update service.' }, { status: 403 });
+    }
+    // This endpoint is for non-hotel services.
+    // Fetch the service type to double-check, although provider type check is primary
+    const serviceToUpdate = await db.getServiceById(serviceId);
+    if (!serviceToUpdate) { // Should be caught by isOwner check
+        return NextResponse.json({ success: false, message: 'Service not found.' }, { status: 404 });
+    }
+    if (isHotel || serviceToUpdate.type === 'hotel') {
+        return NextResponse.json({ success: false, message: 'Hotel vendors should use the hotel management endpoint.' }, { status: 400 });
     }
 
-    // Apply type assertion and add explicit type annotation
-    const body: ServiceUpdateBody = await request.json() as ServiceUpdateBody;
+    // Define expected body structure including specific fields (similar to POST)
+    interface ServiceUpdateBody {
+      // Generic
+      name: string;
+      description?: string;
+      type: string; // e.g., "rental/car", "activity/trek"
+      island_id: number;
+      price: number;
+      availability?: any;
+      images?: string | null;
+      cancellation_policy?: any;
+      // is_active is handled by the status endpoint
+      // Rental Specific (Optional)
+      rental_unit?: 'per hour' | 'per day';
+      quantity_available?: number;
+      deposit_required?: boolean;
+      deposit_amount?: number;
+      age_license_requirement?: boolean;
+      age_license_details?: string;
+      // Activity Specific (Optional)
+      duration?: number;
+      duration_unit?: 'hours' | 'days';
+      group_size_min?: number;
+      group_size_max?: number;
+      difficulty_level?: 'easy' | 'medium' | 'hard';
+      equipment_provided?: string[];
+      safety_requirements?: string;
+      guide_required?: boolean;
+      // General Amenities (Optional)
+      general_amenities?: string[];
+    }
 
-    // Add basic check for body type after parsing
+    const body: ServiceUpdateBody = await request.json();
+
     if (!body || typeof body !== 'object') {
         return NextResponse.json({ success: false, message: 'Invalid request body format' }, { status: 400 });
     }
 
-    // Basic validation (refined check for price)
+    // Basic validation
     if (!body.name || !body.type || body.price === undefined || body.island_id === undefined) {
       return NextResponse.json({ success: false, message: 'Missing required fields (name, type, price, island_id)' }, { status: 400 });
     }
+    if (body.type.startsWith('hotel')) {
+         return NextResponse.json({ success: false, message: 'Invalid type. Use hotel management endpoint for hotels.' }, { status: 400 });
+    }
+
+    // --- Prepare Specific Fields JSON --- (Similar to POST)
+    let specificFieldsData: any = {};
+    if (body.type.startsWith('rental/')) {
+        specificFieldsData = {
+            unit: body.rental_unit,
+            quantity: body.quantity_available,
+            deposit: body.deposit_required ? { required: true, amount: body.deposit_amount } : { required: false },
+            requirements: body.age_license_requirement ? { required: true, details: body.age_license_details } : { required: false },
+        };
+    } else if (body.type.startsWith('activity/')) {
+        specificFieldsData = {
+            duration: body.duration ? { value: body.duration, unit: body.duration_unit } : null,
+            group_size: { min: body.group_size_min, max: body.group_size_max },
+            difficulty: body.difficulty_level,
+            equipment: body.equipment_provided,
+            safety: body.safety_requirements,
+            guide: body.guide_required,
+        };
+    }
+    const amenitiesToStore = {
+        general: body.general_amenities ?? [],
+        specifics: specificFieldsData
+    };
+    // --- End Specific Fields JSON ---
 
     const result = await db.updateService(serviceId, {
       name: body.name,
@@ -122,19 +190,22 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       island_id: Number(body.island_id),
       price: Number(body.price),
       availability: body.availability ? JSON.stringify(body.availability) : null,
-      images: body.images ?? null, // Store as provided string
-      amenities: body.amenities ? JSON.stringify(body.amenities) : null, // Assuming amenities might be structured
-      cancellation_policy: body.cancellation_policy ? JSON.stringify(body.cancellation_policy) : null, // Assuming policy might be structured
+      images: body.images ?? null,
+      amenities: JSON.stringify(amenitiesToStore), // Store combined JSON string
+      cancellation_policy: body.cancellation_policy ? JSON.stringify(body.cancellation_policy) : null,
+      // is_active is not updated here, use status endpoint
     });
 
      if (!result.success) {
+        if (result.meta?.changes === 0) {
+             return NextResponse.json({ success: false, message: 'Service not found or no changes detected.' }, { status: 404 });
+        }
         throw new Error(result.error || 'Failed to update service in database');
     }
 
-    // Optionally fetch the updated service to return it
+    // Fetch the updated service to return it
     const updatedService = await db.getServiceById(serviceId);
     if (!updatedService) {
-        // Should not happen if update succeeded, but handle defensively
         throw new Error('Failed to retrieve updated service.');
     }
 
@@ -165,13 +236,21 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
     const db = new DatabaseService();
 
-    // Verify ownership
-    const isOwner = await checkServiceOwnership(db, user.id, serviceId);
+    // Verify ownership and verification
+    const { isOwner, isVerified } = await checkServiceOwnershipAndVerification(db, user.id, serviceId);
+
     if (!isOwner) {
         return NextResponse.json({ success: false, message: 'Permission denied: You do not own this service.' }, { status: 403 });
     }
+    if (!isVerified) {
+        return NextResponse.json({ success: false, message: 'Vendor account not verified. Cannot delete service.' }, { status: 403 });
+    }
 
-    // Add check for existing bookings before deleting?
+    // Optional: Add check for existing bookings before deleting?
+    // const existingBookings = await db.checkBookingsForService(serviceId); // Needs implementation in DatabaseService
+    // if (existingBookings > 0) {
+    //     return NextResponse.json({ success: false, message: 'Cannot delete service with active bookings.' }, { status: 400 });
+    // }
 
     const result = await db.deleteService(serviceId);
 
@@ -179,9 +258,9 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
         throw new Error(result.error || 'Failed to delete service in database');
     }
     if (result.meta?.changes === 0) {
+        // This implies the service didn't exist, which contradicts the ownership check, but handle defensively
         return NextResponse.json({ success: false, message: 'Service not found or already deleted.' }, { status: 404 });
     }
-
 
     return NextResponse.json({ success: true, message: 'Service deleted successfully' });
 
@@ -191,3 +270,4 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: false, message: 'Failed to delete service.', error: message }, { status: 500 });
   }
 }
+
