@@ -57,7 +57,7 @@ INSERT INTO islands (id, name, description, permit_required, images) VALUES
 -- =============================================
 INSERT INTO service_providers (id, user_id, business_name, type, address, verified, bank_details) VALUES
   (1, 3, 'Andaman Scuba Experts', 'activity_provider', 'Beach No. 3, Havelock Island', 1, '{"account_no": "123", "ifsc": "ABC"}'),
-  (2, 4, 'SeaShell Port Blair', 'accommodation', 'Marine Hill, Port Blair', 1, '{"account_no": "456", "ifsc": "DEF"}'),
+  (2, 4, 'SeaShell Port Blair', 'hotel', 'Marine Hill, Port Blair', 1, '{"account_no": "456", "ifsc": "DEF"}'),
   (3, 3, 'Havelock Snorkeling Tours', 'activity_provider', 'Jetty Area, Havelock Island', 1, '{"account_no": "789", "ifsc": "GHI"}'); -- Same vendor, different service type focus
 
 -- =============================================

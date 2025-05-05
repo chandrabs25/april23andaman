@@ -1,14 +1,15 @@
-// Path: /home/ubuntu/vendor_dev/component/(vendor)/services/[serviceId]/edit/page.tsx
+// Path: /home/ubuntu/vendor_frontend_rev2/test 2/src/app/(vendor)/services/[serviceId]/edit/page.tsx
 "use client";
 export const dynamic = "force-dynamic";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useRouter, useParams } from "next/navigation"; // Added useParams
+import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useFetch } from "@/hooks/useFetch";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package } from "lucide-react";
+import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info } from "lucide-react";
 import Link from "next/link";
+import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import the CheckboxGroup component
 
 // --- Interfaces ---
 interface AuthUser {
@@ -18,29 +19,19 @@ interface AuthUser {
 
 interface VendorProfile {
   id: number;
-  verified: number; // 0 or 1
-  type: string; // e.g., hotel, rental, activity
-}
-interface GetVendorProfileResponse {
-  success: boolean;
-  data: VendorProfile | null;
-  message?: string;
-}
-
-// Add a generic response type for simple success/message APIs
-interface ApiResponse {
-    success: boolean;
-    message?: string;
+  verified: number;
+  type: string;
 }
 
 interface Island {
   id: number;
   name: string;
 }
-interface GetIslandsResponse {
-  success: boolean;
-  data: Island[];
-  message?: string;
+
+interface ApiResponse {
+    success: boolean;
+    message?: string;
+    data?: any;
 }
 
 // Existing Service Data Interface (from GET /api/vendor/services/[serviceId])
@@ -51,138 +42,150 @@ interface VendorService {
   type: string;
   island_id: number;
   price: string | number;
-  availability: string | null; // Assuming JSON string or simple text
-  images: string | null; // Assuming comma-separated URLs or single URL
-  amenities: string | null; // Assuming JSON string { general: [], specifics: {} }
-  cancellation_policy: string | null; // Assuming JSON string or simple text
+  availability: string | null; // Expecting JSON string like {"days":["Mon", "Tue"], "notes":"9am-5pm"} or legacy text
+  images: string | null; // Expecting JSON array string or legacy comma-separated/single URL
+  amenities: string | null; // Expecting JSON string like {"general":["wifi"], "specifics":{...}}
+  cancellation_policy: string | null;
   is_active: number;
-  // Other fields if returned by API
-}
-interface GetServiceResponse {
-  success: boolean;
-  data: VendorService | null;
-  message?: string;
-}
-
-// Define structure for amenities specifics
-interface RentalSpecifics {
-    unit?: "per hour" | "per day";
-    quantity?: number;
-    deposit?: {
-        required?: boolean;
-        amount?: number;
-    };
-    requirements?: {
-        required?: boolean;
-        details?: string;
-    };
+  // Specific fields might be nested in amenities or separate, adjust based on actual API response
+  rental_unit?: "per hour" | "per day";
+  quantity_available?: number;
+  deposit_required?: boolean;
+  deposit_amount?: number;
+  age_license_requirement?: boolean;
+  age_license_details?: string;
+  duration?: number;
+  duration_unit?: "hours" | "days";
+  group_size_min?: number;
+  group_size_max?: number;
+  difficulty_level?: "easy" | "medium" | "hard";
+  equipment_provided?: string | string[]; // Could be JSON array string or array itself if parsed from amenities
+  safety_requirements?: string;
+  guide_required?: boolean;
 }
 
-interface ActivitySpecifics {
-    duration?: {
-        value?: number;
-        unit?: "hours" | "days";
-    };
-    group_size?: {
-        min?: number;
-        max?: number;
-    };
-    difficulty?: "easy" | "medium" | "hard";
-    equipment?: string[];
-    safety?: string;
-    guide?: boolean;
-}
+// --- Define Options for Checkbox Groups (Same as Add page) ---
+const generalAmenityOptions = [
+  { label: "Wi-Fi", value: "wifi" },
+  { label: "Parking", value: "parking" },
+  { label: "Restroom", value: "restroom" },
+  { label: "First Aid", value: "first_aid" },
+  { label: "Refreshments Available", value: "refreshments" },
+];
 
-// Form state interface (matches API body + specific fields)
+const equipmentOptions = [
+  { label: "Helmet", value: "helmet" },
+  { label: "Life Jacket", value: "life_jacket" },
+  { label: "Snorkel Gear", value: "snorkel_gear" },
+  { label: "Scuba Gear", value: "scuba_gear" },
+  { label: "Kayak/Paddle", value: "kayak_paddle" },
+  { label: "Hiking Boots", value: "hiking_boots" },
+  { label: "Safety Harness", value: "safety_harness" },
+];
+
+const availabilityDayOptions = [
+    { label: "Monday", value: "Mon" },
+    { label: "Tuesday", value: "Tue" },
+    { label: "Wednesday", value: "Wed" },
+    { label: "Thursday", value: "Thu" },
+    { label: "Friday", value: "Fri" },
+    { label: "Saturday", value: "Sat" },
+    { label: "Sunday", value: "Sun" },
+];
+
+// Updated Form state interface (using arrays for multi-select)
 interface ServiceFormData {
-  // Generic
   name: string;
   description: string;
-  type: string; // e.g., "rental/car", "activity/trek"
-  island_id: string; // Use string for form input
-  price: string; // Use string for form input
-  availability: string;
-  images: string;
+  type: string;
+  island_id: string;
+  price: string;
+  availability_days: string[]; // Use array for checkboxes
+  availability_notes: string; // Text field for notes
+  images: string[]; // Use array for TagInput
   cancellation_policy: string;
-  // is_active is handled separately via status endpoint/list page toggle
-  // Rental Specific
+  // is_active is not edited here
   rental_unit: "per hour" | "per day" | "";
   quantity_available: string;
   deposit_required: boolean;
   deposit_amount: string;
   age_license_requirement: boolean;
   age_license_details: string;
-  // Activity Specific
   duration: string;
   duration_unit: "hours" | "days" | "";
   group_size_min: string;
   group_size_max: string;
   difficulty_level: "easy" | "medium" | "hard" | "";
-  equipment_provided: string; // Comma-separated
+  equipment_provided: string[]; // Use array for CheckboxGroup
   safety_requirements: string;
   guide_required: boolean;
-  // General Amenities
-  general_amenities: string; // Comma-separated
+  general_amenities: string[]; // Use array for CheckboxGroup
 }
 
-// --- Helper Components ---
+// --- Helper Components (LoadingSpinner, VerificationPending, IncorrectVendorType, TagInput) ---
 const LoadingSpinner = ({ text = "Loading..." }: { text?: string }) => (
-  <div className="flex justify-center items-center py-10">
-    <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-2" />
-    <span>{text}</span>
-  </div>
+    <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-2" />
+        <span>{text}</span>
+    </div>
 );
 
-const VerificationPending = () => (
-  <div
-    className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md shadow-md mb-8"
-    role="alert"
-  >
-    <p className="font-bold flex items-center">
-      <AlertTriangle size={18} className="mr-2" />
-      Verification Pending
-    </p>
-    <p>
-      Your account must be verified before you can edit services. Please check your
-      profile status or contact support.
-    </p>
-    <Link
-      href="/dashboard"
-      className="text-sm text-blue-600 hover:underline mt-2 inline-block"
-    >
-      Return to Dashboard
-    </Link>
-  </div>
-);
+const VerificationPending = () => (<div>VerificationPending Placeholder</div>);
+const IncorrectVendorType = () => (<div>IncorrectVendorType Placeholder</div>);
 
-const IncorrectVendorType = () => (
-  <div
-    className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-md mb-8"
-    role="alert"
-  >
-    <p className="font-bold flex items-center">
-      <Hotel size={18} className="mr-2" />
-      Incorrect Vendor Type
-    </p>
-    <p>
-      This page is for editing Rentals and Activities. Hotel vendors should use
-      the Hotel Management section.
-    </p>
-    <Link
-      href="/hotels" // Link to hotel list or specific hotel edit?
-      className="text-sm text-blue-600 hover:underline mt-2 inline-block"
-    >
-      Go to Hotel Management
-    </Link>
-    <br />
-    <Link
-      href="/dashboard"
-      className="text-sm text-gray-600 hover:underline mt-1 inline-block"
-    >
-      Return to Dashboard
-    </Link>
-  </div>
-);
+// Simple Tag Input Component (Styling updated)
+const TagInput = ({ label, name, value, onChange, placeholder, helperText }: {
+    label: string;
+    name: string;
+    value: string[];
+    onChange: (name: string, value: string[]) => void;
+    placeholder?: string;
+    helperText?: string;
+}) => {
+    const [inputValue, setInputValue] = useState("");
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "," || e.key === "Enter") {
+            e.preventDefault();
+            const newTag = inputValue.trim();
+            if (newTag && !value.includes(newTag)) {
+                onChange(name, [...value, newTag]);
+            }
+            setInputValue("");
+        }
+    };
+
+    const removeTag = (tagToRemove: string) => {
+        onChange(name, value.filter(tag => tag !== tagToRemove));
+    };
+
+    return (
+        <div>
+            <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+            <div className="mt-1 flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-md shadow-sm bg-white">
+                {value.map(tag => (
+                    <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        {tag}
+                        <button type="button" onClick={() => removeTag(tag)} className="ml-1.5 flex-shrink-0 text-indigo-500 hover:text-indigo-700 focus:outline-none">
+                            <span className="sr-only">Remove {tag}</span>
+                            &times;
+                        </button>
+                    </span>
+                ))}
+                <input
+                    type="text"
+                    id={name}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={placeholder || "Add item and press Enter or comma"}
+                    className="flex-grow px-1 py-0.5 border-none focus:ring-0 sm:text-sm outline-none"
+                />
+            </div>
+            {helperText && <p className="mt-1.5 text-xs text-gray-500">{helperText}</p>}
+        </div>
+    );
+};
 
 // --- Main Edit Service Form Component ---
 function EditServiceForm() {
@@ -196,24 +199,40 @@ function EditServiceForm() {
     isAuthenticated: boolean;
   };
 
-  const [formData, setFormData] = useState<ServiceFormData | null>(null); // Initialize as null
+  const [formData, setFormData] = useState<ServiceFormData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [initialServiceType, setInitialServiceType] = useState<string>(""); // Store initial type
+  const [initialServiceType, setInitialServiceType] = useState<string>("");
 
-  // 1. Fetch Vendor Profile (for verification and type check)
+  // 1. Fetch Vendor Profile
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
   const { data: vendorProfile, error: profileError, status: profileStatus } = useFetch<VendorProfile | null>(profileApiUrl);
   const isVerified = vendorProfile?.verified === 1;
   const isHotelVendor = vendorProfile?.type === "hotel";
 
-  // 2. Fetch Existing Service Data (only if profile loaded, verified, not hotel, and serviceId is valid)
-  const shouldFetchService = profileStatus === "success" && vendorProfile && isVerified && !isHotelVendor && !!serviceId;
+  // 2. Fetch Existing Service Data
+  const shouldFetchService = profileStatus === "success" && vendorProfile && !isHotelVendor && !!serviceId;
   const serviceApiUrl = shouldFetchService ? `/api/vendor/services/${serviceId}` : null;
   const { data: serviceData, error: serviceError, status: serviceStatus } = useFetch<VendorService | null>(serviceApiUrl);
 
   // 3. Fetch Islands
-  const { data: islands, status: islandsStatus } = useFetch<Island[]>("/api/islands");
-  const islandsList = islands || [];
+  const { data: islands = [], status: islandsStatus } = useFetch<Island[]>("/api/islands");
+
+  // --- Utility Function to Safely Parse JSON Array String ---
+  const parseJsonArray = (jsonString: string | null | undefined, fieldName: string): string[] => {
+      if (!jsonString || typeof jsonString !== "string" || !jsonString.trim()) return [];
+      try {
+          const parsed = JSON.parse(jsonString);
+          if (Array.isArray(parsed) && parsed.every(item => typeof item === "string")) return parsed;
+          console.warn(`Parsed ${fieldName} data is not an array of strings:`, parsed);
+          if (typeof parsed === "string" && parsed.trim()) return [parsed.trim()];
+          return [];
+      } catch (e) {
+          console.error(`Failed to parse ${fieldName} JSON:`, jsonString, e);
+          if (typeof jsonString === "string" && jsonString.includes(",")) return jsonString.split(",").map(s => s.trim()).filter(Boolean);
+          if (typeof jsonString === "string" && jsonString.trim()) return [jsonString.trim()];
+          return [];
+      }
+  };
 
   // --- Populate Form Data Effect ---
   useEffect(() => {
@@ -221,80 +240,46 @@ function EditServiceForm() {
       const service = serviceData;
       setInitialServiceType(service.type); // Store the initial type
 
-      // --- Safe JSON Parsing ---
-      let amenitiesData: { general?: string[]; specifics?: RentalSpecifics | ActivitySpecifics | {} } = { general: [], specifics: {} };
+      // --- Parse Nested/JSON Fields Safely ---
+      let amenitiesData: { general?: string[]; specifics?: any } = { general: [], specifics: {} };
       try {
-          // Explicitly check if service.amenities is a non-empty string before parsing
-          if (typeof service.amenities === 'string' && service.amenities.trim()) {
+          if (typeof service.amenities === "string" && service.amenities.trim()) {
               amenitiesData = JSON.parse(service.amenities);
           }
       } catch (e) {
           console.error("Failed to parse service amenities JSON:", service.amenities, e);
-          toast({ variant: "destructive", title: "Warning", description: "Could not load existing amenities data." });
       }
 
-      let imagesArray: string[] = [];
-       try {
-           // Explicitly check if service.images is a non-empty string before parsing
-           if (typeof service.images === 'string' && service.images.trim()) {
-               const parsedImages = JSON.parse(service.images);
-               // Ensure it's actually an array of strings
-               if (Array.isArray(parsedImages) && parsedImages.every(item => typeof item === 'string')) {
-                   imagesArray = parsedImages;
-               } else {
-                   console.warn("Parsed images data is not an array of strings:", parsedImages);
-                   // Attempt recovery if it's just a single string
-                   if (typeof parsedImages === 'string' && parsedImages.trim()) {
-                       imagesArray = [parsedImages.trim()];
-                   }
-               }
-           } else if (typeof service.images === 'string' && service.images.trim()) {
-               // Handle case where it might be a single URL string not in JSON format
-               imagesArray = [service.images.trim()];
-           }
-       } catch (e) {
-           console.error("Failed to parse service images JSON:", service.images, e);
-           toast({ variant: "destructive", title: "Warning", description: "Could not load existing image data." });
-            // Fallback: treat as comma-separated if parsing fails but it's a string
-           if (typeof service.images === 'string' && service.images.includes(',')) {
-               imagesArray = service.images.split(',').map(s => s.trim()).filter(Boolean);
-           } else if (typeof service.images === 'string' && service.images.trim()) {
-               imagesArray = [service.images.trim()]; // Treat as single image URL
-           }
-       }
+      const imagesArray = parseJsonArray(service.images, "images");
+      const generalAmenitiesArray = Array.isArray(amenitiesData.general) ? amenitiesData.general : [];
 
-      // Use type assertions based on service type
-      const serviceBaseType = service.type.split("/")[0];
-      const specifics = amenitiesData.specifics || {};
-      const rentalSpecifics = serviceBaseType === 'rental' ? specifics as RentalSpecifics : {};
-      const activitySpecifics = serviceBaseType === 'activity' ? specifics as ActivitySpecifics : {};
-
-      // Safely parse equipment_provided based on activity type
-      let equipmentArray: string[] = [];
-      if (serviceBaseType === 'activity') {
-          try {
-              // Check if activitySpecifics.equipment is already an array (from amenities parse)
-               if (Array.isArray(activitySpecifics.equipment)) {
-                   equipmentArray = activitySpecifics.equipment;
-               }
-               // Legacy check: Maybe equipment_provided is a separate field from the API?
-               // If your API sends `equipment_provided` as a separate JSON string field:
-               /*
-               else if (typeof (service as any).equipment_provided === 'string' && (service as any).equipment_provided.trim()) {
-                   const parsedEquipment = JSON.parse((service as any).equipment_provided);
-                   if (Array.isArray(parsedEquipment) && parsedEquipment.every(item => typeof item === 'string')) {
-                       equipmentArray = parsedEquipment;
-                   }
-               }
-               */
-
-          } catch (e) {
-              console.error("Failed to parse equipment_provided JSON:", activitySpecifics.equipment, e);
-               toast({ variant: "destructive", title: "Warning", description: "Could not load existing equipment data." });
-               // Fallback logic if needed
+      let availabilityDaysArray: string[] = [];
+      let availabilityNotesText: string = "";
+      try {
+          if (typeof service.availability === "string" && service.availability.trim()) {
+              const parsedAvail = JSON.parse(service.availability);
+              if (parsedAvail && Array.isArray(parsedAvail.days)) {
+                  availabilityDaysArray = parsedAvail.days.filter((d: any) => typeof d === "string");
+              }
+              if (parsedAvail && typeof parsedAvail.notes === "string") {
+                  availabilityNotesText = parsedAvail.notes;
+              }
+          } else if (typeof service.availability === "string") {
+              availabilityNotesText = service.availability;
+          }
+      } catch (e) {
+          console.warn("Could not parse availability JSON, treating as notes:", service.availability, e);
+          if (typeof service.availability === "string") {
+              availabilityNotesText = service.availability;
           }
       }
 
+      const specifics = amenitiesData.specifics || {};
+      const serviceBaseType = service.type.split("/")[0];
+      const rentalSpecifics = serviceBaseType === "rental" ? specifics : {};
+      const activitySpecifics = serviceBaseType === "activity" ? specifics : {};
+
+      let equipmentArray = parseJsonArray(activitySpecifics.equipment, "equipment");
 
       // --- Populate State ---
       setFormData({
@@ -302,11 +287,11 @@ function EditServiceForm() {
         description: service.description || "",
         type: service.type || "",
         island_id: service.island_id?.toString() || "",
-        price: typeof service.price === 'number' ? service.price.toString() : service.price || "",
-        availability: service.availability || "",
-        images: imagesArray.join(", "),
+        price: (typeof service.price === "number" ? service.price.toString() : service.price) || "",
+        availability_days: availabilityDaysArray,
+        availability_notes: availabilityNotesText,
+        images: imagesArray,
         cancellation_policy: service.cancellation_policy || "",
-        // is_active is not edited here
         // Rental Specific
         rental_unit: rentalSpecifics.unit || "",
         quantity_available: rentalSpecifics.quantity?.toString() || "",
@@ -320,11 +305,11 @@ function EditServiceForm() {
         group_size_min: activitySpecifics.group_size?.min?.toString() || "",
         group_size_max: activitySpecifics.group_size?.max?.toString() || "",
         difficulty_level: activitySpecifics.difficulty || "",
-        equipment_provided: (activitySpecifics.equipment || []).join(", "),
+        equipment_provided: equipmentArray,
         safety_requirements: activitySpecifics.safety || "",
         guide_required: activitySpecifics.guide || false,
         // General Amenities
-        general_amenities: (amenitiesData.general || []).join(", "),
+        general_amenities: generalAmenitiesArray,
       });
     } else if (serviceStatus === "error") {
         toast({ variant: "destructive", title: "Error Loading Service", description: serviceError?.message || "Could not load service details." });
@@ -345,36 +330,18 @@ function EditServiceForm() {
     return <LoadingSpinner text="Loading Edit Service Form..." />;
   }
 
-  // Handle Profile Fetch Error
-  if (profileStatus === "error") {
-    return (
-      <div className="text-red-600">
-        Error loading vendor profile:{" "}
-        {profileError?.message || "Unknown error"}
-      </div>
-    );
-  }
-  // Handle Profile Not Found (edge case)
-  if (profileStatus === "success" && !vendorProfile) {
-    return (
-      <div className="text-orange-600">
-        Vendor profile not found. Cannot edit service.
-      </div>
-    );
+  // Handle Profile Fetch Error/Not Found
+  if (profileStatus === "error" || (profileStatus === "success" && !vendorProfile)) {
+    return <div className="text-red-600">Error loading vendor profile or profile not found.</div>;
   }
 
-  // --- Conditional Rendering based on Verification & Type ---
-  // --- Verification Check Removed (as per Add page logic) ---
-  // if (!isVerified) {
-  //   return <VerificationPending />;
-  // }
-
+  // --- Conditional Rendering based on Type ---
   if (isHotelVendor) {
     return <IncorrectVendorType />;
   }
 
   // Handle Service Not Found or Error after profile is loaded
-  if (shouldFetchService && serviceStatus === 'success' && !serviceData) {
+  if (shouldFetchService && serviceStatus === "success" && !serviceData) {
     return (
       <div className="text-red-600">
         Service not found or could not be loaded.
@@ -382,348 +349,386 @@ function EditServiceForm() {
       </div>
     );
   }
-   if (shouldFetchService && serviceStatus === 'error') {
-     // Error is handled within the useEffect, redirecting the user.
-     // Showing a loading state might be better here if the redirect hasn't happened.
+   if (shouldFetchService && serviceStatus === "error") {
      return <LoadingSpinner text="Error loading service..." />;
   }
 
-  // If formData hasn't been populated yet (still loading or initial state)
+  // If formData hasn't been populated yet
   if (!formData) {
-     // Render loading or a placeholder if service data is still being fetched/processed
-     return <LoadingSpinner text="Loading service details..." />;
+     return <LoadingSpinner text="Processing service details..." />;
   }
 
-  const selectedServiceBaseType = formData.type.split("/")[0]; // rental or activity
+  const selectedServiceBaseType = formData.type.split("/")[0];
 
   // --- Form Handlers ---
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
-
     if (type === "checkbox") {
-      const { checked } = e.target as HTMLInputElement;
-      setFormData((prev) => prev ? { ...prev, [name]: checked } : null);
+        const { checked } = e.target as HTMLInputElement;
+        setFormData((prev) => prev ? { ...prev, [name]: checked } : null);
     } else {
       setFormData((prev) => prev ? { ...prev, [name]: value } : null);
     }
+  };
 
-    // If the main type changes, warn the user if it crosses rental/activity boundary
-    if (name === "type") {
-        const newBaseType = value.split("/")[0];
-        const initialBaseType = initialServiceType.split("/")[0];
-        if (newBaseType !== initialBaseType && initialBaseType) {
-            toast({ variant: "default", title: "Warning", description: "Changing the base service type (Rental/Activity) might reset specific fields. Please review carefully." });
-        }
-    }
+  const handleArrayChange = (name: string, values: string[]) => {
+    setFormData((prev) => prev ? { ...prev, [name]: values } : null);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData) {
-        toast({ variant: "destructive", title: "Error", description: "Form data not loaded yet." });
-        return;
-    }
+    if (!formData) return;
     setIsSubmitting(true);
 
-    // Basic validation (can add more)
-    if (!formData.type) {
-        toast({ variant: "destructive", title: "Error", description: "Please select a service type." });
+    // Basic validation
+    if (!formData.type || !formData.island_id || !formData.name.trim() || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+        toast({ variant: "destructive", title: "Validation Error", description: "Please fill all required fields (*) with valid data." });
         setIsSubmitting(false);
         return;
     }
-     if (!formData.island_id) {
-        toast({ variant: "destructive", title: "Error", description: "Please select an island." });
+    // Add more specific validation based on type
+    if (selectedServiceBaseType === "rental" && (!formData.rental_unit || isNaN(parseInt(formData.quantity_available)) || parseInt(formData.quantity_available) <= 0)) {
+        toast({ variant: "destructive", title: "Validation Error", description: "Please provide valid rental unit and quantity for rentals." });
+        setIsSubmitting(false);
+        return;
+    }
+    if (selectedServiceBaseType === "activity" && (!formData.duration_unit || isNaN(parseInt(formData.duration)) || parseInt(formData.duration) <= 0)) {
+        toast({ variant: "destructive", title: "Validation Error", description: "Please provide valid duration and unit for activities." });
         setIsSubmitting(false);
         return;
     }
 
-    // --- Data Transformation (Similar to Add Page) ---
-    // Note: We are rebuilding the payload structure required by the PUT API endpoint.
-    // This might differ slightly from the GET response structure.
-    // We assume the PUT endpoint expects a similar structure to the POST endpoint.
+    // --- Data Transformation for API (PUT Request) ---
+    // Structure the payload based on how the backend expects updates
+    // Assuming a nested structure within `amenities` for specifics
+    let specificsPayload: any = {};
+    if (selectedServiceBaseType === "rental") {
+        specificsPayload = {
+            unit: formData.rental_unit,
+            quantity: formData.quantity_available ? parseInt(formData.quantity_available, 10) : null,
+            deposit: {
+                required: formData.deposit_required,
+                amount: formData.deposit_amount ? parseFloat(formData.deposit_amount) : null,
+            },
+            requirements: {
+                required: formData.age_license_requirement,
+                details: formData.age_license_details,
+            },
+        };
+    } else if (selectedServiceBaseType === "activity") {
+        specificsPayload = {
+            duration: {
+                value: formData.duration ? parseInt(formData.duration, 10) : null,
+                unit: formData.duration_unit,
+            },
+            group_size: {
+                min: formData.group_size_min ? parseInt(formData.group_size_min, 10) : null,
+                max: formData.group_size_max ? parseInt(formData.group_size_max, 10) : null,
+            },
+            difficulty: formData.difficulty_level,
+            equipment: formData.equipment_provided, // Send as array
+            safety: formData.safety_requirements,
+            guide: formData.guide_required,
+        };
+    }
 
-    let apiPayload: any = {
-        // Include fields that are directly editable and part of the ServiceFormData
+    const apiPayload = {
         name: formData.name,
         description: formData.description,
         type: formData.type,
         island_id: parseInt(formData.island_id, 10) || null,
         price: parseFloat(formData.price) || 0,
-        availability: formData.availability, // Assuming API accepts simple string
-        cancellation_policy: formData.cancellation_policy, // Assuming API accepts simple string
-        // is_active is handled separately
-
-        // Transform comma-separated strings back to JSON arrays
-        images: JSON.stringify(formData.images ? formData.images.split(',').map(img => img.trim()).filter(Boolean) : []),
-        general_amenities: JSON.stringify(formData.general_amenities ? formData.general_amenities.split(',').map(am => am.trim()).filter(Boolean) : []),
-
-        // Include type-specific fields, converting numeric strings
-        rental_unit: formData.rental_unit || null,
-        quantity_available: parseInt(formData.quantity_available, 10) || null,
-        deposit_required: formData.deposit_required,
-        deposit_amount: formData.deposit_required ? (parseFloat(formData.deposit_amount) || null) : null,
-        age_license_requirement: formData.age_license_requirement,
-        age_license_details: formData.age_license_requirement ? formData.age_license_details : null,
-
-        duration: parseInt(formData.duration, 10) || null,
-        duration_unit: formData.duration_unit || null,
-        group_size_min: parseInt(formData.group_size_min, 10) || null,
-        group_size_max: parseInt(formData.group_size_max, 10) || null,
-        difficulty_level: formData.difficulty_level || null,
-        equipment_provided: JSON.stringify(formData.equipment_provided ? formData.equipment_provided.split(',').map(eq => eq.trim()).filter(Boolean) : []),
-        safety_requirements: formData.safety_requirements,
-        guide_required: formData.guide_required,
-
+        availability: JSON.stringify({
+            days: formData.availability_days,
+            notes: formData.availability_notes
+        }),
+        images: JSON.stringify(formData.images),
+        cancellation_policy: formData.cancellation_policy,
+        amenities: JSON.stringify({
+            general: formData.general_amenities,
+            specifics: specificsPayload,
+        }),
+        // is_active is usually updated via a separate toggle/endpoint
     };
 
-     // Optional: Clean up fields irrelevant to the *current* type before sending
-     const baseType = formData.type.split('/')[0];
-     if (baseType === 'rental') {
-         delete apiPayload.duration;
-         delete apiPayload.duration_unit;
-         delete apiPayload.group_size_min;
-         delete apiPayload.group_size_max;
-         delete apiPayload.difficulty_level;
-         delete apiPayload.equipment_provided; // Keep if stored under rental specifics? Check API PUT model
-         delete apiPayload.safety_requirements;
-         delete apiPayload.guide_required;
-     } else if (baseType === 'activity') {
-         delete apiPayload.rental_unit;
-         delete apiPayload.quantity_available;
-         delete apiPayload.deposit_required;
-         delete apiPayload.deposit_amount;
-         delete apiPayload.age_license_requirement;
-         delete apiPayload.age_license_details;
-     }
-
-    // --- API Call ---
+    // --- API Call (PUT) ---
     try {
-      // Use PUT method for update
       const response = await fetch(`/api/vendor/services/${serviceId}`, {
-        method: "PUT", // Changed from POST to PUT
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(apiPayload), // Send the transformed payload
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(apiPayload),
       });
-
-      const result: ApiResponse = await response.json(); // Use ApiResponse type
-
+      const result: ApiResponse = await response.json();
       if (response.ok && result.success) {
         toast({ title: "Success", description: "Service updated successfully." });
-        router.push("/services"); // Redirect back to the service list
+        router.push("/services");
       } else {
         throw new Error(result.message || "Failed to update service");
       }
     } catch (error: any) {
       console.error("Update Service Error:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "An unexpected error occurred.",
-      });
+      toast({ variant: "destructive", title: "Error", description: error.message || "An unexpected error occurred." });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // --- Render Form ---
-  // Show loading spinner until form data is populated
-  if (!isLoading) {
-      return (
-        <div className="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
-          <Link href="/services" className="text-sm text-blue-600 hover:underline mb-4 inline-flex items-center">
-            <ArrowLeft size={14} className="mr-1" /> Back to Services
-          </Link>
-          <h2 className="text-xl font-bold mb-6">Edit Service: {serviceData?.name || ""}</h2>
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto">
+       {/* Breadcrumb Navigation */}
+        <nav className="mb-6 text-sm text-gray-500" aria-label="Breadcrumb">
+            <ol className="list-none p-0 inline-flex space-x-2">
+            <li className="flex items-center">
+                <Link href="/dashboard" className="hover:text-indigo-600 hover:underline">Dashboard</Link>
+            </li>
+            <li><span className="text-gray-400">/</span></li>
+            <li className="flex items-center">
+                <Link href="/services" className="hover:text-indigo-600 hover:underline">Services</Link>
+            </li>
+            <li><span className="text-gray-400">/</span></li>
+            <li className="flex items-center text-gray-700 font-medium">
+                Edit: {formData.name || "Service"}
+            </li>
+            </ol>
+        </nav>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Generic Fields Section */}
-            <fieldset className="border p-4 rounded-md">
-              <legend className="text-lg font-semibold px-2">Basic Information</legend>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">Service Name <span className="text-red-500">*</span></label>
-                  <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                </div>
-                <div>
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700">Service Type <span className="text-red-500">*</span></label>
-                  <select id="type" name="type" value={formData.type} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                    <option value="" disabled>-- Select Type --</option>
-                    <optgroup label="Rentals">
-                      <option value="rental/car">Car Rental</option>
-                      <option value="rental/bike">Bike Rental</option>
-                      <option value="rental/scooter">Scooter Rental</option>
-                      {/* Add other rental types */}
-                    </optgroup>
-                    <optgroup label="Activities">
-                      <option value="activity/scuba">Scuba Diving</option>
-                      <option value="activity/snorkeling">Snorkeling</option>
-                      <option value="activity/trek">Trekking</option>
-                      <option value="activity/kayaking">Kayaking</option>
-                      {/* Add other activity types */}
-                    </optgroup>
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-                  <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
-                </div>
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price (INR) <span className="text-red-500">*</span></label>
-                  <input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                </div>
-                <div>
-                  <label htmlFor="island_id" className="block text-sm font-medium text-gray-700">Island <span className="text-red-500">*</span></label>
-                  <select id="island_id" name="island_id" value={formData.island_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                    <option value="" disabled>-- Select Island --</option>
-                    {islandsList.map(island => (
-                      <option key={island.id} value={island.id}>{island.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="availability" className="block text-sm font-medium text-gray-700">Availability (e.g., schedule, dates)</label>
-                  <input type="text" id="availability" name="availability" value={formData.availability} onChange={handleChange} placeholder="Enter schedule details or JSON" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                </div>
-                <div>
-                  <label htmlFor="images" className="block text-sm font-medium text-gray-700">Image URLs (comma-separated)</label>
-                  <input type="text" id="images" name="images" value={formData.images} onChange={handleChange} placeholder="http://..., http://..." className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="cancellation_policy" className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
-                  <textarea id="cancellation_policy" name="cancellation_policy" value={formData.cancellation_policy} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
-                </div>
-                 <div className="md:col-span-2">
-                  <label htmlFor="general_amenities" className="block text-sm font-medium text-gray-700">General Amenities (comma-separated)</label>
-                  <input type="text" id="general_amenities" name="general_amenities" value={formData.general_amenities} onChange={handleChange} placeholder="e.g., Helmet, Insurance, GPS, Guide" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                </div>
-                {/* is_active toggle is on the list page, not here */}
-              </div>
-            </fieldset>
+      <h2 className="text-2xl font-semibold text-gray-800 mb-6">Edit Service: {formData.name}</h2>
 
-            {/* Rental Specific Fields */} 
-            {selectedServiceBaseType === "rental" && (
-              <fieldset className="border p-4 rounded-md">
-                <legend className="text-lg font-semibold px-2">Rental Details</legend>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label htmlFor="rental_unit" className="block text-sm font-medium text-gray-700">Rental Unit</label>
-                    <select id="rental_unit" name="rental_unit" value={formData.rental_unit} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                      <option value="">-- Select Unit --</option>
-                      <option value="per hour">Per Hour</option>
-                      <option value="per day">Per Day</option>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* --- Basic Information --- */}
+        <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
+            <legend className="text-lg font-semibold text-gray-700 px-2">Basic Information</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Service Type (Readonly) */}
+                <div>
+                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+                    <input type="text" id="type" name="type" value={formData.type} readOnly disabled className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 sm:text-sm cursor-not-allowed"/>
+                    <p className="mt-1 text-xs text-gray-500">Service type cannot be changed after creation.</p>
+                </div>
+                {/* Island */}
+                <div>
+                    <label htmlFor="island_id" className="block text-sm font-medium text-gray-700 mb-1">Island <span className="text-red-500">*</span></label>
+                    <select id="island_id" name="island_id" value={formData.island_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white">
+                        <option value="" disabled>-- Select Island --</option>
+                        {islands?.map(island => (
+                        <option key={island.id} value={island.id}>{island.name}</option>
+                        ))}
                     </select>
-                  </div>
-                  <div>
-                    <label htmlFor="quantity_available" className="block text-sm font-medium text-gray-700">Quantity Available</label>
-                    <input type="number" id="quantity_available" name="quantity_available" value={formData.quantity_available} onChange={handleChange} min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                  </div>
-                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
-                     <div className="flex items-center sm:col-span-1">
-                        <input type="checkbox" id="deposit_required" name="deposit_required" checked={formData.deposit_required} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                        <label htmlFor="deposit_required" className="ml-2 block text-sm text-gray-900">Deposit Required?</label>
-                     </div>
-                     {formData.deposit_required && (
-                        <div className="sm:col-span-2">
-                            <label htmlFor="deposit_amount" className="block text-sm font-medium text-gray-700">Deposit Amount (INR)</label>
-                            <input type="number" id="deposit_amount" name="deposit_amount" value={formData.deposit_amount} onChange={handleChange} min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                        </div>
-                     )}
-                  </div>
-                   <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                     <div className="flex items-center sm:col-span-1">
-                        <input type="checkbox" id="age_license_requirement" name="age_license_requirement" checked={formData.age_license_requirement} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                        <label htmlFor="age_license_requirement" className="ml-2 block text-sm text-gray-900">Age/License Required?</label>
-                     </div>
-                     {formData.age_license_requirement && (
-                        <div className="sm:col-span-2">
-                            <label htmlFor="age_license_details" className="block text-sm font-medium text-gray-700">Requirement Details</label>
-                            <textarea id="age_license_details" name="age_license_details" value={formData.age_license_details} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
-                        </div>
-                     )}
-                  </div>
+                    {islandsStatus === "error" && <p className="text-xs text-red-500 mt-1">Error loading islands.</p>}
                 </div>
-              </fieldset>
-            )}
+                {/* Name */}
+                <div className="md:col-span-2">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Service Name <span className="text-red-500">*</span></label>
+                    <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Guided Island Tour, Scooter Rental"/>
+                </div>
+                {/* Description */}
+                <div className="md:col-span-2">
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Provide details about the service..."></textarea>
+                </div>
+                {/* Price */}
+                <div>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">Price (INR) <span className="text-red-500">*</span></label>
+                    <input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 1500"/>
+                    <p className="mt-1 text-xs text-gray-500">Base price. Specify unit (per hour/day) in relevant section below.</p>
+                </div>
+                 {/* is_active status is usually managed on the list page, not here */}
+            </div>
+        </fieldset>
 
-            {/* Activity Specific Fields */} 
-            {selectedServiceBaseType === "activity" && (
-              <fieldset className="border p-4 rounded-md">
-                <legend className="text-lg font-semibold px-2">Activity Details</legend>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                   <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label htmlFor="duration" className="block text-sm font-medium text-gray-700">Duration</label>
-                            <input type="number" id="duration" name="duration" value={formData.duration} onChange={handleChange} min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                        </div>
-                        <div>
-                            <label htmlFor="duration_unit" className="block text-sm font-medium text-gray-700">Unit</label>
-                            <select id="duration_unit" name="duration_unit" value={formData.duration_unit} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="">-- Unit --</option>
-                            <option value="hours">Hours</option>
-                            <option value="days">Days</option>
-                            </select>
-                        </div>
-                   </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label htmlFor="group_size_min" className="block text-sm font-medium text-gray-700">Min Group Size</label>
-                            <input type="number" id="group_size_min" name="group_size_min" value={formData.group_size_min} onChange={handleChange} min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                        </div>
-                        <div>
-                            <label htmlFor="group_size_max" className="block text-sm font-medium text-gray-700">Max Group Size</label>
-                            <input type="number" id="group_size_max" name="group_size_max" value={formData.group_size_max} onChange={handleChange} min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                        </div>
-                    </div>
-                     <div>
-                        <label htmlFor="difficulty_level" className="block text-sm font-medium text-gray-700">Difficulty Level</label>
-                        <select id="difficulty_level" name="difficulty_level" value={formData.difficulty_level} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <option value="">-- Select Level --</option>
-                        <option value="easy">Easy</option>
-                        <option value="medium">Medium</option>
-                        <option value="hard">Hard</option>
+        {/* --- Availability & Amenities --- */}
+        <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
+            <legend className="text-lg font-semibold text-gray-700 px-2">Availability & Amenities</legend>
+            <div className="space-y-6 mt-4">
+                {/* Availability Days */}
+                <CheckboxGroup
+                    label="Available Days"
+                    name="availability_days"
+                    options={availabilityDayOptions}
+                    selectedValues={formData.availability_days}
+                    onChange={handleArrayChange}
+                    gridCols={4} // Use grid layout
+                    helperText="Select the days this service is typically available."
+                />
+                {/* Availability Notes */}
+                <div>
+                    <label htmlFor="availability_notes" className="block text-sm font-medium text-gray-700 mb-1">Availability Notes</label>
+                    <input type="text" id="availability_notes" name="availability_notes" value={formData.availability_notes} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 9 AM - 5 PM, Closed on public holidays"/>
+                    <p className="mt-1 text-xs text-gray-500">Specify times, seasonal availability, or other notes.</p>
+                </div>
+                {/* General Amenities */}
+                <CheckboxGroup
+                    label="General Amenities"
+                    name="general_amenities"
+                    options={generalAmenityOptions}
+                    selectedValues={formData.general_amenities}
+                    onChange={handleArrayChange}
+                    gridCols={3} // Use grid layout
+                    helperText="Select amenities available at the location or included with the service."
+                />
+            </div>
+        </fieldset>
+
+        {/* --- Rental Specific Fields --- */}
+        {selectedServiceBaseType === "rental" && (
+            <fieldset className="border border-blue-200 p-6 rounded-lg shadow-sm bg-blue-50">
+                <legend className="text-lg font-semibold text-blue-700 px-2">Rental Details</legend>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    {/* Rental Unit */}
+                    <div>
+                        <label htmlFor="rental_unit" className="block text-sm font-medium text-gray-700 mb-1">Rental Unit <span className="text-red-500">*</span></label>
+                        <select id="rental_unit" name="rental_unit" value={formData.rental_unit} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white">
+                            <option value="" disabled>-- Select Unit --</option>
+                            <option value="per hour">Per Hour</option>
+                            <option value="per day">Per Day</option>
                         </select>
                     </div>
+                    {/* Quantity Available */}
                     <div>
-                        <label htmlFor="equipment_provided" className="block text-sm font-medium text-gray-700">Equipment Provided (comma-separated)</label>
-                        <input type="text" id="equipment_provided" name="equipment_provided" value={formData.equipment_provided} onChange={handleChange} placeholder="e.g., Life Jacket, Boots" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                        <label htmlFor="quantity_available" className="block text-sm font-medium text-gray-700 mb-1">Quantity Available <span className="text-red-500">*</span></label>
+                        <input type="number" id="quantity_available" name="quantity_available" value={formData.quantity_available} onChange={handleChange} required min="1" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 10"/>
                     </div>
-                    <div className="md:col-span-2">
-                        <label htmlFor="safety_requirements" className="block text-sm font-medium text-gray-700">Safety Requirements</label>
-                        <textarea id="safety_requirements" name="safety_requirements" value={formData.safety_requirements} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                    {/* Deposit */}
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div className="flex items-center pt-6">
+                            <input type="checkbox" id="deposit_required" name="deposit_required" checked={formData.deposit_required} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer" />
+                            <label htmlFor="deposit_required" className="ml-2 block text-sm text-gray-900 cursor-pointer">Deposit Required?</label>
+                        </div>
+                        {formData.deposit_required && (
+                            <div className="md:col-span-2">
+                                <label htmlFor="deposit_amount" className="block text-sm font-medium text-gray-700 mb-1">Deposit Amount (INR)</label>
+                                <input type="number" id="deposit_amount" name="deposit_amount" value={formData.deposit_amount} onChange={handleChange} min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 500"/>
+                            </div>
+                        )}
                     </div>
-                    <div className="flex items-center">
-                        <input type="checkbox" id="guide_required" name="guide_required" checked={formData.guide_required} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-                        <label htmlFor="guide_required" className="ml-2 block text-sm text-gray-900">Guide Required?</label>
+                    {/* Age/License Requirement */}
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div className="flex items-center pt-6">
+                            <input type="checkbox" id="age_license_requirement" name="age_license_requirement" checked={formData.age_license_requirement} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer" />
+                            <label htmlFor="age_license_requirement" className="ml-2 block text-sm text-gray-900 cursor-pointer">Age/License Required?</label>
+                        </div>
+                        {formData.age_license_requirement && (
+                            <div className="md:col-span-2">
+                                <label htmlFor="age_license_details" className="block text-sm font-medium text-gray-700 mb-1">Requirement Details</label>
+                                <input type="text" id="age_license_details" name="age_license_details" value={formData.age_license_details} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Min age 18, Valid driving license"/>
+                            </div>
+                        )}
                     </div>
                 </div>
-              </fieldset>
-            )}
+            </fieldset>
+        )}
 
-            {/* Submit Button */}
-            <div className="flex justify-end">
-              <Link href="/services" className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 mr-2">
-                Cancel
-              </Link>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex items-center bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-wait"
-              >
-                {isSubmitting ? (
-                  <><Loader2 size={16} className="animate-spin mr-2" /> Saving Changes...</>
-                ) : (
-                  "Save Changes"
-                )}
-              </button>
+        {/* --- Activity Specific Fields --- */}
+        {selectedServiceBaseType === "activity" && (
+            <fieldset className="border border-green-200 p-6 rounded-lg shadow-sm bg-green-50">
+                <legend className="text-lg font-semibold text-green-700 px-2">Activity Details</legend>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    {/* Duration */}
+                    <div className="flex items-end gap-2">
+                        <div className="flex-grow">
+                            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">Duration <span className="text-red-500">*</span></label>
+                            <input type="number" id="duration" name="duration" value={formData.duration} onChange={handleChange} required min="1" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 3"/>
+                        </div>
+                        <div>
+                            <label htmlFor="duration_unit" className="block text-sm font-medium text-gray-700 mb-1">Unit <span className="text-red-500">*</span></label>
+                            <select id="duration_unit" name="duration_unit" value={formData.duration_unit} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white">
+                                <option value="" disabled>-- Unit --</option>
+                                <option value="hours">Hours</option>
+                                <option value="days">Days</option>
+                            </select>
+                        </div>
+                    </div>
+                    {/* Group Size */}
+                    <div className="flex items-end gap-2">
+                        <div className="flex-grow">
+                            <label htmlFor="group_size_min" className="block text-sm font-medium text-gray-700 mb-1">Min Group Size</label>
+                            <input type="number" id="group_size_min" name="group_size_min" value={formData.group_size_min} onChange={handleChange} min="1" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 2"/>
+                        </div>
+                        <div className="flex-grow">
+                            <label htmlFor="group_size_max" className="block text-sm font-medium text-gray-700 mb-1">Max Group Size</label>
+                            <input type="number" id="group_size_max" name="group_size_max" value={formData.group_size_max} onChange={handleChange} min="1" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 10"/>
+                        </div>
+                    </div>
+                    {/* Difficulty Level */}
+                    <div>
+                        <label htmlFor="difficulty_level" className="block text-sm font-medium text-gray-700 mb-1">Difficulty Level</label>
+                        <select id="difficulty_level" name="difficulty_level" value={formData.difficulty_level} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white">
+                            <option value="" disabled>-- Select Level --</option>
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    {/* Guide Required */}
+                    <div className="flex items-center pt-6">
+                        <input type="checkbox" id="guide_required" name="guide_required" checked={formData.guide_required} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer" />
+                        <label htmlFor="guide_required" className="ml-2 block text-sm text-gray-900 cursor-pointer">Guide Required/Included</label>
+                    </div>
+                    {/* Equipment Provided */}
+                    <div className="md:col-span-2">
+                        <CheckboxGroup
+                            label="Equipment Provided"
+                            name="equipment_provided"
+                            options={equipmentOptions}
+                            selectedValues={formData.equipment_provided}
+                            onChange={handleArrayChange}
+                            gridCols={3} // Use grid layout
+                            helperText="Select equipment included in the activity price."
+                        />
+                    </div>
+                    {/* Safety Requirements */}
+                    <div className="md:col-span-2">
+                        <label htmlFor="safety_requirements" className="block text-sm font-medium text-gray-700 mb-1">Safety Requirements</label>
+                        <textarea id="safety_requirements" name="safety_requirements" value={formData.safety_requirements} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Must be able to swim, Good physical condition required..."></textarea>
+                    </div>
+                </div>
+            </fieldset>
+        )}
+
+        {/* --- Images & Policies --- */}
+        <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
+            <legend className="text-lg font-semibold text-gray-700 px-2">Images & Policies</legend>
+            <div className="space-y-6 mt-4">
+                {/* Images */}
+                <TagInput
+                    label="Image URLs"
+                    name="images"
+                    value={formData.images}
+                    onChange={handleArrayChange}
+                    placeholder="Enter image URL and press Enter"
+                    helperText="Add URLs for photos showcasing the service or rental item."
+                />
+                {/* Cancellation Policy */}
+                <div>
+                    <label htmlFor="cancellation_policy" className="block text-sm font-medium text-gray-700 mb-1">Cancellation Policy</label>
+                    <textarea id="cancellation_policy" name="cancellation_policy" value={formData.cancellation_policy} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Full refund if cancelled 24 hours prior..."></textarea>
+                </div>
             </div>
-          </form>
+        </fieldset>
+
+        {/* --- Form Actions --- */}
+        <div className="flex justify-end space-x-4 pt-4">
+          <Link href="/services" className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition duration-150 ease-in-out">
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={isSubmitting || isLoading}
+            className="inline-flex items-center bg-indigo-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
+          >
+            {isSubmitting ? (
+              <><Loader2 size={16} className="animate-spin mr-2" /> Saving Changes...</>
+            ) : (
+              "Save Changes"
+            )}
+          </button>
         </div>
-      );
-  }
+      </form>
+    </div>
+  );
 }
 
 // --- Wrap with Suspense ---
@@ -734,4 +739,3 @@ export default function EditVendorServicePage() {
     </Suspense>
   );
 }
-
