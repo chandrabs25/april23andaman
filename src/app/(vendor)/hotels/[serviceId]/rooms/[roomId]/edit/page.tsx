@@ -21,22 +21,12 @@ interface VendorProfile {
   verified: number; // 0 or 1
   type: string; // e.g., hotel, rental, activity
 }
-interface GetVendorProfileResponse {
-  success: boolean;
-  data: VendorProfile | null;
-  message?: string;
-}
 
 // Interface for the parent hotel data (needed for context/breadcrumbs)
 interface VendorHotel {
   service_id: number;
   name: string;
   // Add other fields if needed
-}
-interface GetHotelResponse {
-  success: boolean;
-  data: VendorHotel | null;
-  message?: string;
 }
 
 // Interface for Existing Room Type data
@@ -49,11 +39,6 @@ interface RoomType {
   quantity_available: number | null;
   amenities: string | null; // JSON string
   images: string | null; // URLs
-}
-interface GetRoomTypeResponse {
-  success: boolean;
-  data: RoomType | null;
-  message?: string;
 }
 
 // Form state interface (matches API body)
@@ -149,26 +134,25 @@ function EditRoomForm() {
 
   // 1. Fetch Vendor Profile (for verification and type check)
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
-  const { data: profileApiResponse, error: profileError, status: profileStatus } = useFetch<GetVendorProfileResponse>(profileApiUrl);
-  const vendorProfile = profileApiResponse?.data;
+  const { data: vendorProfile, error: profileError, status: profileStatus } = useFetch<VendorProfile | null>(profileApiUrl);
   const isVerified = vendorProfile?.verified === 1;
   const isHotelVendor = vendorProfile?.type === "hotel";
 
   // 2. Fetch Parent Hotel Details (for context and checks)
-  const shouldFetchHotel = profileStatus === "success" && isVerified && isHotelVendor && !!serviceId;
+  const shouldFetchHotel = profileStatus === "success" && vendorProfile && isVerified && isHotelVendor && !!serviceId;
   const hotelApiUrl = shouldFetchHotel ? `/api/vendor/hotels/${serviceId}` : null;
-  const { data: hotelApiResponse, error: hotelError, status: hotelStatus } = useFetch<GetHotelResponse>(hotelApiUrl);
-  const hotelName = hotelApiResponse?.data?.name || `Hotel ${serviceId}`;
+  const { data: hotelData, error: hotelError, status: hotelStatus } = useFetch<VendorHotel | null>(hotelApiUrl);
+  const hotelName = hotelData?.name || `Hotel ${serviceId}`;
 
   // 3. Fetch Existing Room Type Data (only if hotel fetch successful and roomId valid)
-  const shouldFetchRoom = hotelStatus === "success" && !!hotelApiResponse?.data && !!roomId;
+  const shouldFetchRoom = hotelStatus === "success" && !!hotelData && !!roomId;
   const roomApiUrl = shouldFetchRoom ? `/api/vendor/hotels/${serviceId}/rooms/${roomId}` : null;
-  const { data: roomApiResponse, error: roomError, status: roomStatus } = useFetch<GetRoomTypeResponse>(roomApiUrl);
+  const { data: roomData, error: roomError, status: roomStatus } = useFetch<RoomType | null>(roomApiUrl);
 
   // --- Populate Form Data Effect ---
   useEffect(() => {
-    if (roomApiResponse?.success && roomApiResponse.data) {
-      const room = roomApiResponse.data;
+    if (roomStatus === "success" && roomData) {
+      const room = roomData;
 
       // Helper to parse JSON safely and convert array to comma-separated string
       const parseJsonArrayToString = (jsonString: string | null): string => {
@@ -191,7 +175,7 @@ function EditRoomForm() {
         images: room.images || "",
       });
     }
-  }, [roomApiResponse]);
+  }, [roomStatus, roomData]);
 
   // --- Authorization & Loading Checks ---
   useEffect(() => {
@@ -211,7 +195,7 @@ function EditRoomForm() {
     return (
       <div className="text-red-600">
         Error loading vendor profile:{" "}
-        {profileError?.message || profileApiResponse?.message}
+        {profileError?.message || "Unknown error"}
       </div>
     );
   }
@@ -234,10 +218,10 @@ function EditRoomForm() {
   // --- End Conditional Rendering ---
 
   // Handle Hotel Fetch Error or Not Found
-  if (hotelStatus === "error" || (hotelStatus === "success" && !hotelApiResponse?.data)) {
+  if (hotelStatus === "error" || (hotelStatus === "success" && !hotelData)) {
     return (
       <div className="text-red-600">
-        Error loading hotel details: {hotelError?.message || hotelApiResponse?.message || "Hotel not found or permission denied."}
+        Error loading hotel details: {hotelError?.message || "Hotel not found or permission denied."}
         <br />
         <Link href="/hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
             Return to Hotel List
@@ -248,18 +232,26 @@ function EditRoomForm() {
 
   // Handle Room Fetch Error or Not Found
   if (roomStatus === "error") {
-      return <div className="text-red-600">Error loading room type details: {roomError?.message || roomApiResponse?.message}</div>;
+    return (
+      <div className="text-red-600">
+        Error loading room details: {roomError?.message || "Unknown error"}
+        <br />
+        <Link href={`/hotels/${serviceId}/rooms`} className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+            Return to Room List for {hotelName}
+        </Link>
+      </div>
+    );
   }
-  if (roomStatus === "success" && !roomApiResponse?.data) {
-      return (
-        <div className="text-orange-600">
-            Room type with ID {roomId} not found for this hotel or you do not have permission to edit it.
-            <br />
-            <Link href={`/hotels/${serviceId}/rooms`} className="text-sm text-blue-600 hover:underline mt-2 inline-block">
-                Return to Room List
-            </Link>
-        </div>
-      );
+  if (roomStatus === "success" && !roomData) {
+     return (
+      <div className="text-orange-600">
+        Room not found or you do not have permission to edit it.
+        <br />
+        <Link href={`/hotels/${serviceId}/rooms`} className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+            Return to Room List for {hotelName}
+        </Link>
+      </div>
+    );
   }
 
   // If formData is still null after loading and checks, something went wrong
@@ -333,7 +325,7 @@ function EditRoomForm() {
       <Link href={`/hotels/${serviceId}/rooms`} className="text-sm text-blue-600 hover:underline mb-4 inline-flex items-center">
         <ArrowLeft size={14} className="mr-1" /> Back to Rooms for {hotelName}
       </Link>
-      <h2 className="text-xl font-bold mb-6">Edit Room Type: {roomApiResponse?.data?.room_type_name || ""}</h2>
+      <h2 className="text-xl font-bold mb-6">Edit Room Type: {roomData?.room_type_name || ""}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

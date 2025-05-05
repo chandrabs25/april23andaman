@@ -31,22 +31,12 @@ interface VendorProfile {
   verified: number; // 0 or 1
   type: string; // e.g., hotel, rental, activity
 }
-interface GetVendorProfileResponse {
-  success: boolean;
-  data: VendorProfile | null;
-  message?: string;
-}
 
 // Interface for the parent hotel data (needed for context/breadcrumbs)
 interface VendorHotel {
   service_id: number;
   name: string;
   // Add other fields if needed
-}
-interface GetHotelResponse {
-  success: boolean;
-  data: VendorHotel | null;
-  message?: string;
 }
 
 // Interface for Room Type data
@@ -59,11 +49,6 @@ interface RoomType {
   quantity_available: number | null;
   amenities: string | null; // JSON string
   images: string | null; // URLs
-}
-interface GetRoomTypesResponse {
-  success: boolean;
-  data: RoomType[];
-  message?: string;
 }
 
 // Add a generic response type for simple success/message APIs
@@ -148,29 +133,27 @@ function RoomListContent() {
 
   // 1. Fetch Vendor Profile (for verification and type check)
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
-  const { data: profileApiResponse, error: profileError, status: profileStatus } = useFetch<GetVendorProfileResponse>(profileApiUrl);
-  const vendorProfile = profileApiResponse?.data;
+  const { data: vendorProfile, error: profileError, status: profileStatus } = useFetch<VendorProfile | null>(profileApiUrl);
   const isVerified = vendorProfile?.verified === 1;
   const isHotelVendor = vendorProfile?.type === "hotel";
 
   // 2. Fetch Parent Hotel Details (for context and checks)
-  const shouldFetchHotel = profileStatus === "success" && isVerified && isHotelVendor && !!serviceId;
+  const shouldFetchHotel = profileStatus === "success" && vendorProfile && isVerified && isHotelVendor && !!serviceId;
   const hotelApiUrl = shouldFetchHotel ? `/api/vendor/hotels/${serviceId}` : null;
-  const { data: hotelApiResponse, error: hotelError, status: hotelStatus } = useFetch<GetHotelResponse>(hotelApiUrl);
-  const hotelName = hotelApiResponse?.data?.name || `Hotel ${serviceId}`;
+  const { data: hotelData, error: hotelError, status: hotelStatus } = useFetch<VendorHotel | null>(hotelApiUrl);
+  const hotelName = hotelData?.name || `Hotel ${serviceId}`;
 
   // 3. Fetch Room Types (only if hotel fetch successful)
-  const shouldFetchRooms = hotelStatus === "success" && !!hotelApiResponse?.data;
+  const shouldFetchRooms = hotelStatus === "success" && !!hotelData;
   const roomsApiUrl = shouldFetchRooms ? `/api/vendor/hotels/${serviceId}/rooms` : null;
-  // Remove 'mutate' from destructuring
-  const { data: roomsApiResponse, error: roomsError, status: roomsStatus } = useFetch<GetRoomTypesResponse>(roomsApiUrl);
+  const { data: fetchedRooms, error: roomsError, status: roomsStatus } = useFetch<RoomType[] | null>(roomsApiUrl);
 
   // Update local room types state when fetch completes
   useEffect(() => {
-    if (roomsApiResponse?.success && roomsApiResponse.data) {
-      setRoomTypes(roomsApiResponse.data);
+    if (roomsStatus === "success" && fetchedRooms) {
+      setRoomTypes(fetchedRooms);
     }
-  }, [roomsApiResponse]);
+  }, [roomsStatus, fetchedRooms]);
 
   // --- Authorization & Loading Checks ---
   useEffect(() => {
@@ -190,7 +173,7 @@ function RoomListContent() {
     return (
       <div className="text-red-600">
         Error loading vendor profile:{" "}
-        {profileError?.message || profileApiResponse?.message}
+        {profileError?.message || "Unknown error"}
       </div>
     );
   }
@@ -204,19 +187,21 @@ function RoomListContent() {
   }
 
   // --- Conditional Rendering based on Verification & Type ---
-  if (!isVerified) {
-    return <VerificationPending />;
-  }
+  // --- Verification Check Removed ---
+  // if (!isVerified) {
+  //   return <VerificationPending />;
+  // }
+  // --- End Removal ---
   if (!isHotelVendor) {
     return <IncorrectVendorType />;
   }
   // --- End Conditional Rendering ---
 
   // Handle Hotel Fetch Error or Not Found (implies permission issue or invalid ID)
-  if (hotelStatus === "error" || (hotelStatus === "success" && !hotelApiResponse?.data)) {
+  if (hotelStatus === "error" || (hotelStatus === "success" && !hotelData)) {
     return (
       <div className="text-red-600">
-        Error loading hotel details: {hotelError?.message || hotelApiResponse?.message || "Hotel not found or permission denied."}
+        Error loading hotel details: {hotelError?.message || "Hotel not found or permission denied."}
         <br />
         <Link href="/hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
             Return to Hotel List
@@ -229,7 +214,7 @@ function RoomListContent() {
   if (roomsStatus === "error") {
     return (
       <div className="text-red-600">
-        Error loading room types: {roomsError?.message || roomsApiResponse?.message}
+        Error loading room types: {roomsError?.message || "Unknown error"}
       </div>
     );
   }

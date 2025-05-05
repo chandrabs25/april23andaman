@@ -198,27 +198,68 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       );
     }
 
+    // Define type for service update data
+    interface ServiceUpdateData {
+        name: string;
+        description: string | null;
+        island_id: number;
+        price: number;
+        images: string | null;
+        cancellation_policy: string | null;
+    }
+
     // Prepare data for database update
-    const serviceUpdateData = {
+    const serviceUpdateData: ServiceUpdateData = {
       name: body.name,
       description: body.description ?? null,
       // type cannot be changed
       island_id: Number(body.island_id),
       price: Number(body.price),
       images: body.images ?? null,
-      cancellation_policy: body.cancellation_policy
-        ? JSON.stringify(body.cancellation_policy)
-        : null,
+      cancellation_policy: null,
       // is_active is not updated here
     };
+
+    // Safely stringify JSON fields
+    let cancellationPolicyString: string | null = null;
+    try {
+        if (body.cancellation_policy) {
+            cancellationPolicyString = JSON.stringify(body.cancellation_policy);
+        }
+    } catch (e) {
+        console.error(`Hotel Update (Service ID ${serviceId}): Failed to stringify cancellation_policy`, e);
+        return NextResponse.json({ success: false, message: 'Invalid format for cancellation policy data.' }, { status: 400 });
+    }
+    // @ts-ignore - Property exists in database schema but not in type
+    serviceUpdateData.cancellation_policy = cancellationPolicyString;
+
+    let facilitiesString: string | null = null;
+    try {
+        if (body.facilities) {
+            facilitiesString = JSON.stringify(body.facilities);
+        }
+    } catch (e) {
+        console.error(`Hotel Update (Service ID ${serviceId}): Failed to stringify facilities`, e);
+        return NextResponse.json({ success: false, message: 'Invalid format for facilities data.' }, { status: 400 });
+    }
+
+    let mealPlansString: string | null = null;
+    try {
+        if (body.meal_plans) {
+            mealPlansString = JSON.stringify(body.meal_plans);
+        }
+    } catch (e) {
+        console.error(`Hotel Update (Service ID ${serviceId}): Failed to stringify meal_plans`, e);
+        return NextResponse.json({ success: false, message: 'Invalid format for meal plans data.' }, { status: 400 });
+    }
 
     const hotelUpdateData = {
       star_rating: Number(body.star_rating),
       check_in_time: body.check_in_time,
       check_out_time: body.check_out_time,
       total_rooms: body.total_rooms ? Number(body.total_rooms) : null,
-      facilities: body.facilities ? JSON.stringify(body.facilities) : null,
-      meal_plans: body.meal_plans ? JSON.stringify(body.meal_plans) : null,
+      facilities: facilitiesString, // Use safe string
+      meal_plans: mealPlansString, // Use safe string
       pets_allowed: body.pets_allowed === undefined ? false : body.pets_allowed,
       children_allowed:
         body.children_allowed === undefined ? true : body.children_allowed,

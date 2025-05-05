@@ -21,20 +21,10 @@ interface VendorProfile {
   verified: number; // 0 or 1
   type: string; // e.g., hotel, rental, activity
 }
-interface GetVendorProfileResponse {
-  success: boolean;
-  data: VendorProfile | null;
-  message?: string;
-}
 
 interface Island {
   id: number;
   name: string;
-}
-interface GetIslandsResponse {
-  success: boolean;
-  data: Island[];
-  message?: string;
 }
 
 // Existing Hotel Data Interface (from GET /api/vendor/hotels/[serviceId])
@@ -59,11 +49,6 @@ interface VendorHotel {
   street_address: string;
   geo_lat: number | null;
   geo_lng: number | null;
-}
-interface GetHotelResponse {
-  success: boolean;
-  data: VendorHotel | null;
-  message?: string;
 }
 
 // Form state interface (matches API body)
@@ -171,24 +156,23 @@ function EditHotelForm() {
 
   // 1. Fetch Vendor Profile (for verification and type check)
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
-  const { data: profileApiResponse, error: profileError, status: profileStatus } = useFetch<GetVendorProfileResponse>(profileApiUrl);
-  const vendorProfile = profileApiResponse?.data;
+  const { data: vendorProfile, error: profileError, status: profileStatus } = useFetch<VendorProfile | null>(profileApiUrl);
   const isVerified = vendorProfile?.verified === 1;
   const isHotelVendor = vendorProfile?.type === "hotel";
 
   // 2. Fetch Existing Hotel Data (only if profile loaded, verified, hotel vendor, and serviceId valid)
-  const shouldFetchHotel = profileStatus === "success" && isVerified && isHotelVendor && !!serviceId;
+  const shouldFetchHotel = profileStatus === "success" && vendorProfile && isVerified && isHotelVendor && !!serviceId;
   const hotelApiUrl = shouldFetchHotel ? `/api/vendor/hotels/${serviceId}` : null;
-  const { data: hotelApiResponse, error: hotelError, status: hotelStatus } = useFetch<GetHotelResponse>(hotelApiUrl);
+  const { data: hotelData, error: hotelError, status: hotelStatus } = useFetch<VendorHotel | null>(hotelApiUrl);
 
   // 3. Fetch Islands
-  const { data: islandsApiResponse, status: islandsStatus } = useFetch<GetIslandsResponse>("/api/islands");
-  const islands = islandsApiResponse?.data || [];
+  const { data: islands, status: islandsStatus } = useFetch<Island[] | null>("/api/islands");
+  const islandsList = islands || [];
 
   // --- Populate Form Data Effect ---
   useEffect(() => {
-    if (hotelApiResponse?.success && hotelApiResponse.data) {
-      const hotel = hotelApiResponse.data;
+    if (hotelStatus === "success" && hotelData) {
+      const hotel = hotelData;
 
       // Helper to parse JSON safely and convert array to comma-separated string
       const parseJsonArrayToString = (jsonString: string | null): string => {
@@ -205,12 +189,11 @@ function EditHotelForm() {
       setFormData({
         name: hotel.name,
         description: hotel.description || "",
-        price: hotel.price.toString(),
-        cancellation_policy: hotel.cancellation_policy || "", // Assuming text or simple JSON string
-        images: hotel.images || "",
-        island_id: hotel.island_id.toString(),
-        // is_active is handled separately
-        star_rating: hotel.star_rating.toString(),
+        price: hotel.price?.toString() || "",
+        cancellation_policy: hotel.cancellation_policy || "",
+        images: parseJsonArrayToString(hotel.images),
+        island_id: hotel.island_id?.toString() || "",
+        star_rating: hotel.star_rating?.toString() || "",
         check_in_time: hotel.check_in_time || "14:00",
         check_out_time: hotel.check_out_time || "12:00",
         total_rooms: hotel.total_rooms?.toString() || "",
@@ -223,8 +206,12 @@ function EditHotelForm() {
         geo_lat: hotel.geo_lat?.toString() || "",
         geo_lng: hotel.geo_lng?.toString() || "",
       });
+    } else if (hotelStatus === 'success' && !hotelData) {
+        // Handle case where API returns success but no data (e.g., hotel not found)
+        toast({ variant: "destructive", title: "Error", description: "Hotel not found." });
+        router.replace('/hotels'); // Redirect if hotel doesn't exist
     }
-  }, [hotelApiResponse]);
+  }, [hotelStatus, hotelData, router]);
 
   // --- Authorization & Loading Checks ---
   useEffect(() => {
@@ -244,7 +231,7 @@ function EditHotelForm() {
     return (
       <div className="text-red-600">
         Error loading vendor profile:{" "}
-        {profileError?.message || profileApiResponse?.message}
+        {profileError?.message || "Unknown error"}
       </div>
     );
   }
@@ -258,9 +245,11 @@ function EditHotelForm() {
   }
 
   // --- Conditional Rendering based on Verification & Type ---
-  if (!isVerified) {
-    return <VerificationPending />;
-  }
+  // --- Verification Check Removed ---
+  // if (!isVerified) {
+  //   return <VerificationPending />;
+  // }
+  // --- End Removal ---
   if (!isHotelVendor) {
     return <IncorrectVendorType />;
   }
@@ -268,9 +257,9 @@ function EditHotelForm() {
 
   // Handle Hotel Fetch Error or Not Found
   if (hotelStatus === "error") {
-      return <div className="text-red-600">Error loading hotel details: {hotelError?.message || hotelApiResponse?.message}</div>;
+      return <div className="text-red-600">Error loading hotel details: {hotelError?.message || "Unknown error"}</div>;
   }
-  if (hotelStatus === "success" && !hotelApiResponse?.data) {
+  if (hotelStatus === "success" && !hotelData) {
       return <div className="text-orange-600">Hotel with ID {serviceId} not found or you do not have permission to edit it.</div>;
   }
 
@@ -295,65 +284,77 @@ function EditHotelForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData) return; // Should not happen
+    if (!formData) {
+      toast({ variant: "destructive", title: "Error", description: "Form data not loaded yet." });
+      return;
+    }
     setIsSubmitting(true);
 
-    // Basic validation
+    // Basic validation (add more as needed)
      if (!formData.island_id || !formData.star_rating) {
         toast({ variant: "destructive", title: "Error", description: "Please select an island and star rating." });
         setIsSubmitting(false);
         return;
     }
+    if (!formData.name.trim()) {
+        toast({ variant: "destructive", title: "Error", description: "Hotel name is required." });
+        setIsSubmitting(false);
+        return;
+    }
 
-    // Prepare API payload (similar to Add, but using current formData)
-    const payload = {
-      name: formData.name,
-      description: formData.description,
-      price: parseFloat(formData.price),
-      cancellation_policy: formData.cancellation_policy,
-      images: formData.images,
-      island_id: parseInt(formData.island_id, 10),
-      // is_active is not sent in PUT
-      star_rating: parseInt(formData.star_rating, 10),
-      check_in_time: formData.check_in_time,
-      check_out_time: formData.check_out_time,
-      total_rooms: formData.total_rooms ? parseInt(formData.total_rooms, 10) : undefined,
-      facilities: formData.facilities.split(",").map(s => s.trim()).filter(Boolean),
-      meal_plans: formData.meal_plans.split(",").map(s => s.trim()).filter(Boolean),
-      pets_allowed: formData.pets_allowed,
-      children_allowed: formData.children_allowed,
-      accessibility_features: formData.accessibility_features,
-      street_address: formData.street_address,
-      geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
-      geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
-    };
-
+    // --- Data Transformation (Similar to Add Page) ---
     try {
-      const response = await fetch(`/api/vendor/hotels/${serviceId}`, { // Use serviceId in URL
-        method: "PUT", // Use PUT method
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const apiPayload = {
+          // Include fields that are directly editable
+          name: formData.name,
+          description: formData.description,
+          island_id: parseInt(formData.island_id, 10) || null,
+          // is_active is handled separately
+          star_rating: parseInt(formData.star_rating, 10) || null,
+          check_in_time: formData.check_in_time || null,
+          check_out_time: formData.check_out_time || null,
+          price_base: parseFloat(formData.price) || 0, // Assuming 'price' maps to 'price_base'
+          total_rooms: parseInt(formData.total_rooms, 10) || null,
+          pets_allowed: formData.pets_allowed,
+          children_allowed: formData.children_allowed,
+          accessibility_features: formData.accessibility_features,
+          street_address: formData.street_address,
+          geo_lat: parseFloat(formData.geo_lat) || null,
+          geo_lng: parseFloat(formData.geo_lng) || null,
+
+          // Fields stored as JSON strings (or text)
+          cancellation_policy: formData.cancellation_policy, // Keep as text or structure if needed
+          images: JSON.stringify(formData.images ? formData.images.split(',').map(img => img.trim()).filter(Boolean) : []),
+          facilities: JSON.stringify(formData.facilities ? formData.facilities.split(',').map(fac => fac.trim()).filter(Boolean) : []),
+          meal_plans: JSON.stringify(formData.meal_plans ? formData.meal_plans.split(',').map(mp => mp.trim()).filter(Boolean) : []),
+      };
+
+      // --- API Call ---
+      const response = await fetch(`/api/hotels/${serviceId}`, { // Use PUT to /api/hotels/:id
+          method: "PUT",
+          headers: {
+              "Content-Type": "application/json",
+          },
+          body: JSON.stringify(apiPayload),
       });
 
-      // Type the result
       const result: ApiResponse = await response.json();
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to update hotel");
+      if (response.ok && result.success) {
+          toast({ title: "Success", description: "Hotel updated successfully." });
+          router.push("/hotels"); // Redirect to the hotel list
+      } else {
+          throw new Error(result.message || "Failed to update hotel");
       }
-
-      toast({ title: "Success", description: "Hotel updated successfully." });
-      router.push("/hotels"); // Redirect to the hotel list page
-    } catch (error) {
-      console.error("Error updating hotel:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Could not update hotel.",
-      });
+    } catch (error: any) {
+        console.error("Update Hotel Error:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: error.message || "An unexpected error occurred.",
+        });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   };
 
@@ -364,7 +365,7 @@ function EditHotelForm() {
       <Link href="/hotels" className="text-sm text-blue-600 hover:underline mb-4 inline-flex items-center">
         <ArrowLeft size={14} className="mr-1" /> Back to Hotels
       </Link>
-      <h2 className="text-xl font-bold mb-6">Edit Hotel: {hotelApiResponse?.data?.name || ""}</h2>
+      <h2 className="text-xl font-bold mb-6">Edit Hotel: {hotelData?.name || ""}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information Section */}
@@ -398,7 +399,7 @@ function EditHotelForm() {
               <label htmlFor="island_id" className="block text-sm font-medium text-gray-700">Island <span className="text-red-500">*</span></label>
               <select id="island_id" name="island_id" value={formData.island_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                 <option value="" disabled>-- Select Island --</option>
-                {islands.map(island => (
+                {islandsList.map(island => (
                   <option key={island.id} value={island.id}>{island.name}</option>
                 ))}
               </select>

@@ -21,7 +21,6 @@ interface VendorProfile {
   verified: number; // 0 or 1
   type: string; // 'hotel', 'rental', 'activity', etc.
 }
-interface GetVendorProfileResponse { success: boolean; data: VendorProfile | null; message?: string; }
 
 interface VendorService {
   id: number;
@@ -33,13 +32,11 @@ interface VendorService {
   amenities?: string | null; // JSON string
   // Add other fields if needed for display
 }
-interface GetVendorServicesResponse { success: boolean; data: VendorService[]; message?: string; }
 
 interface Island {
     id: number;
     name: string;
 }
-interface GetIslandsResponse { success: boolean; data: Island[]; message?: string; }
 
 // Add a generic response type for simple success/message APIs
 interface ApiResponse {
@@ -88,30 +85,29 @@ function ServiceListContent() {
 
     // 1. Fetch Vendor Profile (for verification and type check)
     const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
-    const { data: profileApiResponse, error: profileError, status: profileStatus } = useFetch<GetVendorProfileResponse>(profileApiUrl);
-    const vendorProfile = profileApiResponse?.data;
+    const { data: vendorProfile, error: profileError, status: profileStatus } = useFetch<VendorProfile | null>(profileApiUrl);
     const isVerified = vendorProfile?.verified === 1;
     const isHotelVendor = vendorProfile?.type === 'hotel';
 
     // 2. Fetch Services (only if profile loaded, verified, and not a hotel vendor)
-    const shouldFetchServices = profileStatus === 'success' && isVerified && !isHotelVendor;
+    const shouldFetchServices = profileStatus === 'success' && vendorProfile && isVerified && !isHotelVendor;
     const servicesApiUrl = shouldFetchServices ? `/api/vendor/services` : null; // Uses GET from route.ts
-    const { data: servicesApiResponse, error: servicesError, status: servicesStatus } = useFetch<GetVendorServicesResponse>(servicesApiUrl);
+    const { data: fetchedServices, error: servicesError, status: servicesStatus } = useFetch<VendorService[] | null>(servicesApiUrl);
 
     // 3. Fetch Islands (for displaying names)
-    const { data: islandsApiResponse, status: islandsStatus } = useFetch<GetIslandsResponse>('/api/islands'); // Assuming this endpoint exists
+    const { data: fetchedIslands, status: islandsStatus } = useFetch<Island[] | null>('/api/islands');
     const islandsMap = React.useMemo(() => {
         const map = new Map<number, string>();
-        islandsApiResponse?.data?.forEach(island => map.set(island.id, island.name));
+        fetchedIslands?.forEach(island => map.set(island.id, island.name));
         return map;
-    }, [islandsApiResponse]);
+    }, [fetchedIslands]);
 
     // Update local services state when fetch completes
     useEffect(() => {
-        if (servicesApiResponse?.success && servicesApiResponse.data) {
-            setServices(servicesApiResponse.data);
+        if (servicesStatus === 'success' && fetchedServices) {
+            setServices(fetchedServices);
         }
-    }, [servicesApiResponse]);
+    }, [servicesStatus, fetchedServices]);
 
     // --- Authorization & Loading Checks ---
     useEffect(() => {
@@ -128,7 +124,7 @@ function ServiceListContent() {
 
     // Handle Profile Fetch Error
     if (profileStatus === 'error') {
-        return <div className="text-red-600">Error loading vendor profile: {profileError?.message || profileApiResponse?.message}</div>;
+        return <div className="text-red-600">Error loading vendor profile: {profileError?.message || 'Unknown error'}</div>;
     }
     // Handle Profile Not Found (edge case)
     if (profileStatus === 'success' && !vendorProfile) {
@@ -136,9 +132,11 @@ function ServiceListContent() {
     }
 
     // --- Conditional Rendering based on Verification & Type ---
-    if (!isVerified) {
-        return <VerificationPending />;
-    }
+    // --- Verification Check Removed ---
+    // if (!isVerified) {
+    //     return <VerificationPending />;
+    // }
+    // --- End Removal ---
     if (isHotelVendor) {
         return <IncorrectVendorType />;
     }
@@ -146,7 +144,7 @@ function ServiceListContent() {
 
     // Handle Services Fetch Error
     if (servicesStatus === 'error') {
-        return <div className="text-red-600">Error loading services: {servicesError?.message || servicesApiResponse?.message}</div>;
+        return <div className="text-red-600">Error loading services: {servicesError?.message || 'Unknown error'}</div>;
     }
 
     // --- Event Handlers ---

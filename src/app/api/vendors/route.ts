@@ -9,7 +9,7 @@ interface ServiceProvider {
   type: string
   license_no: string | null
   address: string | null
-  verified: number
+  verified: boolean
   verification_documents: string | null
   bank_details: string | null
   created_at: string
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     let query = `
       SELECT id, business_name, type, address
       FROM service_providers
-      WHERE verified = 1
+      WHERE verified = TRUE
     `
     const params: (string | number)[] = []
 

@@ -38,7 +38,6 @@ interface VendorStats {
     totalEarnings: number;
     reviewScore: number | null;
 }
-interface GetVendorStatsResponse { success: boolean; data: VendorStats | null; message?: string; }
 
 interface VendorService {
   id: number;
@@ -49,7 +48,6 @@ interface VendorService {
   rating?: number | null;
   is_active: number;
 }
-interface GetVendorServicesResponse { success: boolean; data: VendorService[]; message?: string; }
 
 type VendorBookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
 interface VendorBooking {
@@ -63,7 +61,6 @@ interface VendorBooking {
   net_amount: number;
   status: VendorBookingStatus;
 }
-interface GetVendorBookingsResponse { success: boolean; data: VendorBooking[]; message?: string; }
 
 interface VendorReview {
   id: number;
@@ -73,7 +70,6 @@ interface VendorReview {
   comment: string | null;
   created_at: string;
 }
-interface GetVendorReviewsResponse { success: boolean; data: VendorReview[]; message?: string; }
 // --- End Interfaces ---
 
 
@@ -164,15 +160,17 @@ function VendorDashboardContent() {
   const bookingsApiUrl = shouldFetchOtherData ? `/api/vendors/bookings?vendorUserId=${userId}&limit=5` : null;
   const reviewsApiUrl = shouldFetchOtherData ? `/api/vendors/reviews?vendorUserId=${userId}&limit=3` : null;
 
-  const { data: statsApiResponse, error: statsError, status: statsStatus } = useFetch<GetVendorStatsResponse>(statsApiUrl);
-  const { data: servicesApiResponse, error: servicesError, status: servicesStatus } = useFetch<GetVendorServicesResponse>(servicesApiUrl);
-  const { data: bookingsApiResponse, error: bookingsError, status: bookingsStatus } = useFetch<GetVendorBookingsResponse>(bookingsApiUrl);
-  const { data: reviewsApiResponse, error: reviewsError, status: reviewsStatus } = useFetch<GetVendorReviewsResponse>(reviewsApiUrl);
+  // Corrected: Fetch direct data types
+  const { data: vendorStats, error: statsError, status: statsStatus } = useFetch<VendorStats | null>(statsApiUrl);
+  const { data: vendorServices, error: servicesError, status: servicesStatus } = useFetch<VendorService[] | null>(servicesApiUrl);
+  const { data: vendorBookings, error: bookingsError, status: bookingsStatus } = useFetch<VendorBooking[] | null>(bookingsApiUrl);
+  const { data: vendorReviews, error: reviewsError, status: reviewsStatus } = useFetch<VendorReview[] | null>(reviewsApiUrl);
 
-  const vendorStats = statsApiResponse?.data ?? { totalServices: 0, activeBookings: 0, totalEarnings: 0, reviewScore: null };
-  const vendorServices = servicesApiResponse?.data || [];
-  const vendorBookings = bookingsApiResponse?.data || [];
-  const vendorReviews = reviewsApiResponse?.data || [];
+  // Corrected: Use fetched data directly, provide defaults
+  const statsData = vendorStats ?? { totalServices: 0, activeBookings: 0, totalEarnings: 0, reviewScore: null };
+  const servicesData = vendorServices || [];
+  const bookingsData = vendorBookings || [];
+  const reviewsData = vendorReviews || [];
 
   // --- Authorization Check & Loading State ---
   useEffect(() => {
@@ -248,13 +246,20 @@ function VendorDashboardContent() {
   }
   // --- End RE-INTRODUCE intermediate state check ---
 
+  // Check if vendor profile exists and is verified
+  // --- DERIVE isVerified DIRECTLY from currentVendorProfile ---
+  const isVerified = currentVendorProfile?.verified === 1;
+  // --- End DERIVATION ---
 
-  // --- If we reach here, profileStatus is 'success' and currentVendorProfile is defined (and not null) ---
-  // Proceed with rendering the dashboard content using currentVendorProfile
+  if (profileFetchResult.status === 'success' && !currentVendorProfile) {
+    // If profile loaded but is null (shouldn't happen if auth succeeded, but maybe an API issue)
+    console.warn("Vendor profile data is null after successful fetch.");
+    // Depending on desired behavior, show error or limited view
+    // return <div className="text-red-500">Error: Vendor profile could not be loaded.</div>;
+  }
 
   // --- Sidebar Tabs Definition ---
   // isVerified and isHotelVendor are already derived correctly above
-  const isVerified = currentVendorProfile?.verified === 1;
   const isHotelVendor = currentVendorProfile?.type === 'hotel';
   const sidebarTabs = [
       { id: 'overview', label: 'Overview', icon: Home, show: true },
@@ -267,144 +272,139 @@ function VendorDashboardContent() {
   // --- Render Tab Content Logic ---
   const renderTabContent = () => {
     // If not verified, only allow profile tab, show verification message otherwise
-    if (!isVerified && activeTab !== 'profile') {
-        return <VerificationPending />;
-    }
+    // if (!isVerified && activeTab !== 'profile') {
+    //     return <VerificationPending />;
+    // }
 
     switch(activeTab) {
       case 'overview':
         return (
           <div>
-            {/* Show verification pending message at the top if not verified */}
-            {!isVerified && <VerificationPending />}
+            {/* --- Verification Check Removed ---
+            //{ !isVerified && <VerificationPending /> }
+            --- End Removal --- */}
 
-            {/* Show stats and management section only if verified */}
-            {isVerified && (
-                <>
-                    {/* Stats Display */} 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        {/* Total Services */} 
-                        <div className="bg-white p-6 rounded-lg shadow-md">
-                            <div className="flex items-center mb-4">
-                                <div className={`p-3 rounded-full mr-4 ${isHotelVendor ? 'bg-indigo-100' : 'bg-blue-100'}`}> 
-                                    {isHotelVendor ? <Hotel className="h-6 w-6 text-indigo-600" /> : <Package className="h-6 w-6 text-blue-600" />} 
-                                </div>
-                                <div> <p className="text-sm text-gray-500">Total {isHotelVendor ? 'Hotels' : 'Services'}</p> <h3 className="text-2xl font-bold">{statsStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin"/> : vendorStats.totalServices}</h3> </div>
-                            </div>
-                            <div className="h-1 bg-gray-200 rounded-full"><div className={`h-1 ${isHotelVendor ? 'bg-indigo-500' : 'bg-blue-500'} rounded-full`} style={{width: '100%'}}></div></div>
+            {/* Show stats and management section */}
+            {/* {isVerified && ( */}
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {/* Stats Cards */}
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <div className="flex items-center mb-4">
+                        <div className={`p-3 rounded-full mr-4 ${isHotelVendor ? 'bg-indigo-100' : 'bg-blue-100'}`}> 
+                            {isHotelVendor ? <Hotel className="h-6 w-6 text-indigo-600" /> : <Package className="h-6 w-6 text-blue-600" />} 
                         </div>
-                        {/* Active Bookings */} 
-                        <div className="bg-white p-6 rounded-lg shadow-md">
-                            <div className="flex items-center mb-4">
-                                <div className="bg-green-100 p-3 rounded-full mr-4"> <Calendar className="h-6 w-6 text-green-600" /> </div>
-                                <div> <p className="text-sm text-gray-500">Active Bookings</p> <h3 className="text-2xl font-bold">{statsStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin"/> : vendorStats.activeBookings}</h3> </div>
-                            </div>
-                            <div className="h-1 bg-gray-200 rounded-full"><div className="h-1 bg-green-500 rounded-full" style={{width: '75%'}}></div></div>
-                        </div>
-                        {/* Review Score */} 
-                        <div className="bg-white p-6 rounded-lg shadow-md">
-                            <div className="flex items-center mb-4">
-                                <div className="bg-purple-100 p-3 rounded-full mr-4"> <Star className="h-6 w-6 text-purple-600" /> </div>
-                                <div> <p className="text-sm text-gray-500">Avg. Rating</p> <h3 className="text-2xl font-bold">{statsStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin"/> : (vendorStats.reviewScore ? `${vendorStats.reviewScore.toFixed(1)}/5` : 'N/A')}</h3> </div>
-                            </div>
-                            <div className="h-1 bg-gray-200 rounded-full"><div className="h-1 bg-purple-500 rounded-full" style={{width: `${(vendorStats.reviewScore || 0)/5 * 100}%`}}></div></div>
-                        </div>
-                        {/* Total Earnings */} 
-                        <div className="bg-white p-6 rounded-lg shadow-md">
-                            <div className="flex items-center mb-4">
-                                <div className="bg-yellow-100 p-3 rounded-full mr-4"> <FileText className="h-6 w-6 text-yellow-600" /> </div>
-                                <div> <p className="text-sm text-gray-500">Total Earnings</p> <h3 className="text-2xl font-bold">{statsStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin"/> : `₹${vendorStats.totalEarnings.toLocaleString('en-IN')}`}</h3> </div>
-                            </div>
-                            <div className="h-1 bg-gray-200 rounded-full"><div className="h-1 bg-yellow-500 rounded-full" style={{width: '85%'}}></div></div>
-                        </div>
+                        <div> <p className="text-sm text-gray-500">Total {isHotelVendor ? 'Hotels' : 'Services'}</p> <h3 className="text-2xl font-bold">{statsStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin"/> : statsData.totalServices}</h3> </div>
                     </div>
-                    {/* End Stats Display */} 
-
-                    {/* --- Manage Your Business Section --- (Added as per design) */} 
-                    <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-                        <h3 className="text-lg font-semibold mb-4">Manage Your Business</h3>
-                        {isHotelVendor ? (
-                            // Hotel Management Links
-                            <div className="space-y-3">
-                                <Link href="/hotels" className="inline-flex items-center text-blue-600 hover:underline">
-                                    <Hotel size={16} className="mr-2"/> Manage Hotels
-                                </Link>
-                                <br/>
-                                <Link href="/hotels/add" className="inline-flex items-center text-blue-600 hover:underline">
-                                    <Hotel size={16} className="mr-2"/> Add New Hotel
-                                </Link>
-                            </div>
-                        ) : (
-                            // Generic Service (Rental/Activity) Management Links
-                            <div className="space-y-3">
-                                <Link href="/services" className="inline-flex items-center text-blue-600 hover:underline">
-                                    <Package size={16} className="mr-2"/> Manage Services
-                                </Link>
-                                <br/>
-                                <Link href="/services/add" className="inline-flex items-center text-blue-600 hover:underline">
-                                    <Package size={16} className="mr-2"/> Add New Service
-                                </Link>
-                            </div>
-                        )}
+                    <div className="h-1 bg-gray-200 rounded-full"><div className={`h-1 ${isHotelVendor ? 'bg-indigo-500' : 'bg-blue-500'} rounded-full`} style={{width: '100%'}}></div></div>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <div className="flex items-center mb-4">
+                        <div className="bg-green-100 p-3 rounded-full mr-4"> <Calendar className="h-6 w-6 text-green-600" /> </div>
+                        <div> <p className="text-sm text-gray-500">Active Bookings</p> <h3 className="text-2xl font-bold">{statsStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin"/> : statsData.activeBookings}</h3> </div>
                     </div>
-                    {/* --- End Manage Your Business Section --- */} 
-
-                    {/* Recent Bookings & Reviews Grid */} 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Recent Bookings Card */} 
-                        <div className="bg-white p-6 rounded-lg shadow-md">
-                            <h3 className="text-lg font-semibold mb-4">Recent Bookings</h3>
-                            {bookingsStatus === 'loading' && <LoadingSpinner text="Loading bookings..."/>}
-                            {bookingsStatus === 'error' && <p className="text-sm text-red-600">Error: {bookingsError?.message || bookingsApiResponse?.message}</p>}
-                            {bookingsStatus === 'success' && vendorBookings.length > 0 ? (
-                                <>
-                                    <div className="overflow-x-auto -mx-6">
-                                        <table className="min-w-full">
-                                            <thead> <tr className="border-b"> <th className="py-2 px-6 text-left text-xs font-medium text-gray-500 uppercase">Service/Pkg</th> <th className="py-2 px-6 text-left text-xs font-medium text-gray-500 uppercase">Date</th> <th className="py-2 px-6 text-left text-xs font-medium text-gray-500 uppercase">Amount</th> <th className="py-2 px-6 text-left text-xs font-medium text-gray-500 uppercase">Status</th> </tr> </thead>
-                                            <tbody>
-                                                {vendorBookings.map(booking => (
-                                                    <tr key={booking.id} className="border-b text-sm hover:bg-gray-50">
-                                                    <td className="py-2 px-6 font-medium truncate max-w-[150px]">{booking.serviceOrPackageName}</td>
-                                                    <td className="py-2 px-6">{formatDate(booking.start_date)}</td>
-                                                    <td className="py-2 px-6">₹{(booking.net_amount ?? booking.total_amount ?? 0).toLocaleString('en-IN')}</td>
-                                                    <td className="py-2 px-6"><span className={`px-2 py-0.5 rounded-full text-xs ${getBookingStatusColor(booking.status)}`}>{booking.status}</span></td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="mt-4 text-right">
-                                        <Link href="/manage-bookings" className="text-blue-600 hover:text-blue-800 text-sm font-medium"> View all bookings → </Link>
-                                    </div>
-                                </>
-                            ) : bookingsStatus === 'success' ? ( <p className="text-sm text-gray-500 text-center py-4">No recent bookings.</p> ) : null}
-                        </div>
-
-                        {/* Recent Reviews Card */} 
-                        <div className="bg-white p-6 rounded-lg shadow-md">
-                            <h3 className="text-lg font-semibold mb-4">Recent Reviews</h3>
-                            {reviewsStatus === 'loading' && <LoadingSpinner text="Loading reviews..."/>}
-                            {reviewsStatus === 'error' && <p className="text-sm text-red-600">Error: {reviewsError?.message || reviewsApiResponse?.message}</p>}
-                            {reviewsStatus === 'success' && vendorReviews.length > 0 ? (
-                                <>
-                                    <div className="space-y-4">
-                                        {vendorReviews.map(review => (
-                                            <div key={review.id} className="border-b pb-4 last:border-b-0">
-                                                <div className="flex justify-between items-start mb-2"> <div><p className="font-medium text-sm">{review.serviceName}</p><p className="text-xs text-gray-500">by {review.customerName}</p></div> <div className="flex items-center text-sm text-yellow-500"> {Array.from({ length: 5 }).map((_, i) => ( <Star key={i} size={14} fill={i < review.rating ? 'currentColor' : 'none'} /> ))} </div> </div>
-                                                {review.comment && <p className="text-sm text-gray-600 italic">"{review.comment}"</p>}
-                                                <p className="text-xs text-gray-400 mt-1 text-right">{formatDate(review.created_at)}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="mt-4 text-right">
-                                        <Link href="/reviews" className="text-blue-600 hover:text-blue-800 text-sm font-medium"> View all reviews → </Link>
-                                    </div>
-                                </>
-                            ) : reviewsStatus === 'success' ? ( <p className="text-sm text-gray-500 text-center py-4">No recent reviews.</p> ) : null}
-                        </div>
+                    <div className="h-1 bg-gray-200 rounded-full"><div className="h-1 bg-green-500 rounded-full" style={{width: '75%'}}></div></div>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <div className="flex items-center mb-4">
+                        <div className="bg-purple-100 p-3 rounded-full mr-4"> <Star className="h-6 w-6 text-purple-600" /> </div>
+                        <div> <p className="text-sm text-gray-500">Avg. Rating</p> <h3 className="text-2xl font-bold">{statsStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin"/> : (statsData.reviewScore ? `${statsData.reviewScore.toFixed(1)}/5` : 'N/A')}</h3> </div>
                     </div>
-                </>
-            )}
+                    <div className="h-1 bg-gray-200 rounded-full"><div className="h-1 bg-purple-500 rounded-full" style={{width: `${(statsData.reviewScore || 0)/5 * 100}%`}}></div></div>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <div className="flex items-center mb-4">
+                        <div className="bg-yellow-100 p-3 rounded-full mr-4"> <FileText className="h-6 w-6 text-yellow-600" /> </div>
+                        <div> <p className="text-sm text-gray-500">Total Earnings</p> <h3 className="text-2xl font-bold">{statsStatus === 'loading' ? <Loader2 className="h-5 w-5 animate-spin"/> : `₹${statsData.totalEarnings.toLocaleString('en-IN')}`}</h3> </div>
+                    </div>
+                    <div className="h-1 bg-gray-200 rounded-full"><div className="h-1 bg-yellow-500 rounded-full" style={{width: '85%'}}></div></div>
+                </div>
+              </div>
+
+              {/* --- Manage Your Business Section --- (Added as per design) */} 
+              <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+                  <h3 className="text-lg font-semibold mb-4">Manage Your Business</h3>
+                  {isHotelVendor ? (
+                      // Hotel Management Links
+                      <div className="space-y-3">
+                          <Link href="/hotels" className="inline-flex items-center text-blue-600 hover:underline">
+                              <Hotel size={16} className="mr-2"/> Manage Hotels
+                          </Link>
+                          <br/>
+                          <Link href="/hotels/add" className="inline-flex items-center text-blue-600 hover:underline">
+                              <Hotel size={16} className="mr-2"/> Add New Hotel
+                          </Link>
+                      </div>
+                  ) : (
+                      // Generic Service (Rental/Activity) Management Links
+                      <div className="space-y-3">
+                          <Link href="/services" className="inline-flex items-center text-blue-600 hover:underline">
+                              <Package size={16} className="mr-2"/> Manage Services
+                          </Link>
+                          <br/>
+                          <Link href="/services/add" className="inline-flex items-center text-blue-600 hover:underline">
+                              <Package size={16} className="mr-2"/> Add New Service
+                          </Link>
+                      </div>
+                  )}
+              </div>
+              {/* --- End Manage Your Business Section --- */} 
+
+              {/* Recent Bookings & Reviews Grid */} 
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Recent Bookings Card */} 
+                  <div className="bg-white p-6 rounded-lg shadow-md">
+                      <h3 className="text-lg font-semibold mb-4">Recent Bookings</h3>
+                      {bookingsStatus === 'loading' && <LoadingSpinner text="Loading bookings..."/>}
+                      {bookingsStatus === 'error' && <p className="text-sm text-red-600">Error: {bookingsError?.message || 'Could not load bookings.'}</p>}
+                      {bookingsStatus === 'success' && bookingsData.length > 0 ? (
+                          <>
+                              <div className="overflow-x-auto -mx-6">
+                                  <table className="min-w-full">
+                                      <thead> <tr className="border-b"> <th className="py-2 px-6 text-left text-xs font-medium text-gray-500 uppercase">Service/Pkg</th> <th className="py-2 px-6 text-left text-xs font-medium text-gray-500 uppercase">Date</th> <th className="py-2 px-6 text-left text-xs font-medium text-gray-500 uppercase">Amount</th> <th className="py-2 px-6 text-left text-xs font-medium text-gray-500 uppercase">Status</th> </tr> </thead>
+                                      <tbody>
+                                          {bookingsData.map(booking => (
+                                              <tr key={booking.id} className="border-b text-sm hover:bg-gray-50">
+                                              <td className="py-2 px-6 font-medium truncate max-w-[150px]">{booking.serviceOrPackageName}</td>
+                                              <td className="py-2 px-6">{formatDate(booking.start_date)}</td>
+                                              <td className="py-2 px-6">₹{(booking.net_amount ?? booking.total_amount ?? 0).toLocaleString('en-IN')}</td>
+                                              <td className="py-2 px-6"><span className={`px-2 py-0.5 rounded-full text-xs ${getBookingStatusColor(booking.status)}`}>{booking.status}</span></td>
+                                              </tr>
+                                          ))}
+                                      </tbody>
+                                  </table>
+                              </div>
+                              <div className="mt-4 text-right">
+                                  <Link href="/manage-bookings" className="text-blue-600 hover:text-blue-800 text-sm font-medium"> View all bookings → </Link>
+                              </div>
+                          </>
+                      ) : bookingsStatus === 'success' ? ( <p className="text-sm text-gray-500 text-center py-4">No recent bookings.</p> ) : null}
+                  </div>
+
+                  {/* Recent Reviews Card */} 
+                  <div className="bg-white p-6 rounded-lg shadow-md">
+                      <h3 className="text-lg font-semibold mb-4">Recent Reviews</h3>
+                      {reviewsStatus === 'loading' && <LoadingSpinner text="Loading reviews..."/>}
+                      {reviewsStatus === 'error' && <p className="text-sm text-red-600">Error: {reviewsError?.message || 'Could not load reviews.'}</p>}
+                      {reviewsStatus === 'success' && reviewsData.length > 0 ? (
+                          <>
+                              <div className="space-y-4">
+                                  {reviewsData.map(review => (
+                                      <div key={review.id} className="border-b pb-4 last:border-b-0">
+                                          <div className="flex justify-between items-start mb-2"> <div><p className="font-medium text-sm">{review.serviceName}</p><p className="text-xs text-gray-500">by {review.customerName}</p></div> <div className="flex items-center text-sm text-yellow-500"> {Array.from({ length: 5 }).map((_, i) => ( <Star key={i} size={14} fill={i < review.rating ? 'currentColor' : 'none'} /> ))} </div> </div>
+                                          {review.comment && <p className="text-sm text-gray-600 italic">"{review.comment}"</p>}
+                                          <p className="text-xs text-gray-400 mt-1 text-right">{formatDate(review.created_at)}</p>
+                                      </div>
+                                  ))}
+                              </div>
+                              <div className="mt-4 text-right">
+                                  <Link href="/reviews" className="text-blue-600 hover:text-blue-800 text-sm font-medium"> View all reviews → </Link>
+                              </div>
+                          </>
+                      ) : reviewsStatus === 'success' ? ( <p className="text-sm text-gray-500 text-center py-4">No recent reviews.</p> ) : null}
+                  </div>
+              </div>
+            </>
           </div>
         );
       case 'services':

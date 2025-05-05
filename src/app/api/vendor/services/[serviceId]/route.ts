@@ -183,16 +183,49 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     };
     // --- End Specific Fields JSON ---
 
+    // Safely stringify JSON fields
+    let availabilityString: string | null = null;
+    try {
+        if (body.availability) {
+            // Optional: Add validation here if needed (e.g., using Zod)
+            availabilityString = JSON.stringify(body.availability);
+        }
+    } catch (e) {
+        console.error(`Service ID ${serviceId}: Failed to stringify availability`, e);
+        return NextResponse.json({ success: false, message: 'Invalid format for availability data.' }, { status: 400 });
+    }
+
+    let amenitiesString: string | null = null;
+    try {
+        // Optional: Add validation here if needed (e.g., using Zod)
+        amenitiesString = JSON.stringify(amenitiesToStore);
+    } catch (e) {
+        console.error(`Service ID ${serviceId}: Failed to stringify amenities`, e);
+        // This might indicate a server-side logic error in creating amenitiesToStore
+        return NextResponse.json({ success: false, message: 'Internal error processing service amenities.' }, { status: 500 });
+    }
+
+    let cancellationPolicyString: string | null = null;
+    try {
+        if (body.cancellation_policy) {
+            // Optional: Add validation here if needed (e.g., using Zod)
+            cancellationPolicyString = JSON.stringify(body.cancellation_policy);
+        }
+    } catch (e) {
+        console.error(`Service ID ${serviceId}: Failed to stringify cancellation_policy`, e);
+        return NextResponse.json({ success: false, message: 'Invalid format for cancellation policy data.' }, { status: 400 });
+    }
+
     const result = await db.updateService(serviceId, {
       name: body.name,
       description: body.description ?? null,
       type: body.type,
       island_id: Number(body.island_id),
       price: Number(body.price),
-      availability: body.availability ? JSON.stringify(body.availability) : null,
-      images: body.images ?? null,
-      amenities: JSON.stringify(amenitiesToStore), // Store combined JSON string
-      cancellation_policy: body.cancellation_policy ? JSON.stringify(body.cancellation_policy) : null,
+      availability: availabilityString, // Use safe string
+      images: body.images ?? null, // Assuming images is already a string or null
+      amenities: amenitiesString, // Use safe string
+      cancellation_policy: cancellationPolicyString, // Use safe string
       // is_active is not updated here, use status endpoint
     });
 

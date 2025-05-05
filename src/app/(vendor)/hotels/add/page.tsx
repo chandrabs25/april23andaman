@@ -21,20 +21,10 @@ interface VendorProfile {
   verified: number; // 0 or 1
   type: string; // e.g., hotel, rental, activity
 }
-interface GetVendorProfileResponse {
-  success: boolean;
-  data: VendorProfile | null;
-  message?: string;
-}
 
 interface Island {
   id: number;
   name: string;
-}
-interface GetIslandsResponse {
-  success: boolean;
-  data: Island[];
-  message?: string;
 }
 
 // Form state interface (matches API body)
@@ -162,14 +152,13 @@ function AddHotelForm() {
 
   // 1. Fetch Vendor Profile (for verification and type check)
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
-  const { data: profileApiResponse, error: profileError, status: profileStatus } = useFetch<GetVendorProfileResponse>(profileApiUrl);
-  const vendorProfile = profileApiResponse?.data;
+  const { data: vendorProfile, error: profileError, status: profileStatus } = useFetch<VendorProfile | null>(profileApiUrl);
   const isVerified = vendorProfile?.verified === 1;
   const isHotelVendor = vendorProfile?.type === "hotel";
 
   // 2. Fetch Islands
-  const { data: islandsApiResponse, status: islandsStatus } = useFetch<GetIslandsResponse>("/api/islands");
-  const islands = islandsApiResponse?.data || [];
+  const { data: islands, status: islandsStatus } = useFetch<Island[] | null>("/api/islands");
+  const islandsList = islands || [];
 
   // --- Authorization & Loading Checks ---
   useEffect(() => {
@@ -189,7 +178,7 @@ function AddHotelForm() {
     return (
       <div className="text-red-600">
         Error loading vendor profile:{" "}
-        {profileError?.message || profileApiResponse?.message}
+        {profileError?.message || "Unknown error"}
       </div>
     );
   }
@@ -235,56 +224,64 @@ function AddHotelForm() {
         setIsSubmitting(false);
         return;
     }
+    if (!formData.name.trim()) {
+        toast({ variant: "destructive", title: "Error", description: "Hotel name is required." });
+        setIsSubmitting(false);
+        return;
+    }
+    // Add validation for price, total_rooms, etc.
 
-    // Prepare API payload based on design
-    const payload = {
-      name: formData.name,
-      description: formData.description,
-      price: parseFloat(formData.price),
-      cancellation_policy: formData.cancellation_policy,
-      images: formData.images,
-      island_id: parseInt(formData.island_id, 10),
-      is_active: formData.is_active,
-      star_rating: parseInt(formData.star_rating, 10),
-      check_in_time: formData.check_in_time,
-      check_out_time: formData.check_out_time,
-      total_rooms: formData.total_rooms ? parseInt(formData.total_rooms, 10) : undefined,
-      facilities: formData.facilities.split(",").map(s => s.trim()).filter(Boolean),
-      meal_plans: formData.meal_plans.split(",").map(s => s.trim()).filter(Boolean),
-      pets_allowed: formData.pets_allowed,
-      children_allowed: formData.children_allowed,
-      accessibility_features: formData.accessibility_features,
-      street_address: formData.street_address,
-      geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
-      geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
-    };
-
+    // --- Data Transformation ---
     try {
-      const response = await fetch("/api/vendor/hotels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+        const apiPayload = {
+            service_provider_id: vendorProfile?.id,
+            name: formData.name,
+            description: formData.description,
+            island_id: parseInt(formData.island_id, 10) || null,
+            is_active: formData.is_active,
+            star_rating: parseInt(formData.star_rating, 10) || null,
+            check_in_time: formData.check_in_time || null,
+            check_out_time: formData.check_out_time || null,
+            price_base: parseFloat(formData.price) || 0,
+            total_rooms: parseInt(formData.total_rooms, 10) || null,
+            pets_allowed: formData.pets_allowed,
+            children_allowed: formData.children_allowed,
+            accessibility_features: formData.accessibility_features,
+            street_address: formData.street_address,
+            geo_lat: parseFloat(formData.geo_lat) || null,
+            geo_lng: parseFloat(formData.geo_lng) || null,
+            cancellation_policy: formData.cancellation_policy,
+            images: JSON.stringify(formData.images ? formData.images.split(',').map(img => img.trim()).filter(Boolean) : []),
+            facilities: JSON.stringify(formData.facilities ? formData.facilities.split(',').map(fac => fac.trim()).filter(Boolean) : []),
+            meal_plans: JSON.stringify(formData.meal_plans ? formData.meal_plans.split(',').map(mp => mp.trim()).filter(Boolean) : []),
+        };
 
-      // Type the result
-      const result: ApiResponse = await response.json();
+        // --- API Call ---
+        const response = await fetch("/api/hotels", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(apiPayload),
+        });
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to add hotel");
-      }
+        const result: ApiResponse = await response.json();
 
-      toast({ title: "Success", description: "Hotel added successfully." });
-      router.push("/hotels"); // Redirect to the hotel list page
-    } catch (error) {
-      console.error("Error adding hotel:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Could not add hotel.",
-      });
+        if (response.ok && result.success) {
+            toast({ title: "Success", description: "Hotel added successfully." });
+            router.push("/hotels"); // Redirect to the hotel list
+        } else {
+            throw new Error(result.message || "Failed to add hotel");
+        }
+    } catch (error: any) {
+        console.error("Add Hotel Error:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: error.message || "An unexpected error occurred.",
+        });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   };
 
@@ -299,104 +296,137 @@ function AddHotelForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information Section */}
         <fieldset className="border p-4 rounded-md">
-          <legend className="text-lg font-semibold px-2">Basic Information</legend>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">Hotel Name <span className="text-red-500">*</span></label>
-              <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+            <legend className="text-lg font-semibold px-2">Basic Information</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {/* Name */}
+                <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">Hotel Name <span className="text-red-500">*</span></label>
+                    <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                {/* Island */}
+                <div>
+                    <label htmlFor="island_id" className="block text-sm font-medium text-gray-700">Island <span className="text-red-500">*</span></label>
+                    <select id="island_id" name="island_id" value={formData.island_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled>-- Select Island --</option>
+                        {islandsList.map(island => (
+                        <option key={island.id} value={island.id}>{island.name}</option>
+                        ))}
+                    </select>
+                </div>
+                 {/* Description */}
+                <div className="md:col-span-2">
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                </div>
+                 {/* Base Price */}
+                <div>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">Base Price per Night (INR) <span className="text-red-500">*</span></label>
+                    <input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                 {/* Star Rating */}
+                <div>
+                    <label htmlFor="star_rating" className="block text-sm font-medium text-gray-700">Star Rating <span className="text-red-500">*</span></label>
+                    <select id="star_rating" name="star_rating" value={formData.star_rating} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled>-- Select Rating --</option>
+                        <option value="1">1 Star</option>
+                        <option value="2">2 Stars</option>
+                        <option value="3">3 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="5">5 Stars</option>
+                    </select>
+                </div>
+                {/* Total Rooms */}
+                <div>
+                    <label htmlFor="total_rooms" className="block text-sm font-medium text-gray-700">Total Rooms <span className="text-red-500">*</span></label>
+                    <input type="number" id="total_rooms" name="total_rooms" value={formData.total_rooms} onChange={handleChange} required min="1" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                 {/* Active Toggle */}
+                <div className="flex items-center md:col-span-2">
+                    <input type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                    <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">Hotel is Active</label>
+                </div>
             </div>
-             <div>
-              <label htmlFor="star_rating" className="block text-sm font-medium text-gray-700">Star Rating <span className="text-red-500">*</span></label>
-              <select id="star_rating" name="star_rating" value={formData.star_rating} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                <option value="" disabled>-- Select Rating --</option>
-                <option value="1">1 Star</option>
-                <option value="2">2 Stars</option>
-                <option value="3">3 Stars</option>
-                <option value="4">4 Stars</option>
-                <option value="5">5 Stars</option>
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
-            </div>
-            <div>
-              <label htmlFor="price" className="block text-sm font-medium text-gray-700">Base Price/Night (INR) <span className="text-red-500">*</span></label>
-              <input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-            </div>
-            <div>
-              <label htmlFor="island_id" className="block text-sm font-medium text-gray-700">Island <span className="text-red-500">*</span></label>
-              <select id="island_id" name="island_id" value={formData.island_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                <option value="" disabled>-- Select Island --</option>
-                {islands.map(island => (
-                  <option key={island.id} value={island.id}>{island.name}</option>
-                ))}
-              </select>
-            </div>
-             <div className="md:col-span-2">
-              <label htmlFor="images" className="block text-sm font-medium text-gray-700">Image URLs (comma-separated)</label>
-              <input type="text" id="images" name="images" value={formData.images} onChange={handleChange} placeholder="http://..., http://..." className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-            </div>
-            <div className="md:col-span-2">
-              <label htmlFor="cancellation_policy" className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
-              <textarea id="cancellation_policy" name="cancellation_policy" value={formData.cancellation_policy} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
-            </div>
-             <div className="flex items-center">
-              <input type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-              <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">Hotel is Active</label>
-            </div>
-          </div>
         </fieldset>
 
-        {/* Hotel Details Section */}
+        {/* Details & Policies Section */}
         <fieldset className="border p-4 rounded-md">
-          <legend className="text-lg font-semibold px-2">Hotel Details</legend>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-             <div>
-              <label htmlFor="check_in_time" className="block text-sm font-medium text-gray-700">Check-in Time <span className="text-red-500">*</span></label>
-              <input type="time" id="check_in_time" name="check_in_time" value={formData.check_in_time} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+            <legend className="text-lg font-semibold px-2">Details & Policies</legend>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                 {/* Check-in Time */}
+                <div>
+                    <label htmlFor="check_in_time" className="block text-sm font-medium text-gray-700">Check-in Time</label>
+                    <input type="time" id="check_in_time" name="check_in_time" value={formData.check_in_time} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                {/* Check-out Time */}
+                <div>
+                    <label htmlFor="check_out_time" className="block text-sm font-medium text-gray-700">Check-out Time</label>
+                    <input type="time" id="check_out_time" name="check_out_time" value={formData.check_out_time} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                {/* Cancellation Policy */}
+                <div className="md:col-span-2">
+                    <label htmlFor="cancellation_policy" className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
+                    <textarea id="cancellation_policy" name="cancellation_policy" value={formData.cancellation_policy} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                </div>
+                 {/* Pets Allowed */}
+                 <div className="flex items-center">
+                    <input type="checkbox" id="pets_allowed" name="pets_allowed" checked={formData.pets_allowed} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                    <label htmlFor="pets_allowed" className="ml-2 block text-sm text-gray-900">Pets Allowed?</label>
+                </div>
+                 {/* Children Allowed */}
+                 <div className="flex items-center">
+                    <input type="checkbox" id="children_allowed" name="children_allowed" checked={formData.children_allowed} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                    <label htmlFor="children_allowed" className="ml-2 block text-sm text-gray-900">Children Allowed?</label>
+                </div>
+                 {/* Accessibility Features */}
+                <div className="md:col-span-2">
+                    <label htmlFor="accessibility_features" className="block text-sm font-medium text-gray-700">Accessibility Features</label>
+                    <input type="text" id="accessibility_features" name="accessibility_features" value={formData.accessibility_features} onChange={handleChange} placeholder="e.g., Wheelchair ramp, Accessible bathroom" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+             </div>
+        </fieldset>
+
+        {/* Facilities & Media Section */}
+        <fieldset className="border p-4 rounded-md">
+            <legend className="text-lg font-semibold px-2">Facilities & Media</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                 {/* Facilities */}
+                 <div>
+                    <label htmlFor="facilities" className="block text-sm font-medium text-gray-700">Facilities (comma-separated)</label>
+                    <input type="text" id="facilities" name="facilities" value={formData.facilities} onChange={handleChange} placeholder="e.g., Pool, Gym, Spa, Restaurant" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                 </div>
+                  {/* Meal Plans */}
+                 <div>
+                    <label htmlFor="meal_plans" className="block text-sm font-medium text-gray-700">Meal Plans Offered (comma-separated)</label>
+                    <input type="text" id="meal_plans" name="meal_plans" value={formData.meal_plans} onChange={handleChange} placeholder="e.g., Breakfast Included, Half Board, Full Board" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                 </div>
+                  {/* Images */}
+                <div className="md:col-span-2">
+                    <label htmlFor="images" className="block text-sm font-medium text-gray-700">Hotel Image URLs (comma-separated)</label>
+                    <input type="text" id="images" name="images" value={formData.images} onChange={handleChange} placeholder="http://..., http://..." className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
             </div>
-             <div>
-              <label htmlFor="check_out_time" className="block text-sm font-medium text-gray-700">Check-out Time <span className="text-red-500">*</span></label>
-              <input type="time" id="check_out_time" name="check_out_time" value={formData.check_out_time} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+        </fieldset>
+
+        {/* Location Section */}
+        <fieldset className="border p-4 rounded-md">
+            <legend className="text-lg font-semibold px-2">Location</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {/* Street Address */}
+                <div className="md:col-span-2">
+                    <label htmlFor="street_address" className="block text-sm font-medium text-gray-700">Street Address</label>
+                    <input type="text" id="street_address" name="street_address" value={formData.street_address} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                 {/* Latitude */}
+                <div>
+                    <label htmlFor="geo_lat" className="block text-sm font-medium text-gray-700">Latitude</label>
+                    <input type="number" id="geo_lat" name="geo_lat" value={formData.geo_lat} onChange={handleChange} step="any" placeholder="e.g., 12.9716" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                 {/* Longitude */}
+                <div>
+                    <label htmlFor="geo_lng" className="block text-sm font-medium text-gray-700">Longitude</label>
+                    <input type="number" id="geo_lng" name="geo_lng" value={formData.geo_lng} onChange={handleChange} step="any" placeholder="e.g., 77.5946" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
             </div>
-             <div>
-              <label htmlFor="total_rooms" className="block text-sm font-medium text-gray-700">Total Rooms</label>
-              <input type="number" id="total_rooms" name="total_rooms" value={formData.total_rooms} onChange={handleChange} min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-            </div>
-             <div>
-              <label htmlFor="facilities" className="block text-sm font-medium text-gray-700">Facilities (comma-separated)</label>
-              <input type="text" id="facilities" name="facilities" value={formData.facilities} onChange={handleChange} placeholder="Pool, Gym, Spa" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-            </div>
-             <div>
-              <label htmlFor="meal_plans" className="block text-sm font-medium text-gray-700">Meal Plans (comma-separated)</label>
-              <input type="text" id="meal_plans" name="meal_plans" value={formData.meal_plans} onChange={handleChange} placeholder="Breakfast, Half-board" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-            </div>
-             <div className="md:col-span-2">
-              <label htmlFor="street_address" className="block text-sm font-medium text-gray-700">Street Address <span className="text-red-500">*</span></label>
-              <input type="text" id="street_address" name="street_address" value={formData.street_address} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-            </div>
-             <div>
-              <label htmlFor="geo_lat" className="block text-sm font-medium text-gray-700">Latitude</label>
-              <input type="number" step="any" id="geo_lat" name="geo_lat" value={formData.geo_lat} onChange={handleChange} placeholder="e.g., 11.6234" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-            </div>
-             <div>
-              <label htmlFor="geo_lng" className="block text-sm font-medium text-gray-700">Longitude</label>
-              <input type="number" step="any" id="geo_lng" name="geo_lng" value={formData.geo_lng} onChange={handleChange} placeholder="e.g., 92.7265" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-            </div>
-             <div className="md:col-span-2">
-              <label htmlFor="accessibility_features" className="block text-sm font-medium text-gray-700">Accessibility Features</label>
-              <textarea id="accessibility_features" name="accessibility_features" value={formData.accessibility_features} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
-            </div>
-             <div className="flex items-center">
-              <input type="checkbox" id="pets_allowed" name="pets_allowed" checked={formData.pets_allowed} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-              <label htmlFor="pets_allowed" className="ml-2 block text-sm text-gray-900">Pets Allowed</label>
-            </div>
-             <div className="flex items-center">
-              <input type="checkbox" id="children_allowed" name="children_allowed" checked={formData.children_allowed} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-              <label htmlFor="children_allowed" className="ml-2 block text-sm text-gray-900">Children Allowed</label>
-            </div>
-          </div>
         </fieldset>
 
         {/* Submit Button */}

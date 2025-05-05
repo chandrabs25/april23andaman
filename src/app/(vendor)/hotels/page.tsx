@@ -33,11 +33,6 @@ interface VendorProfile {
   verified: number; // 0 or 1
   type: string; // e.g., hotel, rental, activity
 }
-interface GetVendorProfileResponse {
-  success: boolean;
-  data: VendorProfile | null;
-  message?: string;
-}
 
 // Interface for the data returned by GET /api/vendor/hotels
 // This joins services and hotels tables
@@ -51,20 +46,10 @@ interface VendorHotel {
   // Add other fields as needed for display (e.g., price from services)
   price?: number | string;
 }
-interface GetVendorHotelsResponse {
-  success: boolean;
-  data: VendorHotel[];
-  message?: string;
-}
 
 interface Island {
   id: number;
   name: string;
-}
-interface GetIslandsResponse {
-  success: boolean;
-  data: Island[];
-  message?: string;
 }
 
 // Add a generic response type for simple success/message APIs
@@ -147,31 +132,29 @@ function HotelListContent() {
 
   // 1. Fetch Vendor Profile (for verification and type check)
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
-  const { data: profileApiResponse, error: profileError, status: profileStatus } = useFetch<GetVendorProfileResponse>(profileApiUrl);
-  const vendorProfile = profileApiResponse?.data;
+  const { data: vendorProfile, error: profileError, status: profileStatus } = useFetch<VendorProfile | null>(profileApiUrl);
   const isVerified = vendorProfile?.verified === 1;
   const isHotelVendor = vendorProfile?.type === "hotel";
 
   // 2. Fetch Hotels (only if profile loaded, verified, and is a hotel vendor)
-  const shouldFetchHotels = profileStatus === "success" && isVerified && isHotelVendor;
+  const shouldFetchHotels = profileStatus === "success" && vendorProfile && isVerified && isHotelVendor;
   const hotelsApiUrl = shouldFetchHotels ? `/api/vendor/hotels` : null; // Uses GET from hotels route.ts
-  // Remove 'mutate' from destructuring
-  const { data: hotelsApiResponse, error: hotelsError, status: hotelsStatus } = useFetch<GetVendorHotelsResponse>(hotelsApiUrl);
+  const { data: fetchedHotels, error: hotelsError, status: hotelsStatus } = useFetch<VendorHotel[] | null>(hotelsApiUrl);
 
   // 3. Fetch Islands (for displaying names)
-  const { data: islandsApiResponse, status: islandsStatus } = useFetch<GetIslandsResponse>("/api/islands");
+  const { data: fetchedIslands, status: islandsStatus } = useFetch<Island[] | null>("/api/islands");
   const islandsMap = React.useMemo(() => {
     const map = new Map<number, string>();
-    islandsApiResponse?.data?.forEach((island) => map.set(island.id, island.name));
+    fetchedIslands?.forEach((island) => map.set(island.id, island.name));
     return map;
-  }, [islandsApiResponse]);
+  }, [fetchedIslands]);
 
   // Update local hotels state when fetch completes
   useEffect(() => {
-    if (hotelsApiResponse?.success && hotelsApiResponse.data) {
-      setHotels(hotelsApiResponse.data);
+    if (hotelsStatus === "success" && fetchedHotels) {
+      setHotels(fetchedHotels);
     }
-  }, [hotelsApiResponse]);
+  }, [hotelsStatus, fetchedHotels]);
 
   // --- Authorization & Loading Checks ---
   useEffect(() => {
@@ -191,7 +174,7 @@ function HotelListContent() {
     return (
       <div className="text-red-600">
         Error loading vendor profile:{" "}
-        {profileError?.message || profileApiResponse?.message}
+        {profileError?.message || "Unknown error"}
       </div>
     );
   }
@@ -205,9 +188,11 @@ function HotelListContent() {
   }
 
   // --- Conditional Rendering based on Verification & Type ---
-  if (!isVerified) {
-    return <VerificationPending />;
-  }
+  // --- Verification Check Removed ---
+  // if (!isVerified) {
+  //   return <VerificationPending />;
+  // }
+  // --- End Removal ---
   if (!isHotelVendor) {
     return <IncorrectVendorType />;
   }
@@ -217,7 +202,7 @@ function HotelListContent() {
   if (hotelsStatus === "error") {
     return (
       <div className="text-red-600">
-        Error loading hotels: {hotelsError?.message || hotelsApiResponse?.message}
+        Error loading hotels: {hotelsError?.message || "Unknown error"}
       </div>
     );
   }

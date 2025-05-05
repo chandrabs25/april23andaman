@@ -182,8 +182,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Define type for serviceData based on createService input
+    interface ServiceDataForCreate {
+        name: string;
+        description: string | null;
+        type: string;
+        provider_id: number;
+        island_id: number;
+        price: number;
+        availability: string | null;
+        images: string | null;
+        amenities: string | null;
+        cancellation_policy: string | null;
+        is_active?: boolean;
+    }
+
     // Prepare data for database insertion
-    const serviceData = {
+    const serviceData: ServiceDataForCreate = {
       name: body.name,
       description: body.description ?? null,
       type: "hotel", // Hardcoded type
@@ -193,11 +208,43 @@ export async function POST(request: NextRequest) {
       availability: null, // Hotels usually manage availability via rooms
       images: body.images ?? null,
       amenities: null, // Use hotel-specific fields instead
-      cancellation_policy: body.cancellation_policy
-        ? JSON.stringify(body.cancellation_policy)
-        : null,
+      cancellation_policy: null, // Initialize as null, will be updated below
       is_active: body.is_active === undefined ? true : body.is_active,
     };
+
+    // Safely stringify JSON fields for hotelData
+    let facilitiesString: string | null = null;
+    try {
+        if (body.facilities) {
+            facilitiesString = JSON.stringify(body.facilities);
+        }
+    } catch (e) {
+        console.error("Hotel Creation: Failed to stringify facilities", e);
+        return NextResponse.json({ success: false, message: 'Invalid format for facilities data.' }, { status: 400 });
+    }
+
+    let mealPlansString: string | null = null;
+    try {
+        if (body.meal_plans) {
+            mealPlansString = JSON.stringify(body.meal_plans);
+        }
+    } catch (e) {
+        console.error("Hotel Creation: Failed to stringify meal_plans", e);
+        return NextResponse.json({ success: false, message: 'Invalid format for meal plans data.' }, { status: 400 });
+    }
+
+    // Safely stringify JSON for cancellation_policy in serviceData
+    let cancellationPolicyString: string | null = null;
+    try {
+        if (body.cancellation_policy) {
+            cancellationPolicyString = JSON.stringify(body.cancellation_policy);
+        }
+    } catch (e) {
+        console.error("Hotel Creation: Failed to stringify cancellation_policy", e);
+        return NextResponse.json({ success: false, message: 'Invalid format for cancellation policy data.' }, { status: 400 });
+    }
+    // Update serviceData with the safe string
+    serviceData.cancellation_policy = cancellationPolicyString;
 
     const hotelData = {
       // service_id will be set after service creation
@@ -205,8 +252,8 @@ export async function POST(request: NextRequest) {
       check_in_time: body.check_in_time,
       check_out_time: body.check_out_time,
       total_rooms: body.total_rooms ? Number(body.total_rooms) : null,
-      facilities: body.facilities ? JSON.stringify(body.facilities) : null,
-      meal_plans: body.meal_plans ? JSON.stringify(body.meal_plans) : null,
+      facilities: facilitiesString, // Use safe string
+      meal_plans: mealPlansString, // Use safe string
       pets_allowed: body.pets_allowed === undefined ? false : body.pets_allowed,
       children_allowed:
         body.children_allowed === undefined ? true : body.children_allowed,

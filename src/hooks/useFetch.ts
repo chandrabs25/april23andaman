@@ -13,51 +13,54 @@ interface ApiResponse<T> {
   message?: string; // Optional error/status message
 }
 
+// --- Combined State Interface ---
+interface FetchState<T> {
+  data: T | null;
+  error: Error | null;
+  status: LoadingState;
+}
+
 // Generic hook for data fetching with loading states
 // The hook itself is generic over the expected data type T
 export function useFetch<T>(url: string | null, options?: RequestInit) { // Allow URL to be null to prevent fetching initially
   console.log('[useFetch] Hook initialized/re-rendered. URL:', url);
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const [status, setStatus] = useState<LoadingState>('idle');
+
+  // --- Use single state object ---
+  const [state, setState] = useState<FetchState<T>>({
+    data: null,
+    error: null,
+    status: 'idle',
+  });
 
   // Memoize options using JSON.stringify to handle object changes
   const memoizedOptions = JSON.stringify(options);
 
   useEffect(() => {
-    console.log('[useFetch] useEffect triggered. URL:', url); // Log effect run
+    console.log('[useFetch] useEffect triggered. URL:', url);
 
-    // Function to perform the fetch
     const fetchData = async () => {
       console.log('[useFetch] fetchData started. URL:', url);
 
-      // Don't fetch if URL is null or empty
       if (!url) {
-        console.log('[useFetch] URL is null, setting status to idle.');
-        setStatus('idle');
-        setData(null); // Ensure data is cleared if URL becomes null
-        setError(null);
+        console.log('[useFetch] URL is null, setting state to idle/null.');
+        // --- Update combined state ---
+        setState({ data: null, error: null, status: 'idle' });
         return;
       }
 
-      // Reset state for new fetch
       console.log('[useFetch] Resetting state and setting status to loading.');
-      setStatus('loading');
-      setData(null);
-      setError(null);
+      // --- Update combined state ---
+      setState({ data: null, error: null, status: 'loading' });
 
       try {
-        const currentOptions = JSON.parse(memoizedOptions || '{}'); // Parse memoized options
+        const currentOptions = JSON.parse(memoizedOptions || '{}');
         console.log('[useFetch] Attempting fetch. URL:', url, 'Options:', currentOptions);
         const response = await fetch(url, {
           ...currentOptions,
-          // --- FIX: Correct type for credentials ---
-          credentials: 'include' as RequestCredentials, // Cast to the specific type
-          // --- End FIX ---
+          credentials: 'include' as RequestCredentials,
         });
         console.log('[useFetch] Fetch completed. URL:', url, 'Status:', response.status);
 
-        // Try parsing the body regardless of status first to get potential error messages
         let result: ApiResponse<T>;
         try {
           console.log('[useFetch] Attempting response.json(). URL:', url);
@@ -65,53 +68,53 @@ export function useFetch<T>(url: string | null, options?: RequestInit) { // Allo
           console.log('[useFetch] response.json() successful. URL:', url, 'Result:', result);
         } catch (jsonError) {
           console.error('[useFetch] response.json() FAILED. URL:', url, 'Error:', jsonError);
-          // Handle cases where response is not JSON
           throw new Error(`Request failed with status ${response.status} and non-JSON response.`);
         }
 
         if (!response.ok) {
-          // Use message from parsed body if available, otherwise use status text
           const errorMessage = result?.message || response.statusText || `HTTP error! Status: ${response.status}`;
           console.warn('[useFetch] Response not OK. Status:', response.status, 'URL:', url, 'Throwing error:', errorMessage);
           throw new Error(errorMessage);
         }
 
-        // Process successful response
         console.log('[useFetch] Response OK. Checking result.success. URL:', url);
         if (result.success) {
           console.log('[useFetch] result.success is true. URL:', url);
           if (result.data !== undefined) {
-            console.log('[useFetch] Setting data and status=success. URL:', url, 'Data:', result.data);
-            setData(result.data);
-            setStatus('success');
+            console.log('[useFetch] Setting state data and status=success. URL:', url, 'Data:', result.data);
+            // --- Update combined state ---
+            setState({ data: result.data, error: null, status: 'success' });
           } else {
-            // Success reported, but no data (could be valid)
-            setData(null);
-            setStatus('success');
-            console.warn(`[useFetch] Fetch successful (result.success=true) but result.data is undefined. Setting data=null, status=success. URL: ${url}`);
+            console.warn(`[useFetch] Fetch successful (result.success=true) but result.data is undefined. Setting state data=null, status=success. URL: ${url}`);
+            // --- Update combined state ---
+            setState({ data: null, error: null, status: 'success' });
           }
         } else {
-          // API reported success: false
           const apiErrorMessage = result.message || 'API returned success: false';
           console.warn('[useFetch] result.success is false. URL:', url, 'Throwing error:', apiErrorMessage);
           throw new Error(apiErrorMessage);
         }
       } catch (err) {
         console.error(`[useFetch] CATCH block error for URL ${url}:`, err);
-        console.log('[useFetch] Setting error state and status=error. URL:', url);
-        setError(err instanceof Error ? err : new Error('Unknown fetch error occurred'));
-        setStatus('error');
+        const error = err instanceof Error ? err : new Error('Unknown fetch error occurred');
+        console.log('[useFetch] Setting state error and status=error. URL:', url);
+        // --- Update combined state ---
+        setState({ data: null, error: error, status: 'error' });
       }
     };
 
     fetchData();
 
-    // No AbortController added here as requested
+  }, [url, memoizedOptions]);
 
-  }, [url, memoizedOptions]); // Depend on URL and memoized options
+  // Log the state being returned by the hook
+  console.log(
+    '[useFetch] Returning combined state for URL:', url,
+    { data: state.data, error: state.error?.message, status: state.status }
+  );
 
-  console.log('[useFetch] Returning state. URL:', url, 'Status:', status);
-  return { data, error, status, isLoading: status === 'loading' };
+  // --- Return combined state values ---
+  return { data: state.data, error: state.error, status: state.status, isLoading: state.status === 'loading' };
 }
 
 
@@ -124,14 +127,10 @@ export function useSubmit<T, R = any>(initialUrl: string) {
   const [error, setError] = useState<Error | null>(null);
   const [status, setStatus] = useState<LoadingState>('idle');
 
-  // Add overrideUrl parameter
   const submit = async (payload: R, method: 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'POST', overrideUrl?: string): Promise<{ success: boolean; data?: T | null; error?: string }> => {
-    // --- FIX: Use overrideUrl if provided, else initialUrl ---
     const targetUrl = overrideUrl || initialUrl;
-    // --- End FIX ---
 
     console.log('[useSubmit] submit function called. Target URL:', targetUrl, 'Method:', method);
-    console.log('[useSubmit] Resetting state and setting status=loading.');
     setStatus('loading');
     setData(null);
     setError(null);
@@ -150,14 +149,13 @@ export function useSubmit<T, R = any>(initialUrl: string) {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: method !== 'DELETE' ? JSON.stringify(payload) : undefined, // Payload is now just the data
+        body: method !== 'DELETE' ? JSON.stringify(payload) : undefined,
         credentials: 'include' as RequestCredentials,
       };
       console.log('[useSubmit] Attempting fetch. URL:', targetUrl, 'Options:', fetchOptions);
       const response = await fetch(targetUrl, fetchOptions);
       console.log('[useSubmit] Fetch completed. URL:', targetUrl, 'Status:', response.status);
 
-      // Declare result with the expected successful structure (using T for response data)
       let result: ApiResponse<T>;
 
       try {
@@ -166,7 +164,7 @@ export function useSubmit<T, R = any>(initialUrl: string) {
             console.log('[useSubmit] Received 204 No Content or empty body. Assuming success.');
             result = { success: true };
         } else {
-            result = await response.json() as ApiResponse<T>; // Expect ApiResponse<T>
+            result = await response.json() as ApiResponse<T>;
         }
         console.log('[useSubmit] response.json() successful or handled empty. URL:', targetUrl, 'Result:', result);
       } catch (jsonError) {
@@ -179,9 +177,9 @@ export function useSubmit<T, R = any>(initialUrl: string) {
         console.log('[useSubmit] Response OK and result.success is true/undefined. URL:', targetUrl);
         if (result.data !== undefined) {
           console.log('[useSubmit] Setting data and status=success. URL:', targetUrl, 'Data:', result.data);
-          setData(result.data); // Set data with type T
+          setData(result.data);
           setStatus('success');
-          return { success: true, data: result.data }; // Return data with type T
+          return { success: true, data: result.data };
         } else {
           setData(null);
           setStatus('success');

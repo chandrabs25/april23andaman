@@ -375,10 +375,39 @@ export class DatabaseService {
     const db = await getDatabase();
 
     // Helper to ensure complex fields are stored as TEXT strings if provided as objects
-    const stringifyIfNeeded = (data: any): string | null => {
+    const stringifyIfNeeded = (data: any, fieldName: string): string | null => {
       if (data === null || data === undefined) return null;
       // Only stringify if it's an actual object (not null, not already a string)
-      return typeof data === 'object' ? JSON.stringify(data) : String(data);
+      if (typeof data === 'object') {
+          try {
+              return JSON.stringify(data);
+          } catch (e) {
+              console.error(`Failed to stringify field '${fieldName}' in createPackage:`, e);
+              // Throw a more specific error or handle as needed. Rethrowing for now.
+              throw new Error(`Invalid format for package field '${fieldName}'.`);
+          }
+      } else {
+          // If it's not an object, just convert to string
+          return String(data);
+      }
+    }
+
+    let itineraryString: string | null = null;
+    let includedServicesString: string | null = null;
+    let imagesString: string | null = null;
+
+    try {
+        itineraryString = stringifyIfNeeded(packageData.itinerary, 'itinerary');
+        includedServicesString = stringifyIfNeeded(packageData.included_services, 'included_services');
+        imagesString = stringifyIfNeeded(packageData.images, 'images');
+    } catch (e) {
+        // If stringifyIfNeeded throws, catch it here and return an error result
+        // This prevents the error from crashing the DatabaseService call entirely
+        // and allows the API route to handle it gracefully.
+        console.error("Error processing package data for stringification:", e);
+        // Returning a D1Result-like structure indicating failure
+        // Modify based on how your API route expects errors from DBService
+        return { success: false, error: e instanceof Error ? e.message : "Stringification failed", meta: {} } as any; // Cast needed as it doesn't match typical D1Result
     }
 
     return db
@@ -396,9 +425,9 @@ export class DatabaseService {
         packageData.base_price,
         packageData.max_people ?? null,
         packageData.created_by, // Pass the authenticated user ID here
-        stringifyIfNeeded(packageData.itinerary),
-        stringifyIfNeeded(packageData.included_services),
-        stringifyIfNeeded(packageData.images)
+        itineraryString, // Use processed string
+        includedServicesString, // Use processed string
+        imagesString // Use processed string
       )
       .run(); // Returns Promise<D1Result>
   }

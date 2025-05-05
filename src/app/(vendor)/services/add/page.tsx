@@ -175,14 +175,14 @@ function AddServiceForm() {
 
   // 1. Fetch Vendor Profile (for verification and type check)
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
-  const { data: profileApiResponse, error: profileError, status: profileStatus } = useFetch<GetVendorProfileResponse>(profileApiUrl);
-  const vendorProfile = profileApiResponse?.data;
+  const profileFetchState = useFetch<VendorProfile>(profileApiUrl);
+  const vendorProfile = profileFetchState.data;
   const isVerified = vendorProfile?.verified === 1;
   const isHotelVendor = vendorProfile?.type === "hotel";
 
   // 2. Fetch Islands
-  const { data: islandsApiResponse, status: islandsStatus } = useFetch<GetIslandsResponse>("/api/islands");
-  const islands = islandsApiResponse?.data || [];
+  const islandsFetchState = useFetch<Island[]>("/api/islands");
+  const islands = islandsFetchState.data || [];
 
   // --- Authorization & Loading Checks ---
   useEffect(() => {
@@ -191,23 +191,23 @@ function AddServiceForm() {
     }
   }, [authLoading, isAuthenticated, authUser, router]);
 
-  const isLoading = authLoading || profileStatus === "loading" || islandsStatus === "loading";
+  const isLoading = authLoading || profileFetchState.status === "loading" || islandsFetchState.status === "loading";
 
   if (isLoading) {
     return <LoadingSpinner text="Loading Add Service Form..." />;
   }
 
   // Handle Profile Fetch Error
-  if (profileStatus === "error") {
+  if (profileFetchState.status === "error") {
     return (
       <div className="text-red-600">
         Error loading vendor profile:{" "}
-        {profileError?.message || profileApiResponse?.message}
+        {profileFetchState.error?.message}
       </div>
     );
   }
   // Handle Profile Not Found (edge case)
-  if (profileStatus === "success" && !vendorProfile) {
+  if (profileFetchState.status === "success" && !profileFetchState.data) {
     return (
       <div className="text-orange-600">
         Vendor profile not found. Cannot add service.
@@ -216,9 +216,11 @@ function AddServiceForm() {
   }
 
   // --- Conditional Rendering based on Verification & Type ---
-  if (!isVerified) {
-    return <VerificationPending />;
-  }
+  // --- Verification Check Removed ---
+  // if (!isVerified) {
+  //   return <VerificationPending />;
+  // }
+  // --- End Removal ---
   if (isHotelVendor) {
     return <IncorrectVendorType />;
   }
@@ -254,62 +256,70 @@ function AddServiceForm() {
         return;
     }
 
-    // Prepare API payload based on design
-    const payload: any = {
-      name: formData.name,
-      description: formData.description,
-      type: formData.type,
-      island_id: parseInt(formData.island_id, 10),
-      price: parseFloat(formData.price),
-      availability: formData.availability, // Send as string for now
-      images: formData.images, // Send as string
-      cancellation_policy: formData.cancellation_policy, // Send as string
-      is_active: formData.is_active,
-      // Specific fields will be added based on type
-      general_amenities: formData.general_amenities.split(',').map(s => s.trim()).filter(Boolean),
+    // --- Data Transformation ---
+    let apiPayload: any = {
+        ...formData, // Start with form data
+        service_provider_id: vendorProfile?.id, // Add vendor ID
+        // Convert numeric fields (handle potential NaN)
+        island_id: parseInt(formData.island_id, 10) || null,
+        price: parseFloat(formData.price) || 0,
+        quantity_available: parseInt(formData.quantity_available, 10) || null, // Allow null if empty/invalid
+        deposit_amount: parseFloat(formData.deposit_amount) || null, // Allow null if empty/invalid
+        duration: parseInt(formData.duration, 10) || null, // Allow null if empty/invalid
+        group_size_min: parseInt(formData.group_size_min, 10) || null, // Allow null if empty/invalid
+        group_size_max: parseInt(formData.group_size_max, 10) || null, // Allow null if empty/invalid
+
+        // Convert comma-separated strings to JSON arrays (handle empty strings)
+        images: JSON.stringify(formData.images ? formData.images.split(',').map(img => img.trim()).filter(img => img) : []),
+        equipment_provided: JSON.stringify(formData.equipment_provided ? formData.equipment_provided.split(',').map(eq => eq.trim()).filter(eq => eq) : []),
+        general_amenities: JSON.stringify(formData.general_amenities ? formData.general_amenities.split(',').map(am => am.trim()).filter(am => am) : []),
     };
 
-    if (selectedServiceBaseType === "rental") {
-      payload.rental_unit = formData.rental_unit || undefined;
-      payload.quantity_available = formData.quantity_available ? parseInt(formData.quantity_available, 10) : undefined;
-      payload.deposit_required = formData.deposit_required;
-      payload.deposit_amount = formData.deposit_required && formData.deposit_amount ? parseFloat(formData.deposit_amount) : undefined;
-      payload.age_license_requirement = formData.age_license_requirement;
-      payload.age_license_details = formData.age_license_requirement ? formData.age_license_details : undefined;
-    } else if (selectedServiceBaseType === "activity") {
-      payload.duration = formData.duration ? parseInt(formData.duration, 10) : undefined;
-      payload.duration_unit = formData.duration ? formData.duration_unit : undefined;
-      payload.group_size_min = formData.group_size_min ? parseInt(formData.group_size_min, 10) : undefined;
-      payload.group_size_max = formData.group_size_max ? parseInt(formData.group_size_max, 10) : undefined;
-      payload.difficulty_level = formData.difficulty_level || undefined;
-      payload.equipment_provided = formData.equipment_provided.split(',').map(s => s.trim()).filter(Boolean);
-      payload.safety_requirements = formData.safety_requirements;
-      payload.guide_required = formData.guide_required;
+    // Remove fields specific to the other service type if necessary
+    const baseType = formData.type.split('/')[0];
+    if (baseType === 'rental') {
+        delete apiPayload.duration;
+        delete apiPayload.duration_unit;
+        delete apiPayload.group_size_min;
+        delete apiPayload.group_size_max;
+        delete apiPayload.difficulty_level;
+        delete apiPayload.equipment_provided;
+        delete apiPayload.safety_requirements;
+        delete apiPayload.guide_required;
+    } else if (baseType === 'activity') {
+        delete apiPayload.rental_unit;
+        delete apiPayload.quantity_available;
+        delete apiPayload.deposit_required;
+        delete apiPayload.deposit_amount;
+        delete apiPayload.age_license_requirement;
+        delete apiPayload.age_license_details;
     }
 
+    // Remove form-specific state if not needed directly by API
+    // (Example: if API doesn't need 'type' split, adjust accordingly)
+
+    // --- API Call ---
     try {
       const response = await fetch("/api/vendor/services", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(apiPayload), // Send the transformed payload
       });
 
-      // Type the result
-      const result: ApiResponse = await response.json();
+      const result: ApiResponse = await response.json(); // Use ApiResponse type
 
-      if (!response.ok || !result.success) {
+      if (response.ok && result.success) {
+        toast({ title: "Success", description: "Service added successfully." });
+        router.push("/services"); // Redirect to the service list
+      } else {
         throw new Error(result.message || "Failed to add service");
       }
-
-      toast({ title: "Success", description: "Service added successfully." });
-      router.push("/services"); // Redirect to the service list page
-    } catch (error) {
-      console.error("Error adding service:", error);
+    } catch (error: any) {
+      console.error("Add Service Error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description:
-          error instanceof Error ? error.message : "Could not add service.",
+        description: error.message || "An unexpected error occurred.",
       });
     } finally {
       setIsSubmitting(false);

@@ -73,7 +73,7 @@ CREATE TABLE services (
   type                TEXT NOT NULL,
   provider_id         INTEGER NOT NULL,
   island_id           INTEGER NOT NULL,
-  price               TEXT NOT NULL,
+  price               REAL NOT NULL,
   availability        TEXT,
   images              TEXT,
   amenities           TEXT,

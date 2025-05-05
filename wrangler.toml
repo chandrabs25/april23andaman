@@ -18,7 +18,7 @@ directory = ".open-next/assets"
 [[d1_databases]]
 binding = "DB" 
 database_name = "database" 
-database_id = "ea15d93d-0ca8-4fb1-9a9a-56d5b819d383" 
+database_id = "dcef4894-e507-4220-80f5-004217219d80" 
 
 
 [vars]
