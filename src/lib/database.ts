@@ -33,6 +33,15 @@ interface PackageFilters {
   // Add other potential filters here if needed
 }
 
+// Interface for hotel filtering options
+interface HotelFilters {
+  name?: string;       // Search by hotel name (from services table)
+  location?: string;   // Search by location (e.g., in street_address)
+  minRating?: number;  // Minimum star rating
+  islandId?: number; // Filter by island_id
+  // Add other potential filters here if needed
+}
+
 // You might have other interfaces for Users, Islands, Services, etc.
 // Define them here or import them if they are defined elsewhere.
 // For brevity, only Package and PackageFilters are explicitly defined here,
@@ -1144,6 +1153,99 @@ export class DatabaseService {
   async deleteRoomType(roomId: number) {
     const db = await getDatabase();
     return db.prepare('DELETE FROM hotel_room_types WHERE id = ?').bind(roomId).run();
+  }
+
+  /**
+   * Retrieves a list of all hotels with optional filtering and pagination.
+   * Joins services and hotels tables.
+   * @param limit Max number of hotels to return.
+   * @param offset Number of hotels to skip.
+   * @param filters Optional filters for name, location, minRating.
+   * @returns Promise<D1Result<any[]>> - Define a proper Hotel interface for the result
+   */
+  async getAllHotels(limit = 10, offset = 0, filters: HotelFilters = {}) {
+    const db = await getDatabase();
+    let query = `
+      SELECT
+        s.id AS service_id, s.name, s.description, s.type, s.provider_id, s.island_id,
+        s.price, s.availability, s.images, s.amenities AS service_amenities, s.cancellation_policy,
+        s.is_active,
+        h.star_rating, h.check_in_time, h.check_out_time, h.facilities, h.policies,
+        h.extra_images AS hotel_extra_images, h.total_rooms, h.street_address, h.geo_lat, h.geo_lng,
+        h.meal_plans, h.pets_allowed, h.children_allowed, h.accessibility
+      FROM services s
+      JOIN hotels h ON s.id = h.service_id
+      WHERE s.type = 'hotel' AND s.is_active = 1
+    `;
+    const params: (string | number)[] = [];
+
+    const conditions: string[] = [];
+    if (filters.name) {
+      conditions.push('s.name LIKE ?');
+      params.push(`%${filters.name}%`);
+    }
+    if (filters.location) {
+      // Assuming location filter searches street_address
+      conditions.push('h.street_address LIKE ?');
+      params.push(`%${filters.location}%`);
+    }
+    if (filters.minRating !== undefined) {
+      conditions.push('h.star_rating >= ?');
+      params.push(filters.minRating);
+    }
+    if (filters.islandId !== undefined) {
+      conditions.push('s.island_id = ?');
+      params.push(filters.islandId);
+    }
+
+    if (conditions.length > 0) {
+      query += ' AND (' + conditions.join(' AND ') + ')';
+    }
+
+    query += ' ORDER BY s.name ASC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    return db.prepare(query).bind(...params).all<any>(); // Define a proper Hotel interface later
+  }
+
+  /**
+   * Counts the total number of active hotels, applying optional filters.
+   * @param filters Optional filters for name, location, minRating.
+   * @returns Promise<{ total: number } | null>
+   */
+  async countAllHotels(filters: HotelFilters = {}) {
+    const db = await getDatabase();
+    let query = `
+      SELECT COUNT(s.id) AS total
+      FROM services s
+      JOIN hotels h ON s.id = h.service_id
+      WHERE s.type = 'hotel' AND s.is_active = 1
+    `;
+    const params: (string | number)[] = [];
+
+    const conditions: string[] = [];
+    if (filters.name) {
+      conditions.push('s.name LIKE ?');
+      params.push(`%${filters.name}%`);
+    }
+    if (filters.location) {
+      conditions.push('h.street_address LIKE ?');
+      params.push(`%${filters.location}%`);
+    }
+    if (filters.minRating !== undefined) {
+      conditions.push('h.star_rating >= ?');
+      params.push(filters.minRating);
+    }
+    if (filters.islandId !== undefined) {
+      conditions.push('s.island_id = ?');
+      params.push(filters.islandId);
+    }
+
+    if (conditions.length > 0) {
+      query += ' AND (' + conditions.join(' AND ') + ')';
+    }
+
+    return db.prepare(query).bind(...params).first<{ total: number }>();
   }
 
 }

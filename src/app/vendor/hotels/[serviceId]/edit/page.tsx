@@ -1,0 +1,618 @@
+// Path: /home/ubuntu/vendor_frontend_rev2/test 2/src/app/(vendor)/hotels/[serviceId]/edit/page.tsx
+"use client";
+export const dynamic = "force-dynamic";
+
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { useFetch } from "@/hooks/useFetch";
+import { toast } from "@/hooks/use-toast";
+import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info, BedDouble, AlertCircle, XCircle } from "lucide-react"; // Added BedDouble
+import Link from "next/link";
+import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import CheckboxGroup
+
+// --- Interfaces ---
+interface AuthUser {
+  id: string | number;
+  role_id?: number;
+}
+
+interface VendorProfile {
+  id: number;
+  verified: number;
+  type: string;
+}
+
+interface Island {
+  id: number;
+  name: string;
+}
+
+// Existing Hotel Data Interface (from GET /api/vendor/hotels/[serviceId])
+interface VendorHotel {
+  service_id: number;
+  name: string;
+  description: string | null;
+  price: number | string; // price_base
+  cancellation_policy: string | null;
+  images: string | null; // JSON array string or legacy
+  island_id: number;
+  is_active: number;
+  star_rating: number;
+  check_in_time: string;
+  check_out_time: string;
+  total_rooms: number | null;
+  facilities: string | null; // JSON array string or legacy
+  meal_plans: string | null; // JSON array string or legacy
+  pets_allowed: number;
+  children_allowed: number;
+  accessibility_features: string | null;
+  street_address: string;
+  geo_lat: number | null;
+  geo_lng: number | null;
+}
+
+// Updated Form state interface (using arrays for multi-select)
+interface HotelFormData {
+  name: string;
+  description: string;
+  price: string;
+  cancellation_policy: string;
+  images: string[]; // Use array for TagInput
+  island_id: string;
+  // is_active is handled separately
+  star_rating: string;
+  check_in_time: string;
+  check_out_time: string;
+  total_rooms: string;
+  facilities: string[]; // Use array for CheckboxGroup
+  meal_plans: string[]; // Use array for CheckboxGroup
+  pets_allowed: boolean;
+  children_allowed: boolean;
+  accessibility_features: string;
+  street_address: string;
+  geo_lat: string;
+  geo_lng: string;
+}
+
+interface ApiResponse {
+    success: boolean;
+    message?: string;
+    data?: any;
+}
+
+// --- Define Options for Checkbox Groups (Same as Add page) ---
+const facilityOptions = [
+  { label: "Wi-Fi", value: "wifi" },
+  { label: "Swimming Pool", value: "pool" },
+  { label: "Restaurant", value: "restaurant" },
+  { label: "Bar/Lounge", value: "bar" },
+  { label: "Gym/Fitness Center", value: "gym" },
+  { label: "Spa", value: "spa" },
+  { label: "Parking", value: "parking" },
+  { label: "Room Service", value: "room_service" },
+  { label: "Air Conditioning", value: "ac" },
+  { label: "Laundry Service", value: "laundry" },
+  { label: "Business Center", value: "business_center" },
+  { label: "Airport Shuttle", value: "shuttle" },
+];
+
+const mealPlanOptions = [
+  { label: "Breakfast Included (CP)", value: "cp" },
+  { label: "Breakfast & Dinner (MAP)", value: "map" },
+  { label: "All Meals (AP)", value: "ap" },
+  { label: "Room Only (EP)", value: "ep" },
+  { label: "All Inclusive (AI)", value: "ai" },
+];
+
+// --- Helper Components (LoadingSpinner, VerificationPending, IncorrectVendorType, TagInput) ---
+const LoadingSpinner = ({ text = "Loading..." }: { text?: string }) => (
+    <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-2" />
+        <span>{text}</span>
+    </div>
+);
+
+const VerificationPending = () => (
+    <div className="flex flex-col items-center justify-center py-10">
+        <AlertCircle className="h-12 w-12 text-yellow-500 mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Verification Pending</h2>
+        <p className="text-gray-600 text-center">
+            Your account is currently pending verification. You'll be able to add services once verified.
+        </p>
+    </div>
+);
+
+const IncorrectVendorType = () => (
+    <div className="flex flex-col items-center justify-center py-10">
+        <XCircle className="h-12 w-12 text-red-500 mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Incorrect Vendor Type</h2>
+        <p className="text-gray-600 text-center">
+            This section is only available for hotel vendors. Please contact support if you think this is a mistake.
+        </p>
+    </div>
+);
+
+// Simple Tag Input Component (Reused)
+const TagInput = ({ label, name, value, onChange, placeholder, helperText }: {
+    label: string;
+    name: string;
+    value: string[];
+    onChange: (name: string, value: string[]) => void;
+    placeholder?: string;
+    helperText?: string;
+}) => {
+    const [inputValue, setInputValue] = useState("");
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "," || e.key === "Enter") {
+            e.preventDefault();
+            const newTag = inputValue.trim();
+            if (newTag && !value.includes(newTag)) {
+                onChange(name, [...value, newTag]);
+            }
+            setInputValue("");
+        }
+    };
+
+    const removeTag = (tagToRemove: string) => {
+        onChange(name, value.filter(tag => tag !== tagToRemove));
+    };
+
+    return (
+        <div>
+            <label htmlFor={name} className="block text-sm font-medium text-gray-700">{label}</label>
+            <div className="mt-1 flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-md shadow-sm">
+                {value.map(tag => (
+                    <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                        {tag}
+                        <button type="button" onClick={() => removeTag(tag)} className="ml-1 text-blue-600 hover:text-blue-800">
+                            &times;
+                        </button>
+                    </span>
+                ))}
+                <input
+                    type="text"
+                    id={name}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={placeholder || "Add item and press Enter or comma"}
+                    className="flex-grow px-1 py-0.5 border-none focus:ring-0 sm:text-sm"
+                />
+            </div>
+            {helperText && <p className="mt-1 text-xs text-gray-500">{helperText}</p>}
+        </div>
+    );
+};
+
+// --- Main Edit Hotel Form Component ---
+function EditHotelForm() {
+  const router = useRouter();
+  const params = useParams();
+  const serviceId = params.serviceId as string;
+
+  const { user: authUser, isLoading: authLoading, isAuthenticated } = useAuth() as {
+    user: AuthUser | null;
+    isLoading: boolean;
+    isAuthenticated: boolean;
+  };
+
+  const [formData, setFormData] = useState<HotelFormData | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 1. Fetch Vendor Profile
+  const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
+  const { data: vendorProfile, error: profileError, status: profileStatus } = useFetch<VendorProfile | null>(profileApiUrl);
+  const isVerified = vendorProfile?.verified === 1;
+  const isHotelVendor = vendorProfile?.type === "hotel";
+
+  // 2. Fetch Existing Hotel Data
+  const shouldFetchHotel = profileStatus === "success" && vendorProfile && isHotelVendor && !!serviceId; // Removed verification check
+  const hotelApiUrl = shouldFetchHotel ? `/api/vendor/hotels/${serviceId}` : null;
+  const { data: hotelData, error: hotelError, status: hotelStatus } = useFetch<VendorHotel | null>(hotelApiUrl);
+
+  // 3. Fetch Islands
+  const { data: islands = [], status: islandsStatus } = useFetch<Island[]>("/api/islands");
+
+  // --- Utility Function to Safely Parse JSON Array String ---
+  const parseJsonArray = (jsonString: string | null | undefined, fieldName: string): string[] => {
+      if (!jsonString || typeof jsonString !== "string" || !jsonString.trim()) {
+          return [];
+      }
+      try {
+          const parsed = JSON.parse(jsonString);
+          if (Array.isArray(parsed) && parsed.every(item => typeof item === "string")) {
+              return parsed;
+          }
+          console.warn(`Parsed ${fieldName} data is not an array of strings:`, parsed);
+          // Attempt recovery if it's a single string
+          if (typeof parsed === "string" && parsed.trim()) {
+              return [parsed.trim()];
+          }
+          // Attempt recovery if it's comma-separated legacy string
+          if (typeof jsonString === "string" && jsonString.includes(",")) {
+             return jsonString.split(",").map(s => s.trim()).filter(Boolean);
+          }
+          return [];
+      } catch (e) {
+          console.error(`Failed to parse ${fieldName} JSON:`, jsonString, e);
+          // Fallback: treat as comma-separated if parsing fails
+          if (jsonString.includes(",")) {
+              return jsonString.split(",").map(s => s.trim()).filter(Boolean);
+          }
+          // Treat as single item if not empty
+          if (jsonString.trim()) {
+              return [jsonString.trim()];
+          }
+          return [];
+      }
+  };
+
+  // --- Populate Form Data Effect ---
+  useEffect(() => {
+    if (hotelStatus === "success" && hotelData) {
+      const hotel = hotelData;
+
+      setFormData({
+        name: hotel.name || "",
+        description: hotel.description || "",
+        price: (typeof hotel.price === "number" ? hotel.price.toString() : hotel.price) || "",
+        cancellation_policy: hotel.cancellation_policy || "",
+        images: parseJsonArray(hotel.images, "images"),
+        island_id: hotel.island_id?.toString() || "",
+        star_rating: hotel.star_rating?.toString() || "",
+        check_in_time: hotel.check_in_time || "14:00",
+        check_out_time: hotel.check_out_time || "12:00",
+        total_rooms: hotel.total_rooms?.toString() || "",
+        facilities: parseJsonArray(hotel.facilities, "facilities"),
+        meal_plans: parseJsonArray(hotel.meal_plans, "meal_plans"),
+        pets_allowed: hotel.pets_allowed === 1,
+        children_allowed: hotel.children_allowed === 1,
+        accessibility_features: hotel.accessibility_features || "",
+        street_address: hotel.street_address || "",
+        geo_lat: hotel.geo_lat?.toString() || "",
+        geo_lng: hotel.geo_lng?.toString() || "",
+      });
+    } else if (hotelStatus === "success" && !hotelData) {
+        toast({ variant: "destructive", title: "Error", description: "Hotel not found." });
+        router.replace("/hotels");
+    } else if (hotelStatus === "error") {
+        toast({ variant: "destructive", title: "Error Loading Hotel", description: hotelError?.message || "Could not load hotel details." });
+        router.replace("/hotels");
+    }
+  }, [hotelStatus, hotelData, hotelError, router]);
+
+  // --- Authorization & Loading Checks ---
+  useEffect(() => {
+    if (!authLoading && (!isAuthenticated || authUser?.role_id !== 3)) {
+      router.replace("/auth/signin?reason=unauthorized_vendor");
+    }
+  }, [authLoading, isAuthenticated, authUser, router]);
+
+  const isLoading = authLoading || profileStatus === "loading" || islandsStatus === "loading" || (shouldFetchHotel && hotelStatus === "loading");
+
+  if (isLoading) {
+    return <LoadingSpinner text="Loading Edit Hotel Form..." />;
+  }
+
+  // Handle Profile Fetch Error/Not Found
+  if (profileStatus === "error" || (profileStatus === "success" && !vendorProfile)) {
+    return <div className="text-red-600">Error loading vendor profile or profile not found.</div>;
+  }
+
+  // --- Conditional Rendering based on Type ---
+  if (!isHotelVendor) {
+    return <IncorrectVendorType />;
+  }
+
+  // Handle Hotel Not Found (redundant check, handled in useEffect)
+  if (hotelStatus === "success" && !hotelData) {
+      return <div className="text-orange-600">Hotel with ID {serviceId} not found.</div>;
+  }
+
+  // If formData is still null after loading and checks
+  if (!formData) {
+      return <LoadingSpinner text="Preparing form..." />;
+  }
+
+  // --- Form Handlers ---
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value, type } = e.target;
+
+    if (type === "checkbox") {
+      const { checked } = e.target as HTMLInputElement;
+      setFormData((prev) => prev ? { ...prev, [name]: checked } : null);
+    } else {
+      setFormData((prev) => prev ? { ...prev, [name]: value } : null);
+    }
+  };
+
+  // Specific handler for CheckboxGroup and TagInput components
+  const handleArrayChange = (name: string, values: string[]) => {
+    setFormData((prev) => prev ? { ...prev, [name]: values } : null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!formData) return;
+    setIsSubmitting(true);
+
+    // Basic validation
+    if (!formData.island_id || !formData.star_rating || !formData.name.trim() || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0 || isNaN(parseInt(formData.total_rooms, 10)) || parseInt(formData.total_rooms, 10) <= 0) {
+        toast({ variant: "destructive", title: "Validation Error", description: "Please fill all required fields (*) with valid data." });
+        setIsSubmitting(false);
+        return;
+    }
+
+    // --- Data Transformation for API (PUT Request) ---
+    try {
+      const apiPayload = {
+          name: formData.name,
+          description: formData.description,
+          island_id: parseInt(formData.island_id, 10) || null,
+          star_rating: parseInt(formData.star_rating, 10) || null,
+          check_in_time: formData.check_in_time || null,
+          check_out_time: formData.check_out_time || null,
+          price: parseFloat(formData.price) || 0,
+          total_rooms: parseInt(formData.total_rooms, 10) || null,
+          pets_allowed: formData.pets_allowed,
+          children_allowed: formData.children_allowed,
+          accessibility_features: formData.accessibility_features,
+          street_address: formData.street_address,
+          geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
+          geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
+          cancellation_policy: formData.cancellation_policy,
+          // Stringify arrays
+          images: JSON.stringify(formData.images),
+          facilities: JSON.stringify(formData.facilities),
+          meal_plans: JSON.stringify(formData.meal_plans),
+      };
+
+      // --- API Call (PUT) ---
+      console.log("API Payload being sent:", apiPayload); // DEBUG: Log payload
+      const response = await fetch(`/api/vendor/hotels/${serviceId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(apiPayload),
+      });
+
+      const result: ApiResponse = await response.json();
+
+      if (response.ok && result.success) {
+          toast({ title: "Success", description: "Hotel updated successfully." });
+          router.push("/hotels");
+      } else {
+          throw new Error(result.message || "Failed to update hotel");
+      }
+    } catch (error: any) {
+        console.error("Update Hotel Error:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: error.message || "An unexpected error occurred.",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
+  // --- Render Form ---
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
+        {/* Breadcrumb Navigation */}
+        <nav className="mb-4 text-sm text-gray-500" aria-label="Breadcrumb">
+            <ol className="list-none p-0 inline-flex">
+            <li className="flex items-center">
+                <Link href="/dashboard" className="hover:underline">Dashboard</Link>
+                <span className="mx-2">/</span>
+            </li>
+            <li className="flex items-center">
+                <Link href="/hotels" className="hover:underline">Hotels</Link>
+                <span className="mx-2">/</span>
+            </li>
+            <li className="flex items-center text-gray-700">
+                Edit: {formData.name || "Hotel"}
+            </li>
+            </ol>
+        </nav>
+
+      <h2 className="text-2xl font-bold mb-6">Edit Hotel: {formData.name}</h2>
+
+      {/* Link to Manage Rooms */} 
+      <div className="mb-6">
+          <Link 
+              href={`/hotels/${serviceId}/rooms`}
+              className="inline-flex items-center bg-blue-100 text-blue-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-200"
+          >
+              <BedDouble size={16} className="mr-2" /> Manage Hotel Rooms
+          </Link>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* --- Basic Information --- */}
+        <fieldset className="border p-4 rounded-md shadow-sm">
+            <legend className="text-lg font-semibold px-2">Basic Information</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Name */}
+                <div className="md:col-span-2">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">Hotel Name <span className="text-red-500">*</span></label>
+                    <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                {/* Island */}
+                <div>
+                    <label htmlFor="island_id" className="block text-sm font-medium text-gray-700">Island <span className="text-red-500">*</span></label>
+                    <select id="island_id" name="island_id" value={formData.island_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled>-- Select Island --</option>
+                        {islands?.map(island => (
+                        <option key={island.id} value={island.id}>{island.name}</option>
+                        ))}
+                    </select>
+                    {islandsStatus === "error" && <p className="text-xs text-red-500 mt-1">Error loading islands.</p>}
+                </div>
+                 {/* Star Rating */}
+                <div>
+                    <label htmlFor="star_rating" className="block text-sm font-medium text-gray-700">Star Rating <span className="text-red-500">*</span></label>
+                    <select id="star_rating" name="star_rating" value={formData.star_rating} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled>-- Select Rating --</option>
+                        <option value="1">1 Star</option>
+                        <option value="2">2 Stars</option>
+                        <option value="3">3 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="5">5 Stars</option>
+                    </select>
+                </div>
+                 {/* Description */}
+                <div className="md:col-span-2">
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={3} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                </div>
+                 {/* Base Price */}
+                <div>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">Base Price per Night (INR) <span className="text-red-500">*</span></label>
+                    <input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 3500"/>
+                </div>
+                {/* Total Rooms */}
+                <div>
+                    <label htmlFor="total_rooms" className="block text-sm font-medium text-gray-700">Total Rooms <span className="text-red-500">*</span></label>
+                    <input type="number" id="total_rooms" name="total_rooms" value={formData.total_rooms} onChange={handleChange} required min="1" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 25"/>
+                </div>
+                 {/* is_active status is usually managed on the list page, not here */}
+            </div>
+        </fieldset>
+
+        {/* --- Details & Policies --- */}
+        <fieldset className="border p-4 rounded-md shadow-sm">
+            <legend className="text-lg font-semibold px-2">Details & Policies</legend>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                 {/* Check-in Time */}
+                <div>
+                    <label htmlFor="check_in_time" className="block text-sm font-medium text-gray-700">Check-in Time</label>
+                    <input type="time" id="check_in_time" name="check_in_time" value={formData.check_in_time} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                {/* Check-out Time */}
+                <div>
+                    <label htmlFor="check_out_time" className="block text-sm font-medium text-gray-700">Check-out Time</label>
+                    <input type="time" id="check_out_time" name="check_out_time" value={formData.check_out_time} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                {/* Cancellation Policy */}
+                <div className="md:col-span-2">
+                    <label htmlFor="cancellation_policy" className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
+                    <textarea id="cancellation_policy" name="cancellation_policy" value={formData.cancellation_policy} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Full refund if cancelled 48 hours prior..."></textarea>
+                </div>
+                {/* Pets Allowed */}
+                <div className="flex items-center">
+                    <input type="checkbox" id="pets_allowed" name="pets_allowed" checked={formData.pets_allowed} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                    <label htmlFor="pets_allowed" className="ml-2 block text-sm text-gray-900">Pets Allowed</label>
+                </div>
+                {/* Children Allowed */}
+                <div className="flex items-center">
+                    <input type="checkbox" id="children_allowed" name="children_allowed" checked={formData.children_allowed} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                    <label htmlFor="children_allowed" className="ml-2 block text-sm text-gray-900">Children Allowed</label>
+                </div>
+                {/* Accessibility Features */}
+                <div className="md:col-span-2">
+                    <label htmlFor="accessibility_features" className="block text-sm font-medium text-gray-700">Accessibility Features</label>
+                    <textarea id="accessibility_features" name="accessibility_features" value={formData.accessibility_features} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Wheelchair accessible rooms, Ramps..."></textarea>
+                </div>
+            </div>
+        </fieldset>
+
+        {/* --- Facilities & Meal Plans --- */}
+        <fieldset className="border p-4 rounded-md shadow-sm">
+            <legend className="text-lg font-semibold px-2">Facilities & Meal Plans</legend>
+            <div className="space-y-6 mt-4">
+                {/* Facilities */}
+                <CheckboxGroup
+                    label="Facilities Available"
+                    name="facilities"
+                    options={facilityOptions}
+                    selectedValues={formData.facilities}
+                    onChange={handleArrayChange}
+                    helperText="Select all facilities offered by the hotel."
+                />
+                {/* Meal Plans */}
+                <CheckboxGroup
+                    label="Meal Plans Offered"
+                    name="meal_plans"
+                    options={mealPlanOptions}
+                    selectedValues={formData.meal_plans}
+                    onChange={handleArrayChange}
+                    helperText="Select the types of meal plans available."
+                />
+            </div>
+        </fieldset>
+
+        {/* --- Images --- */}
+        <fieldset className="border p-4 rounded-md shadow-sm">
+            <legend className="text-lg font-semibold px-2">Images</legend>
+            <div className="mt-4">
+                {/* Images */}
+                <TagInput
+                    label="Hotel Image URLs"
+                    name="images"
+                    value={formData.images}
+                    onChange={handleArrayChange}
+                    placeholder="Enter image URL and press Enter"
+                    helperText="Add URLs for photos of the hotel (lobby, exterior, etc.). Room photos are added separately."
+                />
+            </div>
+        </fieldset>
+
+        {/* --- Location --- */}
+        <fieldset className="border p-4 rounded-md shadow-sm">
+            <legend className="text-lg font-semibold px-2">Location</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                {/* Street Address */}
+                <div className="md:col-span-2">
+                    <label htmlFor="street_address" className="block text-sm font-medium text-gray-700">Street Address</label>
+                    <input type="text" id="street_address" name="street_address" value={formData.street_address} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                </div>
+                 {/* Latitude */}
+                <div>
+                    <label htmlFor="geo_lat" className="block text-sm font-medium text-gray-700">Latitude</label>
+                    <input type="number" id="geo_lat" name="geo_lat" value={formData.geo_lat} onChange={handleChange} step="any" placeholder="e.g., 12.9716" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <p className="mt-1 text-xs text-gray-500 flex items-center"><Info size={12} className="mr-1"/> Optional. Helps with map display.</p>
+                </div>
+                 {/* Longitude */}
+                <div>
+                    <label htmlFor="geo_lng" className="block text-sm font-medium text-gray-700">Longitude</label>
+                    <input type="number" id="geo_lng" name="geo_lng" value={formData.geo_lng} onChange={handleChange} step="any" placeholder="e.g., 77.5946" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                     <p className="mt-1 text-xs text-gray-500 flex items-center"><Info size={12} className="mr-1"/> Optional. Helps with map display.</p>
+                </div>
+            </div>
+        </fieldset>
+
+        {/* --- Form Actions --- */}
+        <div className="flex justify-end space-x-3 pt-4">
+          <Link href="/hotels" className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={Boolean(isSubmitting) || Boolean(isLoading)}
+            className="inline-flex items-center bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <><Loader2 size={16} className="animate-spin mr-2" /> Saving Changes...</>
+            ) : (
+              "Save Changes"
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// --- Wrap with Suspense ---
+export default function EditVendorHotelPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner text="Loading Edit Hotel Page..." />}>
+      <EditHotelForm />
+    </Suspense>
+  );
+}
+
