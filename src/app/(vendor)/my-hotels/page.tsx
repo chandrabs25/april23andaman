@@ -138,7 +138,7 @@ function HotelListContent() {
 
   // 2. Fetch Hotels (only if profile loaded, verified, and is a hotel vendor)
   const shouldFetchHotels = profileStatus === "success" && vendorProfile && isVerified && isHotelVendor;
-  const hotelsApiUrl = shouldFetchHotels ? `/api/vendor/hotels` : null; // Uses GET from hotels route.ts
+  const hotelsApiUrl = shouldFetchHotels ? `/api/vendor/my-hotels` : null; // Uses GET from hotels route.ts
   const { data: fetchedHotels, error: hotelsError, status: hotelsStatus } = useFetch<VendorHotel[] | null>(hotelsApiUrl);
 
   // 3. Fetch Islands (for displaying names)
@@ -250,7 +250,7 @@ function HotelListContent() {
     setIsDeleting(serviceId);
     try {
       // Use the hotel-specific delete endpoint
-      const response = await fetch(`/api/vendor/hotels/${serviceId}`, {
+      const response = await fetch(`/api/vendor/my-hotels/${serviceId}`, {
         method: "DELETE",
       });
       // Type the result

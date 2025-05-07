@@ -13,7 +13,7 @@ const VendorNav = () => {
         try {
             await logout(); // Changed signOut to logout
             toast({ title: "Logged Out", description: "You have been successfully logged out." });
-            router.push('/auth/signin'); // Redirect to the sign-in page after logout
+            router.push('/login'); // Redirect to the sign-in page after logout
         } catch (error) {
             console.error("Logout failed:", error);
             toast({ variant: "destructive", title: "Logout Failed", description: "Could not log you out. Please try again." });
@@ -22,9 +22,9 @@ const VendorNav = () => {
 
     const navItems = [
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { href: '/services', label: 'Services', icon: Package },
-        { href: '/hotels', label: 'Hotels', icon: Hotel },
-        { href: '/bookings', label: 'Bookings', icon: CalendarCheck },
+        { href: '/my-services', label: 'Services', icon: Package },
+        { href: '/my-hotels', label: 'Hotels', icon: Hotel },
+        { href: '/manage-bookings', label: 'Bookings', icon: CalendarCheck },
     ];
 
     return (

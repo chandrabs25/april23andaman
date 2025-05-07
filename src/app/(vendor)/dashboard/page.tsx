@@ -120,11 +120,17 @@ const VerificationPending = () => (
 function VendorDashboardContent() {
   const [activeTab, setActiveTab] = useState('overview');
   const router = useRouter();
-  const { user: authUser, isLoading: authLoading, isAuthenticated, logout } = useAuth() as {
+  const { user: authUser, isLoading: authLoading, isAuthenticated, logout: originalLogout } = useAuth() as {
       user: AuthUser | null;
       isLoading: boolean;
       isAuthenticated: boolean;
       logout: () => Promise<void>;
+  };
+  
+  // Custom logout function for vendor dashboard that redirects to /login
+  const logout = async () => {
+    await originalLogout();
+    router.push('/login');
   };
 
   const userId = authUser?.id;
@@ -176,7 +182,7 @@ function VendorDashboardContent() {
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || authUser?.role_id !== 3)) {
         console.log(`Vendor Dashboard Auth Check Failed: authLoading=${authLoading}, isAuthenticated=${isAuthenticated}, role_id=${authUser?.role_id}. Redirecting.`);
-        router.replace('/auth/signin?reason=unauthorized_vendor');
+        router.replace('/login?reason=unauthorized_vendor');
     }
   }, [authLoading, isAuthenticated, authUser, router]);
 
@@ -518,4 +524,3 @@ export default function VendorDashboardPage() {
         </Suspense>
     );
 }
-

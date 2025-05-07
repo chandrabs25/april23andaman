@@ -351,7 +351,7 @@ const Header = () => {
                 <div className="mt-6 pt-6 border-t border-gray-200 text-sm text-gray-600">
                   {/* Using original contact details */}
                   <p className="flex items-center mb-2"><Phone size={14} className={`mr-2 text-[${primaryColor}]`} />+91 123-456-7890</p>
-                  <p className="flex items-center"><Mail size={14} className={`mr-2 text-[${primaryColor}]`} />info@andamanwonders.com</p>
+                  <p className="flex items-center"><Mail size={14} className={`mr-2 text-[${primaryColor}]`} />info@reachandaman.com</p>
                 </div>
               </div>
             </div>

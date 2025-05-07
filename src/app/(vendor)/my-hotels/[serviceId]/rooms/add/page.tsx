@@ -1,4 +1,4 @@
-// Path: /home/ubuntu/vendor_frontend_rev2/test 2/src/app/(vendor)/hotels/[serviceId]/rooms/add/page.tsx
+// Path: /home/ubuntu/vendor_frontend_rev2/test 2/src/app/(vendor)/my-hotels/[serviceId]/rooms/add/page.tsx
 "use client";
 export const dynamic = "force-dynamic";
 
@@ -171,7 +171,7 @@ function AddRoomForm() {
 
   // 2. Fetch Parent Hotel Details
   const shouldFetchHotel = profileStatus === "success" && vendorProfile && isVerified && isHotelVendor && !!serviceId;
-  const hotelApiUrl = shouldFetchHotel ? `/api/vendor/hotels/${serviceId}` : null;
+  const hotelApiUrl = shouldFetchHotel ? `/api/vendor/my-hotels/${serviceId}` : null;
   const { data: hotelData, error: hotelError, status: hotelStatus } = useFetch<VendorHotel | null>(hotelApiUrl);
   const hotelName = hotelData?.name || `Hotel ${serviceId}`;
 
@@ -207,7 +207,7 @@ function AddRoomForm() {
       <div className="text-red-600">
         Error loading hotel details: {hotelError?.message || "Hotel not found or permission denied."}
         <br />
-        <Link href="/hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+        <Link href="/my-hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
             Return to Hotel List
         </Link>
       </div>
@@ -244,12 +244,12 @@ function AddRoomForm() {
       base_price: parseFloat(formData.base_price),
       max_guests: parseInt(formData.max_guests, 10),
       quantity_available: formData.quantity_available ? parseInt(formData.quantity_available, 10) : null, // Use null if empty
-      amenities: JSON.stringify(formData.amenities), // Stringify array
-      images: JSON.stringify(formData.images), // Stringify array
+      amenities: formData.amenities, // Send as array, server will stringify
+      images: formData.images.length > 0 ? formData.images.join(',') : null, // Join to comma-separated string or null
     };
 
     try {
-      const response = await fetch(`/api/vendor/hotels/${serviceId}/rooms`, {
+      const response = await fetch(`/api/vendor/my-hotels/${serviceId}/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -262,7 +262,7 @@ function AddRoomForm() {
       }
 
       toast({ title: "Success", description: "Room type added successfully." });
-      router.push(`/hotels/${serviceId}/rooms`);
+      router.push(`/my-hotels/${serviceId}/rooms`);
     } catch (error) {
       console.error("Error adding room type:", error);
       toast({
@@ -286,15 +286,15 @@ function AddRoomForm() {
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center">
-                <Link href="/hotels" className="hover:text-indigo-600 hover:underline">Hotels</Link>
+                <Link href="/my-hotels" className="hover:text-indigo-600 hover:underline">Hotels</Link>
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center">
-                 <Link href={`/hotels/${serviceId}/edit`} className="hover:text-indigo-600 hover:underline truncate max-w-[150px]">{hotelName}</Link>
+                 <Link href={`/my-hotels/${serviceId}/edit`} className="hover:text-indigo-600 hover:underline truncate max-w-[150px]">{hotelName}</Link>
             </li>
              <li><span className="text-gray-400">/</span></li>
              <li className="flex items-center">
-                 <Link href={`/hotels/${serviceId}/rooms`} className="hover:text-indigo-600 hover:underline">Rooms</Link>
+                 <Link href={`/my-hotels/${serviceId}/rooms`} className="hover:text-indigo-600 hover:underline">Rooms</Link>
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center text-gray-700 font-medium">
@@ -364,7 +364,7 @@ function AddRoomForm() {
 
         {/* --- Form Actions --- */}
         <div className="flex justify-end space-x-4 pt-4">
-          <Link href={`/hotels/${serviceId}/rooms`} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition duration-150 ease-in-out">
+          <Link href={`/my-hotels/${serviceId}/rooms`} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition duration-150 ease-in-out">
             Cancel
           </Link>
           <button

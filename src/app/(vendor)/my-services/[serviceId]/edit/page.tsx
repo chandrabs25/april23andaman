@@ -211,7 +211,7 @@ function EditServiceForm() {
 
   // 2. Fetch Existing Service Data
   const shouldFetchService = profileStatus === "success" && vendorProfile && !isHotelVendor && !!serviceId;
-  const serviceApiUrl = shouldFetchService ? `/api/vendor/services/${serviceId}` : null;
+  const serviceApiUrl = shouldFetchService ? `/api/vendor/my-services/${serviceId}` : null;
   const { data: serviceData, error: serviceError, status: serviceStatus } = useFetch<VendorService | null>(serviceApiUrl);
 
   // 3. Fetch Islands
@@ -455,7 +455,7 @@ function EditServiceForm() {
 
     // --- API Call (PUT) ---
     try {
-      const response = await fetch(`/api/vendor/services/${serviceId}`, {
+      const response = await fetch(`/api/vendor/my-services/${serviceId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(apiPayload),

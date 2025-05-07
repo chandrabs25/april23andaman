@@ -287,7 +287,7 @@ function AddHotelForm() {
         };
 
         // --- API Call ---
-        const response = await fetch("/api/vendor/hotels", {
+        const response = await fetch("/api/vendor/my-hotels", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(apiPayload),
@@ -296,11 +296,10 @@ function AddHotelForm() {
         const result: ApiResponse = await response.json();
 
         if (response.ok && result.success) {
-            toast({ title: "Success", description: "Hotel added successfully." });
-            // Optionally redirect to the edit page of the newly created hotel if ID is returned
-            // const newHotelId = result.data?.id;
-            // if (newHotelId) { router.push(`/hotels/${newHotelId}/edit`); }
-            // else { router.push("/hotels"); }
+            toast({ title: "Success", description: "Hotel added successfully!" });
+            if (result.data && result.data.service_id) {
+                router.push(`/my-hotels/${result.data.service_id}/edit`);
+            }
             router.push("/my-hotels"); // Redirect to the hotel list for now
         } else {
             throw new Error(result.message || "Failed to add hotel");

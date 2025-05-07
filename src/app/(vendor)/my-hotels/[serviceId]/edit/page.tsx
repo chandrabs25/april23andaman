@@ -215,7 +215,7 @@ function EditHotelForm() {
 
   // 2. Fetch Existing Hotel Data
   const shouldFetchHotel = profileStatus === "success" && vendorProfile && isHotelVendor && !!serviceId; // Removed verification check
-  const hotelApiUrl = shouldFetchHotel ? `/api/vendor/hotels/${serviceId}` : null;
+  const hotelApiUrl = shouldFetchHotel ? `/api/vendor/my-hotels/${serviceId}` : null;
   const { data: hotelData, error: hotelError, status: hotelStatus } = useFetch<VendorHotel | null>(hotelApiUrl);
 
   // 3. Fetch Islands
@@ -358,27 +358,26 @@ function EditHotelForm() {
       const apiPayload = {
           name: formData.name,
           description: formData.description,
-          island_id: parseInt(formData.island_id, 10) || null,
-          star_rating: parseInt(formData.star_rating, 10) || null,
-          check_in_time: formData.check_in_time || null,
-          check_out_time: formData.check_out_time || null,
-          price_base: parseFloat(formData.price) || 0,
-          total_rooms: parseInt(formData.total_rooms, 10) || null,
+          island_id: parseInt(formData.island_id, 10), // Ensure it's a number; validation should prevent NaN
+          star_rating: parseInt(formData.star_rating, 10), // Ensure it's a number; validation should prevent NaN
+          check_in_time: formData.check_in_time || "00:00", // Provide default if empty, server expects string
+          check_out_time: formData.check_out_time || "00:00", // Provide default if empty, server expects string
+          price: parseFloat(formData.price) || 0, // Changed from price_base
+          total_rooms: parseInt(formData.total_rooms, 10) || undefined, // Send undefined if not a valid number
           pets_allowed: formData.pets_allowed,
           children_allowed: formData.children_allowed,
           accessibility_features: formData.accessibility_features,
-          street_address: formData.street_address,
+          street_address: formData.street_address || "N/A", // Provide default if empty, server expects string
           geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
           geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
-          cancellation_policy: formData.cancellation_policy,
-          // Stringify arrays
-          images: JSON.stringify(formData.images),
-          facilities: JSON.stringify(formData.facilities),
-          meal_plans: JSON.stringify(formData.meal_plans),
+          cancellation_policy: formData.cancellation_policy, // Send as string, server will stringify if object/array
+          images: formData.images.length > 0 ? JSON.stringify(formData.images) : null, // Stringify or send null
+          facilities: formData.facilities, // Send as array
+          meal_plans: formData.meal_plans, // Send as array
       };
 
       // --- API Call (PUT) ---
-      const response = await fetch(`/api/hotels/${serviceId}`, {
+      const response = await fetch(`/api/vendor/my-hotels/${serviceId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(apiPayload),

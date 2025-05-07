@@ -121,8 +121,8 @@ const Footer = () => {
               </li>
               <li className="flex items-start">
                 <Mail size={16} className={`mr-2 mt-0.5 text-[${primaryColorLighter}] flex-shrink-0`} />
-                <a href="mailto:info@andamanwonders.com" className={footerLinkStyle}>
-                  info@andamanwonders.com
+                <a href="mailto:info@reachandaman.com" className={footerLinkStyle}>
+                  info@reachandaman.com
                 </a>
               </li>
               <li className={`${footerTextStyle.replace(' mb-4', '')} mt-2 pl-8`}>

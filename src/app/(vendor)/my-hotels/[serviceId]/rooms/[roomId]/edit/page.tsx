@@ -1,4 +1,4 @@
-// Path: /home/ubuntu/vendor_frontend_rev2/test 2/src/app/(vendor)/hotels/[serviceId]/rooms/[roomId]/edit/page.tsx
+// Path: /home/ubuntu/vendor_frontend_rev2/test 2/src/app/(vendor)/my-hotels/[serviceId]/rooms/[roomId]/edit/page.tsx
 "use client";
 export const dynamic = "force-dynamic";
 
@@ -176,13 +176,13 @@ function EditRoomForm() {
 
   // 2. Fetch Parent Hotel Details
   const shouldFetchHotel = profileStatus === "success" && vendorProfile && isVerified && isHotelVendor && !!serviceId;
-  const hotelApiUrl = shouldFetchHotel ? `/api/vendor/hotels/${serviceId}` : null;
+  const hotelApiUrl = shouldFetchHotel ? `/api/vendor/my-hotels/${serviceId}` : null;
   const { data: hotelData, error: hotelError, status: hotelStatus } = useFetch<VendorHotel | null>(hotelApiUrl);
   const hotelName = hotelData?.name || `Hotel ${serviceId}`;
 
   // 3. Fetch Existing Room Type Data
   const shouldFetchRoom = hotelStatus === "success" && !!hotelData && !!roomId;
-  const roomApiUrl = shouldFetchRoom ? `/api/vendor/hotels/${serviceId}/rooms/${roomId}` : null;
+  const roomApiUrl = shouldFetchRoom ? `/api/vendor/my-hotels/${serviceId}/rooms/${roomId}` : null;
   const { data: roomData, error: roomError, status: roomStatus } = useFetch<RoomType | null>(roomApiUrl);
 
   // --- Utility Function to Safely Parse JSON Array String ---
@@ -248,37 +248,13 @@ function EditRoomForm() {
   }
 
   // Handle Hotel Fetch Error or Not Found
-  if (hotelStatus === "error" || (hotelStatus === "success" && !hotelData)) {
+  if (hotelStatus === "error" || (hotelStatus === "success" && !hotelData) || roomStatus === "error" || (roomStatus === "success" && !roomData)) {
     return (
       <div className="text-red-600">
-        Error loading hotel details: {hotelError?.message || "Hotel not found or permission denied."}
+        {hotelError?.message || roomError?.message || "Could not load hotel or room details."}
         <br />
-        <Link href="/hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+        <Link href="/my-hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
             Return to Hotel List
-        </Link>
-      </div>
-    );
-  }
-
-  // Handle Room Fetch Error or Not Found
-  if (roomStatus === "error") {
-    return (
-      <div className="text-red-600">
-        Error loading room details: {roomError?.message || "Unknown error"}
-        <br />
-        <Link href={`/hotels/${serviceId}/rooms`} className="text-sm text-blue-600 hover:underline mt-2 inline-block">
-            Return to Room List for {hotelName}
-        </Link>
-      </div>
-    );
-  }
-  if (roomStatus === "success" && !roomData) {
-     return (
-      <div className="text-orange-600">
-        Room not found or you do not have permission to edit it.
-        <br />
-        <Link href={`/hotels/${serviceId}/rooms`} className="text-sm text-blue-600 hover:underline mt-2 inline-block">
-            Return to Room List for {hotelName}
         </Link>
       </div>
     );
@@ -325,7 +301,7 @@ function EditRoomForm() {
     };
 
     try {
-      const response = await fetch(`/api/vendor/hotels/${serviceId}/rooms/${roomId}`, {
+      const response = await fetch(`/api/vendor/my-hotels/${serviceId}/rooms/${roomId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -338,7 +314,7 @@ function EditRoomForm() {
       }
 
       toast({ title: "Success", description: "Room type updated successfully." });
-      router.push(`/hotels/${serviceId}/rooms`);
+      router.push(`/my-hotels/${serviceId}/rooms`);
     } catch (error) {
       console.error("Error updating room type:", error);
       toast({
@@ -362,15 +338,15 @@ function EditRoomForm() {
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center">
-                <Link href="/hotels" className="hover:text-indigo-600 hover:underline">Hotels</Link>
+                <Link href="/my-hotels" className="hover:text-indigo-600 hover:underline">Hotels</Link>
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center">
-                 <Link href={`/hotels/${serviceId}/edit`} className="hover:text-indigo-600 hover:underline truncate max-w-[150px]">{hotelName}</Link>
+                 <Link href={`/my-hotels/${serviceId}/edit`} className="hover:text-indigo-600 hover:underline truncate max-w-[150px]">{hotelName}</Link>
             </li>
              <li><span className="text-gray-400">/</span></li>
              <li className="flex items-center">
-                 <Link href={`/hotels/${serviceId}/rooms`} className="hover:text-indigo-600 hover:underline">Rooms</Link>
+                 <Link href={`/my-hotels/${serviceId}/rooms`} className="hover:text-indigo-600 hover:underline">Rooms</Link>
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center text-gray-700 font-medium truncate max-w-[150px]">
@@ -440,7 +416,7 @@ function EditRoomForm() {
 
         {/* --- Form Actions --- */}
         <div className="flex justify-end space-x-4 pt-4">
-          <Link href={`/hotels/${serviceId}/rooms`} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition duration-150 ease-in-out">
+          <Link href={`/my-hotels/${serviceId}/rooms`} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition duration-150 ease-in-out">
             Cancel
           </Link>
           <button

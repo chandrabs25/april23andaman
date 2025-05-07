@@ -164,7 +164,7 @@ export default function VendorLoginPage() {
                <div className="flex items-start"> <div className="bg-white/20 p-2 rounded-full mr-4 flex-shrink-0"> <User className="h-5 w-5" /> </div> <div> <h3 className="font-semibold">Grow Your Reach</h3> <p className="text-sm text-blue-200 opacity-80">Connect with travelers looking for Andaman experiences.</p> </div> </div>
              </div>
              <div className="mt-10 border-t border-blue-500/50 pt-6 text-sm text-blue-200 opacity-80">
-                 Need Help? Contact us at <a href="mailto:vendors@andamanexplorer.com" className="font-medium hover:underline">vendors@andamanexplorer.com</a>
+                 Need Help? Contact us at <a href="mailto:vendors@reachandaman.com" className="font-medium hover:underline">vendors@reachandaman.com</a>
              </div>
            </div>
          </div>

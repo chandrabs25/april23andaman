@@ -1,4 +1,4 @@
-// Path: /home/ubuntu/vendor_dev/component/(vendor)/hotels/[serviceId]/rooms/page.tsx
+// Path: /home/ubuntu/vendor_dev/component/(vendor)/my-hotels/[serviceId]/rooms/page.tsx
 "use client";
 export const dynamic = "force-dynamic";
 
@@ -139,13 +139,13 @@ function RoomListContent() {
 
   // 2. Fetch Parent Hotel Details (for context and checks)
   const shouldFetchHotel = profileStatus === "success" && vendorProfile && isVerified && isHotelVendor && !!serviceId;
-  const hotelApiUrl = shouldFetchHotel ? `/api/vendor/hotels/${serviceId}` : null;
+  const hotelApiUrl = shouldFetchHotel ? `/api/vendor/my-hotels/${serviceId}` : null;
   const { data: hotelData, error: hotelError, status: hotelStatus } = useFetch<VendorHotel | null>(hotelApiUrl);
   const hotelName = hotelData?.name || `Hotel ${serviceId}`;
 
   // 3. Fetch Room Types (only if hotel fetch successful)
   const shouldFetchRooms = hotelStatus === "success" && !!hotelData;
-  const roomsApiUrl = shouldFetchRooms ? `/api/vendor/hotels/${serviceId}/rooms` : null;
+  const roomsApiUrl = shouldFetchRooms ? `/api/vendor/my-hotels/${serviceId}/rooms` : null;
   const { data: fetchedRooms, error: roomsError, status: roomsStatus } = useFetch<RoomType[] | null>(roomsApiUrl);
 
   // Update local room types state when fetch completes
@@ -203,7 +203,7 @@ function RoomListContent() {
       <div className="text-red-600">
         Error loading hotel details: {hotelError?.message || "Hotel not found or permission denied."}
         <br />
-        <Link href="/hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+        <Link href="/my-hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
             Return to Hotel List
         </Link>
       </div>
@@ -227,7 +227,7 @@ function RoomListContent() {
     setIsDeleting(roomId);
     try {
       // Use the room-specific delete endpoint
-      const response = await fetch(`/api/vendor/hotels/${serviceId}/rooms/${roomId}`, {
+      const response = await fetch(`/api/vendor/my-hotels/${serviceId}/rooms/${roomId}`, {
         method: "DELETE",
       });
       // Type the result
@@ -293,7 +293,7 @@ function RoomListContent() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{room.max_guests}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{room.quantity_available ?? "N/A"}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                    <Link href={`/hotels/${serviceId}/rooms/${room.id}/edit`} className="text-indigo-600 hover:text-indigo-900 inline-flex items-center" title="Edit Room Type">
+                    <Link href={`/my-hotels/${serviceId}/rooms/${room.id}/edit`} className="text-indigo-600 hover:text-indigo-900 inline-flex items-center" title="Edit Room Type">
                       <Edit size={16} />
                     </Link>
                     <button

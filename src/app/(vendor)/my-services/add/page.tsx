@@ -117,7 +117,7 @@ const IncorrectVendorType = () => (
         <Info className="h-8 w-8 mb-2" />
         <h3 className="text-lg font-semibold mb-1">Incorrect Vendor Type</h3>
         <p className="text-sm text-center">This form is for adding Rentals or Activities. Hotel vendors should manage rooms via the Hotels section.</p>
-        <Link href="/hotels" className="mt-3 text-sm text-indigo-600 hover:underline">
+        <Link href="/my-hotels" className="mt-3 text-sm text-indigo-600 hover:underline">
             Go to Hotel Management
         </Link>
     </div>
@@ -331,7 +331,7 @@ function AddServiceForm() {
 
     // --- API Call ---
     try {
-      const response = await fetch("/api/vendor/services", {
+      const response = await fetch("/api/vendor/my-services", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(apiPayload),

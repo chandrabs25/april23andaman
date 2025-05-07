@@ -64,7 +64,7 @@ const IncorrectVendorType = () => (
      <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-md mb-8" role="alert">
         <p className="font-bold flex items-center"><Hotel size={18} className="mr-2"/>Incorrect Vendor Type</p>
         <p>This page is for managing Rentals and Activities. Hotel vendors should use the Hotel Management section.</p>
-        <Link href="/hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">Go to Hotel Management</Link>
+        <Link href="/my-hotels" className="text-sm text-blue-600 hover:underline mt-2 inline-block">Go to Hotel Management</Link>
         <br/>
         <Link href="/dashboard" className="text-sm text-gray-600 hover:underline mt-1 inline-block">Return to Dashboard</Link>
     </div>
@@ -91,7 +91,7 @@ function ServiceListContent() {
 
     // 2. Fetch Services (only if profile loaded, verified, and not a hotel vendor)
     const shouldFetchServices = profileStatus === 'success' && vendorProfile && isVerified && !isHotelVendor;
-    const servicesApiUrl = shouldFetchServices ? `/api/vendor/services` : null; // Uses GET from route.ts
+    const servicesApiUrl = shouldFetchServices ? `/api/vendor/my-services` : null; // Uses GET from route.ts
     const { data: fetchedServices, error: servicesError, status: servicesStatus } = useFetch<VendorService[] | null>(servicesApiUrl);
 
     // 3. Fetch Islands (for displaying names)
@@ -151,7 +151,7 @@ function ServiceListContent() {
     const handleToggleActive = async (serviceId: number, currentStatus: boolean) => {
         setIsToggling(serviceId);
         try {
-            const response = await fetch(`/api/vendor/services/${serviceId}/status`, {
+            const response = await fetch(`/api/vendor/my-services/${serviceId}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isActive: !currentStatus }),
@@ -178,7 +178,7 @@ function ServiceListContent() {
         }
         setIsDeleting(serviceId);
         try {
-            const response = await fetch(`/api/vendor/services/${serviceId}`, {
+            const response = await fetch(`/api/vendor/my-services/${serviceId}`, {
                 method: 'DELETE',
             });
             // Type the result
