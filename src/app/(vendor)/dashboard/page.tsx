@@ -327,22 +327,22 @@ function VendorDashboardContent() {
                   {isHotelVendor ? (
                       // Hotel Management Links
                       <div className="space-y-3">
-                          <Link href="/hotels" className="inline-flex items-center text-blue-600 hover:underline">
+                          <Link href="/my-hotels" className="inline-flex items-center text-blue-600 hover:underline">
                               <Hotel size={16} className="mr-2"/> Manage Hotels
                           </Link>
                           <br/>
-                          <Link href="/hotels/add" className="inline-flex items-center text-blue-600 hover:underline">
+                          <Link href="/my-hotels/add" className="inline-flex items-center text-blue-600 hover:underline">
                               <Hotel size={16} className="mr-2"/> Add New Hotel
                           </Link>
                       </div>
                   ) : (
                       // Generic Service (Rental/Activity) Management Links
                       <div className="space-y-3">
-                          <Link href="/services" className="inline-flex items-center text-blue-600 hover:underline">
+                          <Link href="/my-services" className="inline-flex items-center text-blue-600 hover:underline">
                               <Package size={16} className="mr-2"/> Manage Services
                           </Link>
                           <br/>
-                          <Link href="/services/add" className="inline-flex items-center text-blue-600 hover:underline">
+                          <Link href="/my-services/add" className="inline-flex items-center text-blue-600 hover:underline">
                               <Package size={16} className="mr-2"/> Add New Service
                           </Link>
                       </div>
@@ -410,7 +410,7 @@ function VendorDashboardContent() {
       case 'services':
         // Redirect or show placeholder if accessed directly (actual content is in /services or /hotels)
         // This tab button itself is hidden if not verified
-        router.replace(isHotelVendor ? '/hotels' : '/services');
+        router.replace(isHotelVendor ? '/my-hotels' : '/my-services');
         return <LoadingSpinner text={`Redirecting to ${isHotelVendor ? 'Hotels' : 'Services'}...`} />;
       case 'bookings':
         // Redirect or show placeholder if accessed directly

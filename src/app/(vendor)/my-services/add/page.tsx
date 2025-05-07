@@ -339,7 +339,7 @@ function AddServiceForm() {
       const result: ApiResponse = await response.json();
       if (response.ok && result.success) {
         toast({ title: "Success", description: "Service added successfully." });
-        router.push("/services");
+        router.push("/my-services");
       } else {
         throw new Error(result.message || "Failed to add service");
       }
@@ -362,7 +362,7 @@ function AddServiceForm() {
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center">
-                <Link href="/services" className="hover:text-indigo-600 hover:underline">Services</Link>
+                <Link href="/my-services" className="hover:text-indigo-600 hover:underline">Services</Link>
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center text-gray-700 font-medium">
@@ -605,7 +605,7 @@ function AddServiceForm() {
 
         {/* --- Form Actions --- */}
         <div className="flex justify-end space-x-4 pt-4">
-          <Link href="/services" className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition duration-150 ease-in-out">
+          <Link href="/my-services" className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition duration-150 ease-in-out">
             Cancel
           </Link>
           <button

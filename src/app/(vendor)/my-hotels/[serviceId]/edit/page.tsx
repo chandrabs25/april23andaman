@@ -282,10 +282,10 @@ function EditHotelForm() {
       });
     } else if (hotelStatus === "success" && !hotelData) {
         toast({ variant: "destructive", title: "Error", description: "Hotel not found." });
-        router.replace("/hotels");
+        router.replace("/my-hotels");
     } else if (hotelStatus === "error") {
         toast({ variant: "destructive", title: "Error Loading Hotel", description: hotelError?.message || "Could not load hotel details." });
-        router.replace("/hotels");
+        router.replace("/my-hotels");
     }
   }, [hotelStatus, hotelData, hotelError, router]);
 
@@ -388,7 +388,7 @@ function EditHotelForm() {
 
       if (response.ok && result.success) {
           toast({ title: "Success", description: "Hotel updated successfully." });
-          router.push("/hotels");
+          router.push("/my-hotels");
       } else {
           throw new Error(result.message || "Failed to update hotel");
       }
@@ -415,7 +415,7 @@ function EditHotelForm() {
                 <span className="mx-2">/</span>
             </li>
             <li className="flex items-center">
-                <Link href="/hotels" className="hover:underline">Hotels</Link>
+                <Link href="/my-hotels" className="hover:underline">Hotels</Link>
                 <span className="mx-2">/</span>
             </li>
             <li className="flex items-center text-gray-700">
@@ -429,7 +429,7 @@ function EditHotelForm() {
       {/* Link to Manage Rooms */} 
       <div className="mb-6">
           <Link 
-              href={`/hotels/${serviceId}/rooms`}
+              href={`/my-hotels/${serviceId}/rooms`}
               className="inline-flex items-center bg-blue-100 text-blue-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-200"
           >
               <BedDouble size={16} className="mr-2" /> Manage Hotel Rooms
@@ -592,7 +592,7 @@ function EditHotelForm() {
 
         {/* --- Form Actions --- */}
         <div className="flex justify-end space-x-3 pt-4">
-          <Link href="/hotels" className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">
+          <Link href="/my-hotels" className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">
             Cancel
           </Link>
           <button

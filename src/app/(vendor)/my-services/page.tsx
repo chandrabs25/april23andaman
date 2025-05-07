@@ -202,7 +202,7 @@ function ServiceListContent() {
         <div className="bg-white p-6 rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold">Manage Services (Rentals & Activities)</h2>
-                <Link href="/services/add" className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">
+                <Link href="/my-services/add" className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">
                     <PlusCircle size={16} className="mr-2" /> Add New Service
                 </Link>
             </div>
@@ -246,7 +246,7 @@ function ServiceListContent() {
                                         </button>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                        <Link href={`/services/${service.id}/edit`} className="text-indigo-600 hover:text-indigo-900 inline-flex items-center" title="Edit">
+                                        <Link href={`/my-services/${service.id}/edit`} className="text-indigo-600 hover:text-indigo-900 inline-flex items-center" title="Edit">
                                             <Edit size={16} />
                                         </Link>
                                         <button

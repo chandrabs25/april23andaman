@@ -102,7 +102,7 @@ const IncorrectVendorType = () => (
       Service Management section.
     </p>
     <Link
-      href="/services"
+      href="/my-services"
       className="text-sm text-blue-600 hover:underline mt-2 inline-block"
     >
       Go to Service Management
@@ -281,7 +281,7 @@ function HotelListContent() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">Manage Hotels</h2>
         <Link
-          href="/hotels/add"
+          href="/my-hotels/add"
           className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700"
         >
           <PlusCircle size={16} className="mr-2" /> Add New Hotel
@@ -329,10 +329,10 @@ function HotelListContent() {
                     </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                    <Link href={`/hotels/${hotel.service_id}/rooms`} className="text-green-600 hover:text-green-900 inline-flex items-center" title="Manage Rooms">
+                    <Link href={`/my-hotels/${hotel.service_id}/rooms`} className="text-green-600 hover:text-green-900 inline-flex items-center" title="Manage Rooms">
                       <BedDouble size={16} />
                     </Link>
-                    <Link href={`/hotels/${hotel.service_id}/edit`} className="text-indigo-600 hover:text-indigo-900 inline-flex items-center" title="Edit Hotel">
+                    <Link href={`/my-hotels/${hotel.service_id}/edit`} className="text-indigo-600 hover:text-indigo-900 inline-flex items-center" title="Edit Hotel">
                       <Edit size={16} />
                     </Link>
                     <button

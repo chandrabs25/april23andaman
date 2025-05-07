@@ -131,9 +131,9 @@ export async function POST(request: NextRequest) {
       // Generic Service Fields
       name: string;
       description?: string;
-      price: number; // Base per-night rate
-      cancellation_policy?: any;
-      images?: string | null; // General Hotel Photos (URL)
+      price_base: number; // Changed from price
+      cancellation_policy?: string; // Expecting a string
+      images?: string | null; // Expecting stringified JSON array
       island_id: number;
       is_active?: boolean;
       // Hotel-Specific Fields
@@ -141,14 +141,15 @@ export async function POST(request: NextRequest) {
       check_in_time: string; // e.g., "14:00"
       check_out_time: string; // e.g., "12:00"
       total_rooms?: number;
-      facilities?: string[]; // e.g., ["Pool", "Gym", "Spa"]
-      meal_plans?: string[]; // e.g., ["Breakfast", "Half-board"]
+      facilities?: string; // Expecting stringified JSON array
+      meal_plans?: string;  // Expecting stringified JSON array
       pets_allowed?: boolean;
       children_allowed?: boolean;
       accessibility_features?: string;
       street_address: string;
       geo_lat?: number | null;
       geo_lng?: number | null;
+      // service_provider_id is derived from auth, not in body
     }
 
     const body: HotelCreateBody = await request.json();
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
     // Basic validation
     if (
       !body.name ||
-      body.price === undefined ||
+      body.price_base === undefined || // Changed from price
       body.island_id === undefined ||
       body.star_rating === undefined ||
       !body.check_in_time ||
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message:
-            "Missing required fields (name, price, island_id, star_rating, check_in_time, check_out_time, street_address)",
+            "Missing required fields (name, price_base, island_id, star_rating, check_in_time, check_out_time, street_address)",
         },
         { status: 400 }
       );
@@ -181,6 +182,36 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // --- Enhanced Validation for Numeric Fields ---
+    const priceBase = Number(body.price_base);
+    if (isNaN(priceBase) || priceBase <= 0) {
+      return NextResponse.json(
+        { success: false, message: "Invalid or missing price. Price must be a positive number." },
+        { status: 400 }
+      );
+    }
+
+    const starRating = Number(body.star_rating);
+    if (isNaN(starRating) || starRating < 1 || starRating > 5) {
+         return NextResponse.json(
+            { success: false, message: "Invalid star rating. Must be between 1 and 5." },
+            { status: 400 }
+        );
+    }
+
+    let totalRooms: number | null = null;
+    if (body.total_rooms !== undefined && body.total_rooms !== null) {
+        const parsedRooms = Number(body.total_rooms);
+        if (isNaN(parsedRooms) || parsedRooms < 0) { // Assuming 0 rooms could be valid for a new listing before rooms are defined
+            return NextResponse.json(
+                { success: false, message: "Invalid total number of rooms. Must be a non-negative number." },
+                { status: 400 }
+            );
+        }
+        totalRooms = parsedRooms;
+    }
+    // --- End Enhanced Validation ---
 
     // Define type for serviceData based on createService input
     interface ServiceDataForCreate {
@@ -204,56 +235,56 @@ export async function POST(request: NextRequest) {
       type: "hotel", // Hardcoded type
       provider_id: serviceProvider.id,
       island_id: Number(body.island_id),
-      price: Number(body.price),
+      price: priceBase, // Use validated priceBase
       availability: null, // Hotels usually manage availability via rooms
-      images: body.images ?? null,
+      images: body.images ?? null, // Already a string (stringified JSON)
       amenities: null, // Use hotel-specific fields instead
-      cancellation_policy: null, // Initialize as null, will be updated below
+      cancellation_policy: body.cancellation_policy ?? null, // Directly use the string
       is_active: body.is_active === undefined ? true : body.is_active,
     };
 
-    // Safely stringify JSON fields for hotelData
-    let facilitiesString: string | null = null;
-    try {
-        if (body.facilities) {
-            facilitiesString = JSON.stringify(body.facilities);
-        }
-    } catch (e) {
-        console.error("Hotel Creation: Failed to stringify facilities", e);
-        return NextResponse.json({ success: false, message: 'Invalid format for facilities data.' }, { status: 400 });
-    }
+    // Safely stringify JSON fields for hotelData - NO, frontend already sends stringified
+    // let facilitiesString: string | null = null;
+    // try {
+    //     if (body.facilities) {
+    //         facilitiesString = JSON.stringify(body.facilities);
+    //     }
+    // } catch (e) {
+    //     console.error("Hotel Creation: Failed to stringify facilities", e);
+    //     return NextResponse.json({ success: false, message: 'Invalid format for facilities data.' }, { status: 400 });
+    // }
 
-    let mealPlansString: string | null = null;
-    try {
-        if (body.meal_plans) {
-            mealPlansString = JSON.stringify(body.meal_plans);
-        }
-    } catch (e) {
-        console.error("Hotel Creation: Failed to stringify meal_plans", e);
-        return NextResponse.json({ success: false, message: 'Invalid format for meal plans data.' }, { status: 400 });
-    }
+    // let mealPlansString: string | null = null;
+    // try {
+    //     if (body.meal_plans) {
+    //         mealPlansString = JSON.stringify(body.meal_plans);
+    //     }
+    // } catch (e) {
+    //     console.error("Hotel Creation: Failed to stringify meal_plans", e);
+    //     return NextResponse.json({ success: false, message: 'Invalid format for meal plans data.' }, { status: 400 });
+    // }
 
-    // Safely stringify JSON for cancellation_policy in serviceData
-    let cancellationPolicyString: string | null = null;
-    try {
-        if (body.cancellation_policy) {
-            cancellationPolicyString = JSON.stringify(body.cancellation_policy);
-        }
-    } catch (e) {
-        console.error("Hotel Creation: Failed to stringify cancellation_policy", e);
-        return NextResponse.json({ success: false, message: 'Invalid format for cancellation policy data.' }, { status: 400 });
-    }
+    // Safely stringify JSON for cancellation_policy in serviceData - NO, frontend sends string
+    // let cancellationPolicyString: string | null = null;
+    // try {
+    //     if (body.cancellation_policy) {
+    //         cancellationPolicyString = JSON.stringify(body.cancellation_policy);
+    //     }
+    // } catch (e) {
+    //     console.error("Hotel Creation: Failed to stringify cancellation_policy", e);
+    //     return NextResponse.json({ success: false, message: 'Invalid format for cancellation policy data.' }, { status: 400 });
+    // }
     // Update serviceData with the safe string
-    serviceData.cancellation_policy = cancellationPolicyString;
+    // serviceData.cancellation_policy = cancellationPolicyString; // Use body.cancellation_policy directly
 
     const hotelData = {
       // service_id will be set after service creation
-      star_rating: Number(body.star_rating),
+      star_rating: starRating, // Use validated starRating
       check_in_time: body.check_in_time,
       check_out_time: body.check_out_time,
-      total_rooms: body.total_rooms ? Number(body.total_rooms) : null,
-      facilities: facilitiesString, // Use safe string
-      meal_plans: mealPlansString, // Use safe string
+      total_rooms: totalRooms, // Use validated totalRooms
+      facilities: body.facilities ?? null, // Use directly as it's already a stringified JSON
+      meal_plans: body.meal_plans ?? null,   // Use directly as it's already a stringified JSON
       pets_allowed: body.pets_allowed === undefined ? false : body.pets_allowed,
       children_allowed:
         body.children_allowed === undefined ? true : body.children_allowed,

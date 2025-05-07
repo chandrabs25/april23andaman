@@ -101,7 +101,7 @@ const IncorrectVendorType = () => (
       Service Management section.
     </p>
     <Link
-      href="/services"
+      href="/my-services"
       className="text-sm text-blue-600 hover:underline mt-2 inline-block"
     >
       Go to Service Management
@@ -255,13 +255,13 @@ function RoomListContent() {
   // --- Render Room List ---
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
-      <Link href="/hotels" className="text-sm text-blue-600 hover:underline mb-4 inline-flex items-center">
+      <Link href="/my-hotels" className="text-sm text-blue-600 hover:underline mb-4 inline-flex items-center">
         <ArrowLeft size={14} className="mr-1" /> Back to Hotels
       </Link>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">Manage Rooms for: {hotelName}</h2>
         <Link
-          href={`/hotels/${serviceId}/rooms/add`}
+          href={`/my-hotels/${serviceId}/rooms/add`}
           className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700"
         >
           <PlusCircle size={16} className="mr-2" /> Add New Room Type

@@ -287,7 +287,7 @@ function AddHotelForm() {
         };
 
         // --- API Call ---
-        const response = await fetch("/api/hotels", {
+        const response = await fetch("/api/vendor/hotels", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(apiPayload),

@@ -313,7 +313,7 @@ function EditServiceForm() {
       });
     } else if (serviceStatus === "error") {
         toast({ variant: "destructive", title: "Error Loading Service", description: serviceError?.message || "Could not load service details." });
-        router.replace("/services");
+        router.replace("/my-services");
     }
   }, [serviceStatus, serviceData, serviceError, router]);
 
@@ -345,7 +345,7 @@ function EditServiceForm() {
     return (
       <div className="text-red-600">
         Service not found or could not be loaded.
-        <Link href="/services" className="ml-2 text-blue-600 hover:underline">Back to Services</Link>
+        <Link href="/my-services" className="ml-2 text-blue-600 hover:underline">Back to Services</Link>
       </div>
     );
   }
@@ -463,7 +463,7 @@ function EditServiceForm() {
       const result: ApiResponse = await response.json();
       if (response.ok && result.success) {
         toast({ title: "Success", description: "Service updated successfully." });
-        router.push("/services");
+        router.push("/my-services");
       } else {
         throw new Error(result.message || "Failed to update service");
       }
@@ -486,7 +486,7 @@ function EditServiceForm() {
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center">
-                <Link href="/services" className="hover:text-indigo-600 hover:underline">Services</Link>
+                <Link href="/my-services" className="hover:text-indigo-600 hover:underline">Services</Link>
             </li>
             <li><span className="text-gray-400">/</span></li>
             <li className="flex items-center text-gray-700 font-medium">
@@ -711,7 +711,7 @@ function EditServiceForm() {
 
         {/* --- Form Actions --- */}
         <div className="flex justify-end space-x-4 pt-4">
-          <Link href="/services" className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition duration-150 ease-in-out">
+          <Link href="/my-services" className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition duration-150 ease-in-out">
             Cancel
           </Link>
           <button
