@@ -60,6 +60,17 @@ const HotelsPage = () => {
     isLoading: isLoadingHotels,
   } = useFetch<PaginatedHotelsResponse>(getHotelsListUrl());
 
+  // Defensive extraction for hotels list and pagination
+  const hotelsList = Array.isArray(hotelsResponse)
+    ? hotelsResponse
+    : hotelsResponse?.data || [];
+
+  const totalHotels = Array.isArray(hotelsResponse)
+    ? hotelsResponse.length
+    : hotelsResponse?.total || 0;
+
+  const totalPages = Math.ceil(totalHotels / ITEMS_PER_PAGE);
+
   // Fetch selected hotel details
   const { 
     data: selectedHotelDetailsResponse, 
@@ -77,8 +88,6 @@ const HotelsPage = () => {
     setSelectedHotelId(null);
   };
   
-  const totalPages = hotelsResponse?.total ? Math.ceil(hotelsResponse.total / ITEMS_PER_PAGE) : 0;
-
   // Render selected hotel details
   if (selectedHotelId) {
     if (isLoadingSelectedHotel) {
@@ -202,9 +211,9 @@ const HotelsPage = () => {
       {isLoadingHotels && <div className="text-center"><Loader2 className="h-8 w-8 animate-spin inline-block" /> Loading hotels...</div>}
       {hotelsError && <div className="text-center text-red-500"><AlertTriangle className="inline-block mr-2" />Error loading hotels: {hotelsError.message}</div>}
       
-      {!isLoadingHotels && !hotelsError && hotelsResponse && hotelsResponse.data.length > 0 && (
+      {!isLoadingHotels && !hotelsError && hotelsList.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {hotelsResponse.data.map((hotel: Hotel) => (
+          {hotelsList.map((hotel: Hotel) => (
             <div
               key={hotel.id}
               className="border p-4 rounded-lg shadow-sm hover:shadow-lg transition-shadow cursor-pointer bg-white flex flex-col justify-between"
@@ -232,7 +241,7 @@ const HotelsPage = () => {
           ))}
         </div>
       )}
-      {!isLoadingHotels && !hotelsError && hotelsResponse && hotelsResponse.data.length === 0 && (
+      {!isLoadingHotels && !hotelsError && hotelsList.length === 0 && (
         <p className="text-center text-gray-500">No hotels found matching your criteria. Try adjusting your filters.</p>
       )}
 
