@@ -74,9 +74,18 @@ interface ServiceCardProps {
 }
 
 const ServiceCard: React.FC<ServiceCardProps> = ({ service, categoryColor }) => {
-  const imageUrl = service.images && service.images.length > 0 ? service.images[0] : "/images/placeholder_service.jpg";
+  const [imgError, setImgError] = useState(false);
+  const imageUrl = !imgError && service.images && service.images.length > 0 
+    ? service.images[0] 
+    : "/images/placeholder_service.jpg";
   const rating = service.rating || null;
   const priceDisplay = service.price_details || (service.price_numeric ? `${service.price_numeric.toLocaleString("en-IN")} (approx)` : "Price on request");
+
+  // Handle image error
+  const handleImageError = () => {
+    console.log("Image failed to load:", imageUrl);
+    setImgError(true);
+  };
 
   let detailPath = "";
   if (service.service_category === "transport") {
@@ -96,12 +105,13 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, categoryColor }) => 
           fill
           className="object-cover"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          onError={(e) => (e.currentTarget.src = "/images/placeholder_service.jpg")}
+          onError={handleImageError}
+          priority={false}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
         <div style={{ backgroundColor: categoryColor }} className={`absolute top-3 right-3 text-white text-xs font-semibold py-1 px-2.5 rounded-full shadow-md flex items-center`}>
           {service.service_category === "transport" ? <Car size={12} className="mr-1" /> : service.service_category === "rental" ? <ShoppingBag size={12} className="mr-1" /> : <Tag size={12} className="mr-1" />}
-          {service.type.replace(/^(transport_|rental_|activity_)/, '').replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+          {(service.type || "").replace(/^(transport_|rental_|activity_)/, '').replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
         </div>
       </div>
 
