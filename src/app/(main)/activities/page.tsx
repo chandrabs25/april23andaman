@@ -178,8 +178,19 @@ const ActivityCard = ({ activity }: ActivityCardProps) => {
 
 // --- Main Component Logic ---
 function ActivitiesContent() {
+  console.log('🔍 [Activities Page] Component rendering');
+  
   // Fetch data using the hook
   const { data: apiResponse, error, status } = useFetch<Activity[]>('/api/activities');
+  
+  // Log fetch state each render
+  console.log('🔍 [Activities Page] useFetch state:', { 
+    status, 
+    hasError: !!error, 
+    errorMessage: error?.message,
+    hasData: !!apiResponse,
+    dataLength: apiResponse?.length || 0
+  });
 
   // State for activity filters
   const [filters, setFilters] = useState({
@@ -194,6 +205,31 @@ function ActivitiesContent() {
 
   // Extract activities from the response, default to empty array
   const activities = apiResponse || [];
+  
+  // Log activities data when it changes
+  useEffect(() => {
+    if (apiResponse) {
+      console.log(`🔍 [Activities Page] Received ${apiResponse.length} activities from API`);
+      
+      // Log first 3 activities for debugging (if they exist)
+      const logLimit = Math.min(apiResponse.length, 3);
+      for (let i = 0; i < logLimit; i++) {
+        console.log(`🔍 [Activities Page] Activity ${i+1}/${logLimit}:`, {
+          id: apiResponse[i].id,
+          name: apiResponse[i].name,
+          island_name: apiResponse[i].island_name,
+          price: apiResponse[i].price,
+          images: apiResponse[i].images?.substring(0, 50) // Just show start of images string
+        });
+      }
+      
+      if (apiResponse.length === 0) {
+        console.warn('⚠️ [Activities Page] API returned empty activities array');
+      }
+    } else if (status === 'success') {
+      console.warn('⚠️ [Activities Page] API request successful but no data received');
+    }
+  }, [apiResponse, status]);
 
   // Filter activities based on user selections
   const filteredActivities = activities.filter(activity => {
@@ -237,6 +273,9 @@ function ActivitiesContent() {
 
     return true;
   });
+  
+  // Log filtered activities count
+  console.log(`🔍 [Activities Page] After filtering: ${filteredActivities.length} activities`);
 
   // Handle filter changes
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -253,6 +292,9 @@ function ActivitiesContent() {
       activityType: ''
     });
   };
+
+  // Add a log before returning the JSX to confirm we're reaching the render
+  console.log('🔍 [Activities Page] Rendering component with filtered activities:', filteredActivities.length);
 
   return (
     <>
@@ -430,6 +472,41 @@ function ActivitiesContent() {
             </div>
           </div>
 
+          {/* Add a debugging panel - can be removed in production */}
+          <div className="mt-8 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+            <h3 className="font-semibold mb-2">Debug Information</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <p><span className="font-medium">API Status:</span> {status}</p>
+                <p><span className="font-medium">Error:</span> {error ? error.message : 'None'}</p>
+                <p><span className="font-medium">API Data:</span> {apiResponse ? `${apiResponse.length} items` : 'None'}</p>
+              </div>
+              <div>
+                <p><span className="font-medium">Filters:</span></p>
+                <ul className="ml-4 list-disc">
+                  <li>Search: {filters.search || 'None'}</li>
+                  <li>Island: {filters.island || 'None'}</li>
+                  <li>Price Range: {filters.priceRange || 'None'}</li>
+                  <li>Activity Type: {filters.activityType || 'None'}</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-2">
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-3 py-1 bg-blue-500 text-white rounded text-xs"
+              >
+                Refresh Page
+              </button>
+              <button 
+                onClick={() => console.log('API Data:', apiResponse)}
+                className="px-3 py-1 bg-gray-500 text-white rounded text-xs ml-2"
+              >
+                Log Data to Console
+              </button>
+            </div>
+          </div>
+
           {/* Activities list with enhanced states */}
           {status === 'loading' ? (
             <LoadingSpinner />
@@ -473,6 +550,15 @@ function ActivitiesContent() {
                 </button>
               </div>
             )
+          )}
+
+          {/* Add a debug message if no activities are found */}
+          {status === 'success' && filteredActivities.length === 0 && (
+            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded relative my-6">
+              <strong className="font-bold">No activities found!</strong>
+              <p>Debug info: API status: {status}, Error: {error?.message || 'none'}, Data received: {activities.length}</p>
+              <p>Try clearing your filters or refreshing the page.</p>
+            </div>
           )}
 
           {/* Added Featured Activities section */}
@@ -684,6 +770,7 @@ function ActivitiesContent() {
 
 // Wrap the main content component with Suspense
 export default function ActivitiesPage() {
+  console.log('🔍 [Activities Page] Main page component rendering');
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <ActivitiesContent />

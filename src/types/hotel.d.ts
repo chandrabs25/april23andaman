@@ -31,6 +31,18 @@ export interface Hotel {
   rooms?: Room[]; // Optional: To be populated when fetching hotel details
   created_at?: string; // ISO 8601 date string
   updated_at?: string; // ISO 8601 date string
+  
+  // Adding fields from the hotels table
+  check_in_time?: string;
+  check_out_time?: string;
+  cancellation_policy?: string; // From policies JSON or separate field
+  pets_allowed?: boolean;
+  children_allowed?: boolean;
+  accessibility?: string;
+  facilities?: string[];
+  meal_plans?: string[];
+  street_address?: string;
+  total_rooms?: number;
 }
 
 // For API responses, especially for lists with pagination
@@ -46,6 +58,7 @@ export interface HotelFilters {
   name?: string;
   location?: string; // Could be city or country
   minRating?: number;
+  islandId?: number; // Added islandId filter
   // Potentially add more filters like amenities, price range for rooms etc.
 }
 

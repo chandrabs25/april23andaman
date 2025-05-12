@@ -1,7 +1,7 @@
 // src/hooks/useFetch.ts
 'use client';
 
-import { useState, useEffect } from 'react'; // Removed unused useCallback
+import { useState, useEffect, useRef } from 'react'; // Added useRef for tracking first render
 
 // Define loading states
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
@@ -23,7 +23,13 @@ interface FetchState<T> {
 // Generic hook for data fetching with loading states
 // The hook itself is generic over the expected data type T
 export function useFetch<T>(url: string | null, options?: RequestInit) { // Allow URL to be null to prevent fetching initially
-  console.log('[useFetch] Hook initialized/re-rendered. URL:', url);
+  // Use useRef to track if this is the first render to reduce unnecessary log spam
+  const isInitialRender = useRef(true);
+  
+  if (isInitialRender.current) {
+    console.log('[useFetch] Hook initialized. URL:', url);
+    isInitialRender.current = false;
+  }
 
   // --- Use single state object ---
   const [state, setState] = useState<FetchState<T>>({
@@ -32,10 +38,33 @@ export function useFetch<T>(url: string | null, options?: RequestInit) { // Allo
     status: 'idle',
   });
 
-  // Memoize options using JSON.stringify to handle object changes
-  const memoizedOptions = JSON.stringify(options);
+  // Store previous URL to prevent unnecessary fetches
+  const prevUrlRef = useRef(url);
+  
+  // Properly memoize options by creating a stable reference
+  const optionsRef = useRef(options);
+  
+  // Only update the options ref if they've actually changed
+  if (JSON.stringify(optionsRef.current) !== JSON.stringify(options)) {
+    optionsRef.current = options;
+  }
+
+  // Force an effect trigger for debugging
+  const initialFetchRef = useRef(true);
 
   useEffect(() => {
+    console.log('[useFetch] useEffect entering. URL:', url, 'Initial fetch:', initialFetchRef.current);
+    
+    // Skip effect if URL hasn't changed and not first render
+    if (prevUrlRef.current === url && url !== null && !initialFetchRef.current) {
+      console.log('[useFetch] useEffect skipped - URL unchanged and not first render');
+      return;
+    }
+    
+    // Reset initial fetch flag
+    initialFetchRef.current = false;
+    
+    prevUrlRef.current = url;
     console.log('[useFetch] useEffect triggered. URL:', url);
 
     const fetchData = async () => {
@@ -53,10 +82,13 @@ export function useFetch<T>(url: string | null, options?: RequestInit) { // Allo
       setState({ data: null, error: null, status: 'loading' });
 
       try {
-        const currentOptions = JSON.parse(memoizedOptions || '{}');
-        console.log('[useFetch] Attempting fetch. URL:', url, 'Options:', currentOptions);
-        const response = await fetch(url, {
-          ...currentOptions,
+        console.log('[useFetch] Attempting fetch to URL:', url);
+        // Use a full URL with origin for fetching from relative paths
+        const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+        console.log('[useFetch] Full URL for fetch:', fullUrl);
+        
+        const response = await fetch(fullUrl, {
+          ...optionsRef.current,
           credentials: 'include' as RequestCredentials,
         });
         console.log('[useFetch] Fetch completed. URL:', url, 'Status:', response.status);
@@ -65,7 +97,7 @@ export function useFetch<T>(url: string | null, options?: RequestInit) { // Allo
         try {
           console.log('[useFetch] Attempting response.json(). URL:', url);
           result = await response.json() as ApiResponse<T>;
-          console.log('[useFetch] response.json() successful. URL:', url, 'Result:', result);
+          console.log('[useFetch] response.json() successful. URL:', url);
         } catch (jsonError) {
           console.error('[useFetch] response.json() FAILED. URL:', url, 'Error:', jsonError);
           throw new Error(`Request failed with status ${response.status} and non-JSON response.`);
@@ -81,7 +113,7 @@ export function useFetch<T>(url: string | null, options?: RequestInit) { // Allo
         if (result.success) {
           console.log('[useFetch] result.success is true. URL:', url);
           if (result.data !== undefined) {
-            console.log('[useFetch] Setting state data and status=success. URL:', url, 'Data:', result.data);
+            console.log('[useFetch] Setting state data and status=success. URL:', url);
             // --- Update combined state ---
             setState({ data: result.data, error: null, status: 'success' });
           } else {
@@ -105,12 +137,12 @@ export function useFetch<T>(url: string | null, options?: RequestInit) { // Allo
 
     fetchData();
 
-  }, [url, memoizedOptions]);
+  }, [url]); // Only depend on url, not on stringified options
 
-  // Log the state being returned by the hook
+  // Reduced verbosity of log when returning state
   console.log(
-    '[useFetch] Returning combined state for URL:', url,
-    { data: state.data, error: state.error?.message, status: state.status }
+    '[useFetch] Returning state for URL:', url,
+    { status: state.status }
   );
 
   // --- Return combined state values ---
@@ -122,7 +154,14 @@ export function useFetch<T>(url: string | null, options?: RequestInit) { // Allo
 // T = Type of data expected in the RESPONSE
 // R = Type of data being SUBMITTED (request payload)
 export function useSubmit<T, R = any>(initialUrl: string) {
-  console.log('[useSubmit] Hook initialized/re-rendered. Initial URL:', initialUrl);
+  // Use useRef to track if this is the first render
+  const isInitialRender = useRef(true);
+  
+  if (isInitialRender.current) {
+    console.log('[useSubmit] Hook initialized. Initial URL:', initialUrl);
+    isInitialRender.current = false;
+  }
+  
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [status, setStatus] = useState<LoadingState>('idle');
@@ -152,7 +191,7 @@ export function useSubmit<T, R = any>(initialUrl: string) {
         body: method !== 'DELETE' ? JSON.stringify(payload) : undefined,
         credentials: 'include' as RequestCredentials,
       };
-      console.log('[useSubmit] Attempting fetch. URL:', targetUrl, 'Options:', fetchOptions);
+      console.log('[useSubmit] Attempting fetch. URL:', targetUrl);
       const response = await fetch(targetUrl, fetchOptions);
       console.log('[useSubmit] Fetch completed. URL:', targetUrl, 'Status:', response.status);
 
@@ -166,7 +205,7 @@ export function useSubmit<T, R = any>(initialUrl: string) {
         } else {
             result = await response.json() as ApiResponse<T>;
         }
-        console.log('[useSubmit] response.json() successful or handled empty. URL:', targetUrl, 'Result:', result);
+        console.log('[useSubmit] response.json() successful or handled empty. URL:', targetUrl);
       } catch (jsonError) {
         console.error("[useSubmit] response.json() FAILED. URL:", targetUrl, "Error:", jsonError);
         throw new Error(`Request failed with status ${response.status} and non-JSON response.`);
@@ -176,7 +215,7 @@ export function useSubmit<T, R = any>(initialUrl: string) {
       if (response.ok && (result.success === undefined || result.success === true)) {
         console.log('[useSubmit] Response OK and result.success is true/undefined. URL:', targetUrl);
         if (result.data !== undefined) {
-          console.log('[useSubmit] Setting data and status=success. URL:', targetUrl, 'Data:', result.data);
+          console.log('[useSubmit] Setting data and status=success. URL:', targetUrl);
           setData(result.data);
           setStatus('success');
           return { success: true, data: result.data };
@@ -208,6 +247,5 @@ export function useSubmit<T, R = any>(initialUrl: string) {
     setStatus('idle');
   };
 
-  console.log('[useSubmit] Returning state. Initial URL:', initialUrl, 'Status:', status);
   return { submit, data, error, status, isLoading: status === 'loading', reset };
 }

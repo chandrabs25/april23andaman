@@ -6,6 +6,7 @@ import type {
   CategorizedService,
   TransportService,
   RentalService,
+  ActivityService,
   SingleServiceResponse,
   ServiceProviderBasicInfo
 } from "@/types/transport_rental";
@@ -13,15 +14,50 @@ import type {
 // Helper to parse comma-separated strings or JSON arrays into string arrays
 function parseStringList(value: string | null): string[] {
   if (!value) return [];
+  
+  // Try to parse as JSON first
   try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) {
-      return parsed.map(String).filter(s => s.length > 0);
+    // Check if the string starts with [ and ends with ] which suggests it's a JSON array
+    if (value.trim().startsWith('[') && value.trim().endsWith(']')) {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map(String).filter(s => s.length > 0);
+      }
     }
   } catch (e) {
-    // Fallback to comma-separated logic
+    // Not valid JSON, continue to comma-separated logic
   }
-  return value.split(",").map(s => s.trim()).filter(s => s.length > 0);
+  
+  // Handle comma-separated string
+  return value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+}
+
+// Helper to safely parse potentially invalid JSON amenities
+function parseAmenities(amenitiesStr: string | null): any {
+  if (!amenitiesStr) return { general: [], specifics: {} };
+  
+  try {
+    // Check if it looks like JSON (starts with { or [)
+    if ((amenitiesStr.trim().startsWith('{') && amenitiesStr.trim().endsWith('}')) || 
+        (amenitiesStr.trim().startsWith('[') && amenitiesStr.trim().endsWith(']'))) {
+      return JSON.parse(amenitiesStr);
+    } else {
+      // If it's not JSON, treat it as comma-separated list for general amenities
+      const amenitiesList = parseStringList(amenitiesStr);
+      return { 
+        general: amenitiesList,
+        specifics: {} 
+      };
+    }
+  } catch (e) {
+    console.error("Failed to parse amenities:", e);
+    // If it's not valid JSON, create a default structure with the raw string in general
+    const amenitiesList = parseStringList(amenitiesStr);
+    return { 
+      general: amenitiesList,
+      specifics: {} 
+    };
+  }
 }
 
 export async function GET(
@@ -43,22 +79,17 @@ export async function GET(
       SELECT
         s.id, s.name, s.description, s.type, s.provider_id, s.island_id,
         s.price, s.availability, s.images, s.amenities, s.cancellation_policy,
-        s.duration, s.rating, s.is_active, s.created_at, s.updated_at,
-        s.location_details, s.what_to_bring, s.included_services, s.not_included_services,
-        s.latitude, s.longitude,
-        -- Transport specific
-        s.vehicle_type, s.capacity_passengers, s.route_details, s.price_per_km, s.price_per_trip, s.driver_included,
-        -- Rental specific
-        s.item_type, s.rental_duration_options, s.price_per_hour, s.price_per_day, s.deposit_amount, s.pickup_location_options, s.rental_terms,
+        s.is_active, s.created_at, s.updated_at,
         i.name AS island_name,
         sp.business_name AS provider_business_name,
-        sp.id AS service_provider_table_id
+        sp.id AS service_provider_table_id,
+        (SELECT AVG(r.rating) FROM reviews r WHERE r.service_id = s.id) AS avg_rating
       FROM services s
       JOIN islands i ON s.island_id = i.id
       LEFT JOIN service_providers sp ON s.provider_id = sp.id
       WHERE s.id = ? AND s.is_active = TRUE 
-      AND (s.type LIKE 'transport%' OR s.type LIKE 'rental%')
-    `; // Ensure it's a transport or rental type
+      AND (s.type LIKE 'transport%' OR s.type LIKE 'rental%' OR s.type LIKE 'activity%')
+    `; // Include transport, rental, and activity types
 
     const stmt = db.prepare(queryString).bind(serviceId);
     const raw = await stmt.first<any>();
@@ -69,6 +100,38 @@ export async function GET(
         { status: 404 }
       );
     }
+    
+    // Parse amenities to extract specific fields like duration
+    const parsedAmenities = parseAmenities(raw.amenities);
+
+    // Extract specific fields from amenities.specifics
+    const specificFields = parsedAmenities.specifics || {};
+    const activitySpecifics = specificFields;
+    
+    // Extract location and other details from amenities JSON
+    const locationDetails = specificFields.location_details || null;
+    const whatToBring = specificFields.what_to_bring || [];
+    const includedServices = specificFields.included_services || [];
+    const notIncludedServices = specificFields.not_included_services || [];
+    const latitude = specificFields.latitude ? parseFloat(specificFields.latitude) : null;
+    const longitude = specificFields.longitude ? parseFloat(specificFields.longitude) : null;
+    
+    // Extract transport and rental specific details from amenities
+    const vehicleType = specificFields.vehicle_type || null;
+    const capacityPassengers = specificFields.capacity ? parseInt(specificFields.capacity) : null;
+    const routeDetails = specificFields.route || null;
+    const pricePerKm = specificFields.price_per_km ? parseFloat(specificFields.price_per_km) : null;
+    const pricePerTrip = specificFields.price_per_trip ? parseFloat(specificFields.price_per_trip) : null;
+    const driverIncluded = specificFields.driver_included === true;
+    
+    // Rental specific
+    const itemType = specificFields.item_type || null;
+    const rentalDurationOptions = specificFields.rental_duration_options || [];
+    const pricePerHour = specificFields.price_per_hour ? parseFloat(specificFields.price_per_hour) : null;
+    const pricePerDay = specificFields.price_per_day ? parseFloat(specificFields.price_per_day) : null;
+    const depositAmount = specificFields.deposit?.amount ? parseFloat(specificFields.deposit.amount) : null;
+    const pickupLocationOptions = specificFields.pickup_locations || [];
+    const rentalTerms = specificFields.rental_terms || specificFields.requirements?.details || null;
     
     const providerInfo: ServiceProviderBasicInfo | undefined = raw.provider_business_name ? {
         id: raw.service_provider_table_id,
@@ -86,20 +149,21 @@ export async function GET(
         island_name: raw.island_name,
         images: parseStringList(raw.images),
         price_details: raw.price,
-        price_numeric: raw.price_numeric ? parseFloat(raw.price_numeric) : (parseFloat(raw.price_per_day || raw.price_per_trip || raw.price) || null),
+        price_numeric: raw.price_numeric ? parseFloat(raw.price_numeric) : (parseFloat(raw.price) || null),
         availability_summary: raw.availability,
-        rating: raw.rating ? parseFloat(raw.rating) : null,
+        rating: raw.avg_rating ? parseFloat(raw.avg_rating) : null,
         is_active: Boolean(raw.is_active),
         cancellation_policy: raw.cancellation_policy,
-        amenities: parseStringList(raw.amenities),
-        // Adding fields from activity that might be relevant for services too
-        duration: raw.duration, 
-        location_details: raw.location_details,
-        what_to_bring: parseStringList(raw.what_to_bring),
-        included_services: parseStringList(raw.included_services),
-        not_included_services: parseStringList(raw.not_included_services),
-        latitude: raw.latitude ? parseFloat(raw.latitude) : null,
-        longitude: raw.longitude ? parseFloat(raw.longitude) : null,
+        amenities: parsedAmenities.general || [],
+        // Extract duration from amenities if available
+        duration: activitySpecifics.duration?.value ? parseInt(activitySpecifics.duration.value) : null, 
+        // Additional fields from amenities JSON
+        location_details: locationDetails,
+        what_to_bring: Array.isArray(whatToBring) ? whatToBring : parseStringList(whatToBring),
+        included_services: Array.isArray(includedServices) ? includedServices : parseStringList(includedServices),
+        not_included_services: Array.isArray(notIncludedServices) ? notIncludedServices : parseStringList(notIncludedServices),
+        latitude: latitude,
+        longitude: longitude,
         created_at: raw.created_at,
         updated_at: raw.updated_at,
     };
@@ -110,31 +174,45 @@ export async function GET(
     serviceData = {
         ...baseData,
         service_category: "transport",
-        vehicle_type: raw.vehicle_type,
-        capacity_passengers: raw.capacity_passengers ? parseInt(raw.capacity_passengers) : null,
-        route_details: raw.route_details,
-        price_per_km: raw.price_per_km ? parseFloat(raw.price_per_km) : null,
-        price_per_trip: raw.price_per_trip ? parseFloat(raw.price_per_trip) : null,
-        driver_included: typeof raw.driver_included === 'boolean' ? raw.driver_included : (raw.driver_included === 1 || String(raw.driver_included).toLowerCase() === 'true'),
+        vehicle_type: vehicleType,
+        capacity_passengers: capacityPassengers,
+        route_details: routeDetails,
+        price_per_km: pricePerKm,
+        price_per_trip: pricePerTrip,
+        driver_included: driverIncluded,
     } as TransportService;
     } else if (raw.type && raw.type.startsWith("rental")) {
     serviceData = {
         ...baseData,
         service_category: "rental",
-        item_type: raw.item_type,
-        rental_duration_options: parseStringList(raw.rental_duration_options),
-        price_per_hour: raw.price_per_hour ? parseFloat(raw.price_per_hour) : null,
-        price_per_day: raw.price_per_day ? parseFloat(raw.price_per_day) : null,
-        deposit_amount: raw.deposit_amount ? parseFloat(raw.deposit_amount) : null,
-        pickup_location_options: parseStringList(raw.pickup_location_options),
-        rental_terms: raw.rental_terms,
+        item_type: itemType,
+        rental_duration_options: Array.isArray(rentalDurationOptions) ? rentalDurationOptions : (specificFields.unit ? [`${specificFields.unit}`] : []),
+        price_per_hour: specificFields.unit === 'per hour' ? parseFloat(raw.price) : pricePerHour,
+        price_per_day: specificFields.unit === 'per day' ? parseFloat(raw.price) : pricePerDay,
+        deposit_amount: depositAmount,
+        pickup_location_options: Array.isArray(pickupLocationOptions) ? pickupLocationOptions : [],
+        rental_terms: rentalTerms,
     } as RentalService;
+    } else if (raw.type && raw.type.startsWith("activity")) {
+      // Extract activity-specific data
+      serviceData = {
+        ...baseData,
+        service_category: "activity",
+        duration: activitySpecifics.duration?.value ? parseInt(activitySpecifics.duration.value) : null,
+        duration_unit: activitySpecifics.duration?.unit || null,
+        group_size_min: activitySpecifics.group_size?.min ? parseInt(activitySpecifics.group_size.min) : null,
+        group_size_max: activitySpecifics.group_size?.max ? parseInt(activitySpecifics.group_size.max) : null,
+        difficulty_level: activitySpecifics.difficulty || null,
+        equipment_provided: activitySpecifics.equipment || [],
+        safety_requirements: activitySpecifics.safety || null,
+        guide_required: activitySpecifics.guide || false,
+      } as ActivityService;
     }
 
     if (!serviceData) {
         // This case should ideally not be hit if the WHERE clause for type is correct
         return NextResponse.json(
-            { success: false, message: "Service type is not recognized as transport or rental.", data: null },
+            { success: false, message: "Service type is not recognized as transport, rental, or activity.", data: null },
             { status: 400 }
         );
     }

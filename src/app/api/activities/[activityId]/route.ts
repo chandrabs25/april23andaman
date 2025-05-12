@@ -7,15 +7,50 @@ import type { Activity, ActivityProviderDetails } from "@/types/activity";
 // Helper to parse comma-separated strings or JSON arrays into string arrays
 function parseStringList(value: string | null): string[] {
   if (!value) return [];
+  
+  // Try to parse as JSON first
   try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) {
-      return parsed.map(String);
+    // Check if the string starts with [ and ends with ] which suggests it's a JSON array
+    if (value.trim().startsWith('[') && value.trim().endsWith(']')) {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map(String).filter(s => s.length > 0);
+      }
     }
   } catch (e) {
-    // Fallback to comma-separated logic
+    // Not valid JSON, continue to comma-separated logic
   }
-  return value.split(",").map(s => s.trim()).filter(s => s.length > 0);
+  
+  // Handle comma-separated string
+  return value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+}
+
+// Helper to safely parse potentially invalid JSON amenities
+function parseAmenities(amenitiesStr: string | null): any {
+  if (!amenitiesStr) return { general: [], specifics: {} };
+  
+  try {
+    // Check if it looks like JSON (starts with { or [)
+    if ((amenitiesStr.trim().startsWith('{') && amenitiesStr.trim().endsWith('}')) || 
+        (amenitiesStr.trim().startsWith('[') && amenitiesStr.trim().endsWith(']'))) {
+      return JSON.parse(amenitiesStr);
+    } else {
+      // If it's not JSON, treat it as comma-separated list for general amenities
+      const amenitiesList = parseStringList(amenitiesStr);
+      return { 
+        general: amenitiesList,
+        specifics: {} 
+      };
+    }
+  } catch (e) {
+    console.error("Failed to parse amenities:", e);
+    // If it's not valid JSON, create a default structure with the raw string in general
+    const amenitiesList = parseStringList(amenitiesStr);
+    return { 
+      general: amenitiesList,
+      specifics: {} 
+    };
+  }
 }
 
 export async function GET(
@@ -37,12 +72,11 @@ export async function GET(
       SELECT
         s.id, s.name, s.description, s.type, s.provider_id, s.island_id,
         s.price, s.availability, s.images, s.amenities, s.cancellation_policy,
-        s.duration, s.rating, s.is_active, s.created_at, s.updated_at,
-        s.location_details, s.what_to_bring, s.included_services, s.not_included_services,
-        s.latitude, s.longitude,
+        s.is_active, s.created_at, s.updated_at,
         i.name AS island_name,
         sp.business_name AS provider_business_name,
-        sp.id AS service_provider_table_id
+        sp.id AS service_provider_table_id,
+        (SELECT AVG(r.rating) FROM reviews r WHERE r.service_id = s.id) AS avg_rating
       FROM services s
       JOIN islands i ON s.island_id = i.id
       LEFT JOIN service_providers sp ON s.provider_id = sp.id
@@ -59,6 +93,27 @@ export async function GET(
       );
     }
 
+    // Parse amenities to extract specific fields like duration
+    const parsedAmenities = parseAmenities(rawActivity.amenities);
+
+    // Extract specific fields from amenities.specifics
+    const specificFields = parsedAmenities.specifics || {};
+    const activitySpecifics = specificFields;
+
+    // Format duration as a string (e.g., "2 hours" or "4 days")
+    let durationStr: string | null = null;
+    if (activitySpecifics.duration?.value && activitySpecifics.duration?.unit) {
+      durationStr = `${activitySpecifics.duration.value} ${activitySpecifics.duration.unit}`;
+    }
+
+    // Extract location and other details from amenities JSON
+    const locationDetails = specificFields.location_details || null;
+    const whatToBring = specificFields.what_to_bring || [];
+    const includedServices = specificFields.included_services || [];
+    const notIncludedServices = specificFields.not_included_services || [];
+    const latitude = specificFields.latitude ? parseFloat(specificFields.latitude) : null;
+    const longitude = specificFields.longitude ? parseFloat(specificFields.longitude) : null;
+
     const activityData: Activity = {
       id: rawActivity.id,
       name: rawActivity.name,
@@ -74,17 +129,17 @@ export async function GET(
       price: parseFloat(rawActivity.price) || 0,
       availability: rawActivity.availability,
       images: parseStringList(rawActivity.images),
-      amenities: parseStringList(rawActivity.amenities),
+      amenities: parsedAmenities.general || [],
       cancellation_policy: rawActivity.cancellation_policy,
-      duration: rawActivity.duration,
-      rating: rawActivity.rating ? parseFloat(rawActivity.rating) : null,
+      duration: durationStr,
+      rating: rawActivity.avg_rating ? parseFloat(rawActivity.avg_rating) : null,
       is_active: Boolean(rawActivity.is_active),
-      location_details: rawActivity.location_details,
-      what_to_bring: parseStringList(rawActivity.what_to_bring),
-      included_services: parseStringList(rawActivity.included_services),
-      not_included_services: parseStringList(rawActivity.not_included_services),
-      latitude: rawActivity.latitude ? parseFloat(rawActivity.latitude) : null,
-      longitude: rawActivity.longitude ? parseFloat(rawActivity.longitude) : null,
+      location_details: locationDetails,
+      what_to_bring: Array.isArray(whatToBring) ? whatToBring : parseStringList(whatToBring),
+      included_services: Array.isArray(includedServices) ? includedServices : parseStringList(includedServices),
+      not_included_services: Array.isArray(notIncludedServices) ? notIncludedServices : parseStringList(notIncludedServices),
+      latitude: latitude,
+      longitude: longitude,
       created_at: rawActivity.created_at,
       updated_at: rawActivity.updated_at,
     };

@@ -55,8 +55,21 @@ export interface RentalService extends BaseService {
   rental_terms?: string | null; 
 }
 
+// Specific interface for Activity Services
+export interface ActivityService extends BaseService {
+  service_category: "activity";
+  duration?: number | null;
+  duration_unit?: string | null;
+  group_size_min?: number | null;
+  group_size_max?: number | null;
+  difficulty_level?: string | null;
+  equipment_provided?: string[] | null;
+  safety_requirements?: string | null;
+  guide_required?: boolean;
+}
+
 // Union type for API responses that might return mixed or specific types
-export type CategorizedService = TransportService | RentalService;
+export type CategorizedService = TransportService | RentalService | ActivityService;
 
 // For API response for a list of services
 export interface PaginatedServicesResponse {

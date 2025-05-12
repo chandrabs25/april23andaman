@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, BedDouble } from "lucide-react";
 import Link from "next/link";
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import CheckboxGroup
+import { ImageUploader } from "@/components/ImageUploader"; // Import our new ImageUploader
 
 // --- Interfaces ---
 interface AuthUser {
@@ -35,7 +36,7 @@ interface RoomTypeFormData {
   max_guests: string;
   quantity_available: string;
   amenities: string[]; // Use array for CheckboxGroup
-  images: string[]; // Use array for TagInput
+  images: string[]; // Use array for image URLs from ImageUploader
 }
 
 interface ApiResponse {
@@ -59,7 +60,7 @@ const roomAmenityOptions = [
   { label: "Safe", value: "safe" },
 ];
 
-// --- Helper Components (LoadingSpinner, VerificationPending, IncorrectVendorType, TagInput) ---
+// --- Helper Components (LoadingSpinner, VerificationPending, IncorrectVendorType) ---
 const LoadingSpinner = ({ text = "Loading..." }: { text?: string }) => (
     <div className="flex justify-center items-center py-10">
         <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-2" />
@@ -85,60 +86,6 @@ const IncorrectVendorType = () => (
         <p className="mt-2 text-sm">This section is for Hotel vendors only.</p>
     </div>
 );
-
-// Simple Tag Input Component (Reused)
-const TagInput = ({ label, name, value, onChange, placeholder, helperText }: {
-    label: string;
-    name: string;
-    value: string[];
-    onChange: (name: string, value: string[]) => void;
-    placeholder?: string;
-    helperText?: string;
-}) => {
-    const [inputValue, setInputValue] = useState("");
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "," || e.key === "Enter") {
-            e.preventDefault();
-            const newTag = inputValue.trim();
-            if (newTag && !value.includes(newTag)) {
-                onChange(name, [...value, newTag]);
-            }
-            setInputValue("");
-        }
-    };
-
-    const removeTag = (tagToRemove: string) => {
-        onChange(name, value.filter(tag => tag !== tagToRemove));
-    };
-
-    return (
-        <div>
-            <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-            <div className="mt-1 flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-md shadow-sm bg-white">
-                {value.map(tag => (
-                    <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                        {tag}
-                        <button type="button" onClick={() => removeTag(tag)} className="ml-1.5 flex-shrink-0 text-indigo-500 hover:text-indigo-700 focus:outline-none">
-                            <span className="sr-only">Remove {tag}</span>
-                            &times;
-                        </button>
-                    </span>
-                ))}
-                <input
-                    type="text"
-                    id={name}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={placeholder || "Add item and press Enter or comma"}
-                    className="flex-grow px-1 py-0.5 border-none focus:ring-0 sm:text-sm outline-none"
-                />
-            </div>
-            {helperText && <p className="mt-1.5 text-xs text-gray-500">{helperText}</p>}
-        </div>
-    );
-};
 
 // --- Main Add Room Form Component ---
 function AddRoomForm() {
@@ -222,9 +169,14 @@ function AddRoomForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Specific handler for CheckboxGroup and TagInput components
+  // Specific handler for CheckboxGroup component
   const handleArrayChange = (name: string, values: string[]) => {
     setFormData((prev) => ({ ...prev, [name]: values }));
+  };
+
+  // Handler for images uploaded via ImageUploader
+  const handleImagesUploaded = (imageUrls: string[]) => {
+    setFormData((prev) => ({ ...prev, images: imageUrls }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -245,7 +197,7 @@ function AddRoomForm() {
       max_guests: parseInt(formData.max_guests, 10),
       quantity_available: formData.quantity_available ? parseInt(formData.quantity_available, 10) : null, // Use null if empty
       amenities: formData.amenities, // Send as array, server will stringify
-      images: formData.images.length > 0 ? formData.images.join(',') : null, // Join to comma-separated string or null
+      images: formData.images, // Send array of image URLs
     };
 
     try {
@@ -350,14 +302,16 @@ function AddRoomForm() {
                     gridCols={3} // Use grid layout
                     helperText="Select amenities available in this room type."
                 />
-                {/* Images */}
-                <TagInput
-                    label="Image URLs"
-                    name="images"
-                    value={formData.images}
-                    onChange={handleArrayChange}
-                    placeholder="Enter image URL and press Enter"
-                    helperText="Add URLs for photos specific to this room type."
+                
+                {/* Replace TagInput with ImageUploader */}
+                <ImageUploader
+                    label="Room Images"
+                    onImagesUploaded={handleImagesUploaded}
+                    existingImages={formData.images}
+                    parentId={serviceId}
+                    type="room"
+                    maxImages={6}
+                    helperText="Upload photos specific to this room type (beds, bathroom, views)."
                 />
             </div>
         </fieldset>

@@ -37,3 +37,9 @@ service = "andaman-travel-worker"
 binding = "NEXT_INC_CACHE_R2_BUCKET"
 bucket_name = "r2cache"
 preview_bucket_name = "r2cache"
+
+# Add a new R2 bucket for storing images
+[[r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "andaman-travel-images"
+preview_bucket_name = "andaman-travel-images-dev"

@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info } from "lucide-react";
 import Link from "next/link";
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import the CheckboxGroup component
+import { ImageUploader } from "@/components/ImageUploader"; // Import ImageUploader
 
 // --- Interfaces ---
 interface AuthUser {
@@ -475,6 +476,14 @@ function EditServiceForm() {
     }
   };
 
+  // --- Handle Image Uploads ---
+  const handleImagesUploaded = (imageUrls: string[]) => {
+    console.log(`Images uploaded for service ID: ${serviceId}`, imageUrls);
+    if (formData) {
+      setFormData({ ...formData, images: imageUrls });
+    }
+  };
+
   // --- Render Form ---
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto">
@@ -690,22 +699,39 @@ function EditServiceForm() {
 
         {/* --- Images & Policies --- */}
         <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
-            <legend className="text-lg font-semibold text-gray-700 px-2">Images & Policies</legend>
+            <legend className="text-lg font-semibold text-gray-700 px-2">Images</legend>
+            <div className="mt-4">
+              <ImageUploader
+                label={formData.type.startsWith("activity") ? "Activity Images" : "Rental Equipment Images"}
+                onImagesUploaded={handleImagesUploaded}
+                existingImages={formData.images}
+                parentId={serviceId}
+                type="service"
+                maxImages={8}
+                helperText={formData.type.startsWith("activity") 
+                  ? "Upload photos showcasing your activity (locations, equipment, guests enjoying the activity)"
+                  : "Upload photos of the rental equipment in good condition"}
+              />
+            </div>
+        </fieldset>
+
+        {/* --- Policies --- */}
+        <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
+            <legend className="text-lg font-semibold text-gray-700 px-2">Policies</legend>
             <div className="space-y-6 mt-4">
-                {/* Images */}
-                <TagInput
-                    label="Image URLs"
-                    name="images"
-                    value={formData.images}
-                    onChange={handleArrayChange}
-                    placeholder="Enter image URL and press Enter"
-                    helperText="Add URLs for photos showcasing the service or rental item."
-                />
-                {/* Cancellation Policy */}
-                <div>
-                    <label htmlFor="cancellation_policy" className="block text-sm font-medium text-gray-700 mb-1">Cancellation Policy</label>
-                    <textarea id="cancellation_policy" name="cancellation_policy" value={formData.cancellation_policy} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Full refund if cancelled 24 hours prior..."></textarea>
-                </div>
+              {/* Cancellation Policy */}
+              <div>
+                <label htmlFor="cancellation_policy" className="block text-sm font-medium text-gray-700 mb-1">Cancellation Policy</label>
+                <textarea 
+                  id="cancellation_policy" 
+                  name="cancellation_policy" 
+                  value={formData.cancellation_policy} 
+                  onChange={handleChange} 
+                  rows={2} 
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                  placeholder="e.g., Full refund if cancelled 24 hours prior..."
+                ></textarea>
+              </div>
             </div>
         </fieldset>
 

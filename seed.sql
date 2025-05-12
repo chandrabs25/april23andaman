@@ -49,7 +49,11 @@ INSERT INTO islands (id, name, description, permit_required, images) VALUES
   (1, 'Port Blair', 'The capital city and entry point to the Andaman Islands, known for its historical significance and cellular jail.', 0, '/images/portblair/hero.webp'),
   (2, 'Havelock Island (Swaraj Dweep)', 'Famous for its stunning beaches like Radhanagar Beach (Beach No. 7) and clear waters ideal for water sports.', 0, '/images/havelock/hero.webp'),
   (3, 'Neil Island (Shaheed Dweep)', 'A smaller, quieter island known for its relaxed vibe, natural bridge formations, and beautiful beaches like Laxmanpur and Bharatpur.', 0, '/images/neil/hero.webp'),
-  (4, 'Baratang Island', 'Known for its unique mangrove creeks, limestone caves, and mud volcanoes. Requires permits.', 1, '/images/baratang/hero.webp');
+  (4, 'Baratang Island', 'Known for its unique mangrove creeks, limestone caves, and mud volcanoes. Requires permits.', 1, '/images/baratang/hero.webp'),
+  (5, 'Rangat', 'A tranquil town in Middle Andaman offering India's longest mangrove boardwalk at Dhani Nallah, eco-parks like Amkunj Beach, and secluded turtle-nesting beaches.', 0, '/images/rangat/hero.webp'),
+  (6, 'Mayabundar', 'The administrative hub of North & Middle Andaman, notable for its cultural mix of Karen and Bengali communities, turtle-nesting Karmatang Beach, and nearby mangrove creeks.', 0, '/images/mayabundar/hero.webp'),
+  (7, 'Diglipur', 'The northern frontier town famed for the twin-islands of Ross & Smith, Saddle Peak National Park treks, limestone caves, mud volcanoes, and seasonal turtle nesting.', 0, '/images/diglipur/hero.webp'),
+  (8, 'Little Andaman', 'A remote southern island known for Butler Bay surf breaks, pristine beaches, White Surf and Whisper Wave waterfalls, and lush rainforest trails.', 0, '/images/little-andaman/hero.webp');
   
 -- =============================================
 -- Service Providers (Link users with role 'vendor' to businesses)
@@ -70,7 +74,11 @@ INSERT INTO services (id, name, description, type, provider_id, island_id, price
   (2, 'Snorkeling Trip to Elephant Beach', 'Boat trip to Elephant Beach with snorkeling gear provided. See vibrant corals.', 'activity', 3, 2, '1500', '/images/snorkeling.jpg', 'Daily 10am', 'Boat, Snorkel Gear, Guide'),
   (3, 'Standard Room - SeaShell PB', 'Comfortable AC room with essential amenities in Port Blair.', 'accommodation', 2, 1, '5500', '/images/seashell_room.jpg', 'Year-round', 'AC, WiFi, TV, Restaurant'),
   (4, 'Advanced Open Water Course', 'PADI certified course for experienced divers.', 'activity', 1, 2, '18000', '/images/scuba-advanced.jpg', 'On Request', 'Equipment, Certification, Instructor'),
-  (5, 'Glass Bottom Boat Ride', 'View corals and fish without getting wet at Bharatpur Beach.', 'activity', 3, 3, '1200', '/images/glass-boat.jpg', 'Daily 11am, 2pm', 'Boat, Guide'); -- Added service on Neil Island
+  (5, 'Glass Bottom Boat Ride', 'View corals and fish without getting wet at Bharatpur Beach.', 'activity', 3, 3, '1200', '/images/glass-boat.jpg', 'Daily 11am, 2pm', 'Boat, Guide'), -- Added service on Neil Island
+  (6, 'Airport Transfer - SUV', 'Comfortable airport transfer service in Port Blair with AC SUV.', 'transport_car', 2, 1, '1200', '/images/hotels/suv.jpg', 'Available 24/7', '{"general": ["AC", "Bottled Water", "Professional Driver"], "specifics": {"vehicle_type": "SUV", "capacity": "4", "route": "Airport to Hotels", "price_per_trip": "1200", "driver_included": true}}'),
+  (7, 'Havelock Island Ferry Transfer', 'Fast ferry service between Port Blair and Havelock Island.', 'transport_ferry', 3, 2, '1500', '/images/ferry.jpg', 'Daily 8am, 2pm', '{"general": ["AC Cabin", "Refreshments", "Seating"], "specifics": {"vehicle_type": "Ferry", "capacity": "100", "route": "Port Blair to Havelock", "price_per_trip": "1500"}}'),
+  (8, 'Scooter Rental - Havelock', 'Explore Havelock Island at your own pace with our scooter rentals.', 'rental_vehicle', 1, 2, '600', '/images/scooter.jpg', 'Daily 8am-8pm', '{"general": ["Helmet", "Basic Insurance", "Fuel Efficient"], "specifics": {"item_type": "Scooter", "unit": "per day", "deposit": {"amount": "2000"}, "requirements": {"details": "Valid ID and License required"}}}'),
+  (9, 'Kayak Rental - Neil Island', 'Experience Neil Island from the water with our kayak rentals.', 'rental_equipment', 3, 3, '300', '/images/kayak.jpg', 'Daily 9am-5pm', '{"general": ["Life Jacket", "Basic Training", "Waterproof Bag"], "specifics": {"item_type": "Kayak", "unit": "per hour", "deposit": {"amount": "1000"}}}');
 
 -- =============================================
 -- Packages (Combine islands/services into bookable trips)
@@ -243,13 +251,6 @@ INSERT INTO packages (id, name, description, duration, base_price, max_people, c
     '/images/andaman_4d_havelock_1.jpg,/images/havelock_kalapathar.jpg,/images/radhanagar_sunset.jpg,/images/port_blair_aerial.jpg'
   );
 
-
-  INSERT INTO islands (id, name, description, permit_required, images) VALUES
-  (5, 'Rangat', 'A tranquil town in Middle Andaman offering India’s longest mangrove boardwalk at Dhani Nallah, eco-parks like Amkunj Beach, and secluded turtle-nesting beaches.', 0, '/images/rangat/hero.webp'),
-  (6, 'Mayabundar', 'The administrative hub of North & Middle Andaman, notable for its cultural mix of Karen and Bengali communities, turtle-nesting Karmatang Beach, and nearby mangrove creeks.', 0, '/images/mayabundar/hero.webp'),
-  (7, 'Diglipur', 'The northern frontier town famed for the twin-islands of Ross & Smith, Saddle Peak National Park treks, limestone caves, mud volcanoes, and seasonal turtle nesting.', 0, '/images/diglipur/hero.webp'),
-  (8, 'Little Andaman', 'A remote southern island known for Butler Bay surf breaks, pristine beaches, White Surf and Whisper Wave waterfalls, and lush rainforest trails.', 0, '/images/little-andaman/hero.webp');
- 
 
 INSERT INTO bookings (user_id, package_id, total_people, start_date, end_date, status, total_amount, payment_status)
 VALUES (2, 1, 2, '2025-07-10', '2025-07-15', 'confirmed', 30000, 'paid');

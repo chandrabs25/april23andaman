@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info } from "lucide-react";
 import Link from "next/link";
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import CheckboxGroup
+import { ImageUploader } from "@/components/ImageUploader"; // Import our new ImageUploader
 
 // --- Interfaces ---
 interface AuthUser {
@@ -34,7 +35,7 @@ interface HotelFormData {
   description: string;
   price: string;
   cancellation_policy: string;
-  images: string[]; // Use array for TagInput
+  images: string[]; // Still use array, but will be populated from ImageUploader
   island_id: string;
   is_active: boolean;
   star_rating: string;
@@ -108,60 +109,6 @@ const IncorrectVendorType = () => (
     </div>
 );
 
-// Simple Tag Input Component (Reused from Service forms)
-const TagInput = ({ label, name, value, onChange, placeholder, helperText }: {
-    label: string;
-    name: string;
-    value: string[];
-    onChange: (name: string, value: string[]) => void;
-    placeholder?: string;
-    helperText?: string;
-}) => {
-    const [inputValue, setInputValue] = useState("");
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "," || e.key === "Enter") {
-            e.preventDefault();
-            const newTag = inputValue.trim();
-            if (newTag && !value.includes(newTag)) {
-                onChange(name, [...value, newTag]);
-            }
-            setInputValue("");
-        }
-    };
-
-    const removeTag = (tagToRemove: string) => {
-        onChange(name, value.filter(tag => tag !== tagToRemove));
-    };
-
-    return (
-        <div>
-            <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-            <div className="mt-1 flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-md shadow-sm bg-white">
-                {value.map(tag => (
-                    <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                        {tag}
-                        <button type="button" onClick={() => removeTag(tag)} className="ml-1.5 flex-shrink-0 text-indigo-500 hover:text-indigo-700 focus:outline-none">
-                            <span className="sr-only">Remove {tag}</span>
-                            &times;
-                        </button>
-                    </span>
-                ))}
-                <input
-                    type="text"
-                    id={name}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={placeholder || "Add item and press Enter or comma"}
-                    className="flex-grow px-1 py-0.5 border-none focus:ring-0 sm:text-sm outline-none"
-                />
-            </div>
-            {helperText && <p className="mt-1.5 text-xs text-gray-500">{helperText}</p>}
-        </div>
-    );
-};
-
 // --- Main Add Hotel Form Component ---
 function AddHotelForm() {
   const router = useRouter();
@@ -194,6 +141,8 @@ function AddHotelForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // We need a temporary hotel ID for image uploads before the hotel is created
+  const [tempHotelId, setTempHotelId] = useState<string>('temp-' + Date.now());
 
   // 1. Fetch Vendor Profile
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
@@ -244,9 +193,14 @@ function AddHotelForm() {
     }
   };
 
-  // Specific handler for CheckboxGroup and TagInput components
+  // Specific handler for CheckboxGroup and ImageUploader components
   const handleArrayChange = (name: string, values: string[]) => {
     setFormData((prev) => ({ ...prev, [name]: values }));
+  };
+
+  // Handle images uploaded via ImageUploader
+  const handleImagesUploaded = (imageUrls: string[]) => {
+    setFormData((prev) => ({ ...prev, images: imageUrls }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -280,10 +234,11 @@ function AddHotelForm() {
             geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
             geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
             cancellation_policy: formData.cancellation_policy,
-            // Stringify arrays for API
-            images: JSON.stringify(formData.images),
+            // Pass the image URLs directly
+            images: formData.images.length > 0 ? JSON.stringify(formData.images) : null,
             facilities: JSON.stringify(formData.facilities),
             meal_plans: JSON.stringify(formData.meal_plans),
+            temp_hotel_id: tempHotelId, // Pass the temp ID to associate already uploaded images
         };
 
         // --- API Call ---
@@ -480,13 +435,15 @@ function AddHotelForm() {
         <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
             <legend className="text-lg font-semibold text-gray-700 px-2">Images</legend>
             <div className="mt-4">
-                <TagInput
-                    label="Image URLs"
-                    name="images"
-                    value={formData.images}
-                    onChange={handleArrayChange}
-                    placeholder="Enter image URL and press Enter"
-                    helperText="Add URLs for photos showcasing the hotel."
+                {/* Replace TagInput with ImageUploader */}
+                <ImageUploader
+                    label="Hotel Images"
+                    onImagesUploaded={handleImagesUploaded}
+                    existingImages={formData.images}
+                    parentId={tempHotelId}
+                    type="hotel"
+                    maxImages={8}
+                    helperText="Upload photos showcasing your hotel (exterior, lobby, common areas)."
                 />
             </div>
         </fieldset>

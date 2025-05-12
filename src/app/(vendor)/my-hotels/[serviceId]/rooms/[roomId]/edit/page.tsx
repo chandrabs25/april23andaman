@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, BedDouble } from "lucide-react";
 import Link from "next/link";
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import CheckboxGroup
+import { ImageUploader } from "@/components/ImageUploader"; // Import ImageUploader
 
 // --- Interfaces ---
 interface AuthUser {
@@ -327,6 +328,13 @@ function EditRoomForm() {
     }
   };
 
+  // --- Handle Image Uploads ---
+  const handleImagesUploaded = (imageUrls: string[]) => {
+    if (formData) {
+      setFormData({ ...formData, images: imageUrls });
+    }
+  };
+
   // --- Render Form ---
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-3xl mx-auto">
@@ -403,13 +411,14 @@ function EditRoomForm() {
                     helperText="Select amenities available in this room type."
                 />
                 {/* Images */}
-                <TagInput
-                    label="Image URLs"
-                    name="images"
-                    value={formData.images}
-                    onChange={handleArrayChange}
-                    placeholder="Enter image URL and press Enter"
-                    helperText="Add URLs for photos specific to this room type."
+                <ImageUploader
+                    label="Room Images"
+                    onImagesUploaded={handleImagesUploaded}
+                    existingImages={formData.images}
+                    parentId={serviceId}
+                    type="room"
+                    maxImages={6}
+                    helperText="Upload photos specific to this room type (beds, bathroom, views)."
                 />
             </div>
         </fieldset>

@@ -48,7 +48,7 @@ function initRuntime() {
   };
   Object.assign(globalThis, {
     Request: CustomRequest,
-    __BUILD_TIMESTAMP_MS__: 1746960266340,
+    __BUILD_TIMESTAMP_MS__: 1747074055325,
     __NEXT_BASE_PATH__: ""
   });
 }

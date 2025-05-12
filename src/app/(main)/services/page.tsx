@@ -28,7 +28,9 @@ import type {
   CategorizedService,
   TransportService,
   RentalService,
-  PaginatedServicesResponse
+  ActivityService,
+  PaginatedServicesResponse,
+  SingleServiceResponse
 } from "@/types/transport_rental";
 
 // --- Color Theme ---
@@ -39,6 +41,7 @@ const primaryColorLightestBg = "#ECFDF5"; // Emerald-50
 
 const transportColor = "#3B82F6"; // Blue-500 for transport
 const rentalColor = "#F59E0B";    // Amber-500 for rental
+const activityColor = "#EC4899";  // Pink-500 for activities
 // --- End Color Theme ---
 
 // --- Helper Components ---
@@ -49,11 +52,19 @@ const LoadingSpinner = ({ text }: { text: string }) => (
   </div>
 );
 
-const ErrorDisplay = ({ message }: { message?: string }) => (
+const ErrorDisplay = ({ message, onRetry }: { message?: string, onRetry?: () => void }) => (
   <div className="flex flex-col justify-center items-center py-16 text-center">
     <AlertTriangle className={`h-10 w-10 text-red-500 mb-4`} />
     <span className={`text-lg font-medium text-red-600`}>Oops! Something went wrong.</span>
     <p className="text-sm text-gray-600 mt-2">{message || "Failed to load services."}</p>
+    {onRetry && (
+      <button 
+        onClick={onRetry}
+        className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700 transition-colors"
+      >
+        Try Again
+      </button>
+    )}
   </div>
 );
 
@@ -72,6 +83,8 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, categoryColor }) => 
     detailPath = `/services/transport/${service.id}`;
   } else if (service.service_category === "rental") {
     detailPath = `/services/rental/${service.id}`;
+  } else if (service.service_category === "activity") {
+    detailPath = `/activities/${service.id}`;
   }
 
   return (
@@ -87,8 +100,8 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, categoryColor }) => 
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
         <div style={{ backgroundColor: categoryColor }} className={`absolute top-3 right-3 text-white text-xs font-semibold py-1 px-2.5 rounded-full shadow-md flex items-center`}>
-          {service.service_category === "transport" ? <Car size={12} className="mr-1" /> : <ShoppingBag size={12} className="mr-1" />}
-          {service.type.replace(/^(transport_|rental_)/, '').replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+          {service.service_category === "transport" ? <Car size={12} className="mr-1" /> : service.service_category === "rental" ? <ShoppingBag size={12} className="mr-1" /> : <Tag size={12} className="mr-1" />}
+          {service.type.replace(/^(transport_|rental_|activity_)/, '').replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
         </div>
       </div>
 
@@ -140,30 +153,98 @@ function ServicesMainPageContent() {
     // Add more specific filters if needed, e.g., vehicleType, itemType
   });
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
+  const [forceRefetch, setForceRefetch] = useState(0);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedFilters(filters), 500);
     return () => clearTimeout(handler);
   }, [filters]);
 
+  // Single API URL for all service types
   const apiUrl = useCallback(() => {
     const params = new URLSearchParams();
-    // For this page, we always fetch both transport and rental, then separate client-side
-    // Or, make two API calls if preferred for larger datasets / more complex filtering per category
-    params.append("category", "transport,rental"); 
+    // Fetch all three types of services
+    params.append("category", "transport,rental,activity"); 
     if (debouncedFilters.search) params.append("search", debouncedFilters.search);
     if (debouncedFilters.islandId) params.append("islandId", debouncedFilters.islandId);
     return `/api/services-main?${params.toString()}`;
   }, [debouncedFilters]);
 
-  const { data: apiResponse, error, status } = useFetch<PaginatedServicesResponse>(apiUrl());
+  // Fetch all services from services-main
+  const { 
+    data: apiResponse, 
+    error, 
+    status 
+  } = useFetch<PaginatedServicesResponse | CategorizedService[]>(apiUrl() + (forceRefetch ? `&_cache=${forceRefetch}` : ''));
+  
+  // Log raw API response to debug its structure
+  console.log("🔍 Raw API response:", apiResponse);
 
-  const allServices = apiResponse?.data || [];
+  // Function to manually trigger a refetch of data
+  const refetchData = useCallback(() => {
+    setForceRefetch(prev => prev + 1);
+  }, []);
+
+  // Get all services from the response - handle both possible response formats
+  let allServices = Array.isArray(apiResponse) 
+    ? apiResponse  // Direct array of services
+    : (apiResponse?.data || []); // PaginatedServicesResponse format
+  
+  // Ensure all services have their service_category property set based on their type
+  allServices = allServices.map(service => {
+    // Use type assertion to work with the service object
+    const svc = service as any;
+    if (!svc.service_category) {
+      if (svc.type?.startsWith('transport')) {
+        return { ...svc, service_category: 'transport' };
+      } else if (svc.type?.startsWith('rental')) {
+        return { ...svc, service_category: 'rental' };
+      } else if (svc.type?.startsWith('activity')) {
+        return { ...svc, service_category: 'activity' };
+      }
+    }
+    return svc;
+  }) as CategorizedService[];
+  
+  console.log("🔍 All services from API:", JSON.stringify(allServices).substring(0, 500) + "...");
+  
   const isLoading = status === "loading";
   const fetchError = status === "error" ? error : null;
 
-  const transportServices = allServices.filter(s => s.service_category === "transport") as TransportService[];
-  const rentalServices = allServices.filter(s => s.service_category === "rental") as RentalService[];
+  // Filter services by type with robust type checking
+  const transportServices = allServices
+    .filter(s => s && typeof s === 'object' && s.service_category === "transport")
+    .map(s => s as TransportService);
+    
+  const rentalServices = allServices
+    .filter(s => s && typeof s === 'object' && s.service_category === "rental")
+    .map(s => s as RentalService);
+    
+  const activityServices = allServices
+    .filter(s => s && typeof s === 'object' && s.service_category === "activity")
+    .map(s => s as ActivityService);
+  
+  console.log("🔍 Services page data:", { 
+    status,
+    isLoading,
+    hasError: !!fetchError,
+    allServicesCount: allServices.length,
+    transportCount: transportServices.length,
+    rentalCount: rentalServices.length,
+    activityCount: activityServices.length
+  });
+  
+  if (allServices.length > 0) {
+    console.log("🔍 First service:", JSON.stringify(allServices[0], null, 2));
+    console.log("🔍 Service categories in raw data:", allServices.map(s => s.service_category || 'missing'));
+  }
+  
+  if (activityServices.length > 0) {
+    console.log("🔍 First activity:", JSON.stringify(activityServices[0], null, 2));
+  } else {
+    console.log("🔍 No activities found. Sample service for debugging:", 
+      allServices.length > 0 ? JSON.stringify(allServices[0], null, 2) : "No services available");
+  }
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -183,9 +264,16 @@ function ServicesMainPageContent() {
         <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
       </div>
       {isLoading && <LoadingSpinner text={`Loading ${title.toLowerCase()}...`} />}
-      {fetchError && !isLoading && <ErrorDisplay message={`Could not load ${title.toLowerCase()}.`} />}
+      {fetchError && !isLoading && (
+        <ErrorDisplay 
+          message={`Could not load ${title.toLowerCase()}. ${fetchError.message}`} 
+          onRetry={() => refetchData()}
+        />
+      )}
       {!isLoading && !fetchError && services.length === 0 && (
-        <p className="text-gray-600 text-center py-8">No {title.toLowerCase()} found matching your criteria.</p>
+        <div className="bg-white rounded-lg p-8 text-center shadow-sm border border-gray-100">
+          <p className="text-gray-600">No {title.toLowerCase()} found matching your criteria.</p>
+        </div>
       )}
       {!isLoading && !fetchError && services.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -202,16 +290,32 @@ function ServicesMainPageContent() {
       <div style={{ background: `linear-gradient(to right, ${primaryColorLighter}, ${primaryColor})` }} className={`h-60 md:h-72`}>
         <div className="container mx-auto px-4 h-full flex flex-col justify-center items-center text-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3 drop-shadow-lg">
-            Transport & Rental Services
+            Services & Activities
           </h1>
           <p className="text-lg sm:text-xl text-white max-w-2xl opacity-90 drop-shadow-md">
-            Find reliable transport and convenient rentals for your Andaman adventure.
+            Discover reliable transport, convenient rentals, and exciting activities for your perfect Andaman adventure.
           </p>
         </div>
       </div>
 
       <div className={`bg-[${primaryColorLightestBg}] py-10 md:py-16`}>
         <div className="container mx-auto px-4">
+          {/* Overall status indicator */}
+          {isLoading && (
+            <div className="text-center mb-8">
+              <LoadingSpinner text="Loading all services..." />
+            </div>
+          )}
+          
+          {fetchError && !isLoading && allServices.length === 0 && (
+            <div className="mb-8">
+              <ErrorDisplay
+                message={`Failed to load services. ${fetchError.message}`}
+                onRetry={refetchData}
+              />
+            </div>
+          )}
+
           {/* Filters Section */}
           <div className={`bg-white rounded-xl shadow-lg p-5 md:p-6 mb-10 border border-gray-200`}>
             <div className="flex items-center mb-4">
@@ -235,11 +339,27 @@ function ServicesMainPageContent() {
             </div>
           </div>
 
+          {/* Show a message when there are no services at all after filtering */}
+          {!isLoading && !fetchError && allServices.length === 0 && (
+            <div className="text-center py-10 bg-white rounded-xl shadow mb-8">
+              <p className="text-lg text-gray-700">No services found matching your search criteria.</p>
+              <button 
+                onClick={() => setFilters({ search: "", islandId: "" })}
+                className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700 transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
+
           {/* Transport Services Section */}
           {renderServiceSection("Transport Services", transportServices, Car, transportColor)}
 
           {/* Rental Services Section */}
           {renderServiceSection("Rental Services", rentalServices, ShoppingBag, rentalColor)}
+          
+          {/* Activity Services Section */}
+          {renderServiceSection("Activity Services", activityServices, Tag, activityColor)}
           
         </div>
       </div>

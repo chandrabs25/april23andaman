@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info, BedDouble } from "lucide-react"; // Added BedDouble
 import Link from "next/link";
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import CheckboxGroup
+import { ImageUploader } from "@/components/ImageUploader"; // Import ImageUploader
 
 // --- Interfaces ---
 interface AuthUser {
@@ -403,6 +404,13 @@ function EditHotelForm() {
     }
   };
 
+  // --- Handle Image Uploads ---
+  const handleImagesUploaded = (imageUrls: string[]) => {
+    if (formData) {
+      setFormData({ ...formData, images: imageUrls });
+    }
+  };
+
   // --- Render Form ---
   return (
     <div className="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
@@ -550,19 +558,21 @@ function EditHotelForm() {
         </fieldset>
 
         {/* --- Images --- */}
-        <fieldset className="border p-4 rounded-md shadow-sm">
-            <legend className="text-lg font-semibold px-2">Images</legend>
-            <div className="mt-4">
-                {/* Images */}
-                <TagInput
-                    label="Hotel Image URLs"
-                    name="images"
-                    value={formData.images}
-                    onChange={handleArrayChange}
-                    placeholder="Enter image URL and press Enter"
-                    helperText="Add URLs for photos of the hotel (lobby, exterior, etc.). Room photos are added separately."
-                />
-            </div>
+        <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
+          <legend className="text-lg font-semibold text-gray-700 px-2">Images</legend>
+          <div className="mt-4">
+            {formData && (
+              <ImageUploader
+                label="Hotel Images"
+                onImagesUploaded={handleImagesUploaded}
+                existingImages={formData.images}
+                parentId={serviceId}
+                type="hotel"
+                maxImages={8}
+                helperText="Upload photos showcasing your hotel (exterior, lobby, common areas)."
+              />
+            )}
+          </div>
         </fieldset>
 
         {/* --- Location --- */}

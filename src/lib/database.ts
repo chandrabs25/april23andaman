@@ -4,6 +4,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare'
 // Adjust the path to your CloudflareEnv type definition
 // This typically comes from `wrangler types` or your manual definition
 import type { CloudflareEnv } from '../../cloudflare-env'
+import type { Hotel, Room, HotelFilters } from '../types/hotel'; // Adjusted path
 
 // --- Interfaces (Define or import necessary data structures) ---
 
@@ -33,15 +34,6 @@ interface PackageFilters {
   // Add other potential filters here if needed
 }
 
-// Interface for hotel filtering options
-interface HotelFilters {
-  name?: string;       // Search by hotel name (from services table)
-  location?: string;   // Search by location (e.g., in street_address)
-  minRating?: number;  // Minimum star rating
-  islandId?: number; // Filter by island_id
-  // Add other potential filters here if needed
-}
-
 // You might have other interfaces for Users, Islands, Services, etc.
 // Define them here or import them if they are defined elsewhere.
 // For brevity, only Package and PackageFilters are explicitly defined here,
@@ -54,29 +46,34 @@ let _db: CloudflareEnv['DB'] | undefined;
 // Asynchronous function to get the D1 Database binding
 export async function getDatabase(): Promise<CloudflareEnv['DB']> {
   if (_db) {
-    // console.log("Returning cached DB instance."); // Added log for debugging
+    console.log("🔍 [Database] Returning cached DB instance.");
     return _db;
   }
 
-  // console.log("Attempting to get Cloudflare context for DB..."); // Added log for debugging
+  console.log("🔍 [Database] Attempting to get Cloudflare context for DB...");
   try {
     // Fetch the async context which contains the environment variables including bindings
     const ctx = await getCloudflareContext<CloudflareEnv>({ async: true });
     const { env } = ctx;
-    // console.log("Cloudflare context obtained."); // Added log for debugging
+    console.log("🔍 [Database] Cloudflare context obtained.");
 
-    if (!env || !env.DB) {
-      console.error("D1 binding 'DB' not found in Cloudflare environment."); // Added log for debugging
+    if (!env) {
+      console.error("❌ [Database] Cloudflare environment is undefined.");
+      throw new Error("Cloudflare environment is undefined. Check your open-next configuration.");
+    }
+
+    if (!env.DB) {
+      console.error("❌ [Database] D1 binding 'DB' not found in Cloudflare environment.");
       throw new Error(
         "D1 binding 'DB' not found. Ensure it's configured in wrangler.toml and `npm run cf-typegen` was run."
       );
     }
 
-    // console.log("D1 binding 'DB' found. Caching instance."); // Added log for debugging
+    console.log("✅ [Database] D1 binding 'DB' found. Caching instance.");
     _db = env.DB;
     return _db;
   } catch (error) {
-    console.error("Error getting Cloudflare context or DB binding:", error); // Added log for debugging
+    console.error("❌ [Database] Error getting Cloudflare context or DB binding:", error);
     throw new Error(`Failed to initialize database: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -89,6 +86,29 @@ export async function getDatabase(): Promise<CloudflareEnv['DB']> {
  * Each method retrieves the database binding when called.
  */
 export class DatabaseService {
+
+  // Helper function to safely parse JSON strings
+  private _parseJsonString(jsonString: string | null | undefined, defaultValue: any = []): any {
+    if (jsonString === null || jsonString === undefined) {
+      return defaultValue;
+    }
+    // Added check for empty string, as JSON.parse('') is an error
+    if (typeof jsonString === 'string' && jsonString.trim() === "") {
+      return defaultValue;
+    }
+    try {
+      const parsed = JSON.parse(jsonString);
+      // Ensure it's an array if defaultValue is an array and it's expected, for type safety with .map
+      if (Array.isArray(defaultValue) && !Array.isArray(parsed)) {
+        // console.warn(`Parsed JSON was not an array as expected for: ${jsonString}. Returning default.`);
+        return defaultValue;
+      }
+      return parsed;
+    } catch (e) {
+      // console.warn(`Failed to parse JSON string: "${jsonString}"`, e);
+      return defaultValue;
+    }
+  }
 
   // --- User Methods ---
   async getUserByEmail(email: string) {
@@ -803,10 +823,10 @@ export class DatabaseService {
   async getHotelById(serviceId: number) {
     const db = await getDatabase();
     // Join services and hotels table
-    return db
-      .prepare(`
-        SELECT
-          s.id AS service_id, s.name, s.description, s.type, s.provider_id, s.island_id,
+    const rawHotel = await db
+      .prepare(
+        `SELECT
+          s.id, s.name, s.description, s.type, s.provider_id, s.island_id,
           s.price, s.availability, s.images, s.amenities AS service_amenities, s.cancellation_policy,
           s.is_active, s.created_at AS service_created_at, s.updated_at AS service_updated_at,
           h.star_rating, h.check_in_time, h.check_out_time, h.facilities, h.policies,
@@ -815,10 +835,52 @@ export class DatabaseService {
           h.created_at AS hotel_created_at, h.updated_at AS hotel_updated_at
         FROM services s
         JOIN hotels h ON s.id = h.service_id
-        WHERE s.id = ? AND s.type = 'hotel'
-      `)
+        WHERE s.id = ? AND s.type = 'hotel'`
+      )
       .bind(serviceId)
-      .first(); // Define a proper interface for the joined result
+      .first<any>(); // Get raw hotel data
+
+    if (!rawHotel) {
+      return null;
+    }
+
+    // Fetch and parse rooms for the hotel
+    const roomsResult = await this.getRoomTypesByHotelServiceId(serviceId);
+    const rooms = roomsResult.results || []; // getRoomTypesByHotelServiceId now returns parsed rooms
+
+    // Parse main hotel fields
+    const parsedHotel = {
+      ...rawHotel,
+      images: this._parseJsonString(rawHotel.images, []),
+      amenities: this._parseJsonString(rawHotel.service_amenities, []),
+      // Map other fields if names differ or need processing. Example:
+      rating: rawHotel.star_rating,
+      address: rawHotel.street_address, // Assuming street_address is the primary address
+      // city and country are not directly in this query, might be undefined or handled elsewhere
+      latitude: rawHotel.geo_lat,
+      longitude: rawHotel.geo_lng,
+      // Map hotel fields directly to match the Hotel type properties
+      check_in_time: rawHotel.check_in_time,
+      check_out_time: rawHotel.check_out_time,
+      cancellation_policy: rawHotel.cancellation_policy,
+      pets_allowed: rawHotel.pets_allowed === 1,
+      children_allowed: rawHotel.children_allowed === 1,
+      accessibility: rawHotel.accessibility,
+      facilities: this._parseJsonString(rawHotel.facilities, []),
+      meal_plans: this._parseJsonString(rawHotel.meal_plans, []),
+      total_rooms: rawHotel.total_rooms,
+      rooms: rooms, // Attach parsed rooms
+    };
+
+    // Clean up intermediate fields if necessary
+    delete parsedHotel.service_amenities;
+    delete parsedHotel.star_rating;
+    delete parsedHotel.street_address;
+    delete parsedHotel.geo_lat;
+    delete parsedHotel.geo_lng;
+    // delete parsedHotel.hotel_extra_images; // if not directly part of Hotel type
+
+    return parsedHotel as Hotel; // Cast to the expected Hotel type
   }
 
   /**
@@ -1061,18 +1123,30 @@ export class DatabaseService {
   async getRoomTypesByHotelServiceId(hotelServiceId: number) {
     const db = await getDatabase();
     // Renaming columns to match expected API structure
-    return db
-      .prepare(`
-        SELECT
+    const result = await db
+      .prepare(
+        `SELECT
           id, service_id AS hotel_service_id, room_type AS room_type_name,
           base_price, max_guests, quantity AS quantity_available,
-          amenities, extra_images AS images
+          amenities, extra_images AS images  -- extra_images from DB is aliased to 'images' for the Room type
         FROM hotel_room_types
         WHERE service_id = ?
-        ORDER BY room_type ASC
-      `)
+        ORDER BY room_type ASC`
+      )
       .bind(hotelServiceId)
-      .all(); // Define a proper interface
+      .all<any>();
+
+    if (!result || !result.results) {
+      return { ...result, results: [] }; // Return empty results if fetch failed or no rooms
+    }
+
+    const parsedRoomTypes = result.results.map((room: any) => ({
+      ...room,
+      images: this._parseJsonString(room.images, []),
+      amenities: this._parseJsonString(room.amenities, []),
+    }));
+
+    return { ...result, results: parsedRoomTypes as Room[] };
   }
 
   /**
@@ -1084,12 +1158,12 @@ export class DatabaseService {
     const db = await getDatabase();
     // Map API names to schema names
     return db
-      .prepare(`
-        INSERT INTO hotel_room_types (
+      .prepare(
+        `INSERT INTO hotel_room_types (
           service_id, room_type, base_price, max_guests, quantity,
           amenities, extra_images, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      `)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+      )
       .bind(
         roomTypeData.hotel_service_id, // API uses hotel_service_id
         roomTypeData.room_type_name, // API uses room_type_name
@@ -1097,7 +1171,9 @@ export class DatabaseService {
         roomTypeData.max_guests,
         roomTypeData.quantity_available, // API uses quantity_available
         roomTypeData.amenities, // Expects stringified JSON
-        roomTypeData.images // API uses images
+        roomTypeData.images, // API uses images
+        roomTypeData.created_at,
+        roomTypeData.updated_at
       )
       .run();
   }
@@ -1167,15 +1243,17 @@ export class DatabaseService {
     const db = await getDatabase();
     let query = `
       SELECT
-        s.id AS service_id, s.name, s.description, s.type, s.provider_id, s.island_id,
+        s.id, s.name, s.description, s.type, s.provider_id, s.island_id,
         s.price, s.availability, s.images, s.amenities AS service_amenities, s.cancellation_policy,
         s.is_active,
         h.star_rating, h.check_in_time, h.check_out_time, h.facilities, h.policies,
         h.extra_images AS hotel_extra_images, h.total_rooms, h.street_address, h.geo_lat, h.geo_lng,
         h.meal_plans, h.pets_allowed, h.children_allowed, h.accessibility
+        -- Note: city and country are not directly in services or hotels table in this query
+        -- They need to be sourced if required by the Hotel type for list items.
       FROM services s
       JOIN hotels h ON s.id = h.service_id
-      WHERE s.type = 'hotel' AND s.is_active = 1
+      WHERE s.type = 'hotel\' AND s.is_active = 1
     `;
     const params: (string | number)[] = [];
 
@@ -1185,8 +1263,8 @@ export class DatabaseService {
       params.push(`%${filters.name}%`);
     }
     if (filters.location) {
-      // Assuming location filter searches street_address
-      conditions.push('h.street_address LIKE ?');
+      // Assuming location filter searches street_address or a dedicated location field if available
+      conditions.push('h.street_address LIKE ?'); // Or s.location if that exists
       params.push(`%${filters.location}%`);
     }
     if (filters.minRating !== undefined) {
@@ -1205,7 +1283,36 @@ export class DatabaseService {
     query += ' ORDER BY s.name ASC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
-    return db.prepare(query).bind(...params).all<any>(); // Define a proper Hotel interface later
+    const result = await db.prepare(query).bind(...params).all<any>();
+
+    if (!result || !result.results) {
+      // console.error("Failed to fetch raw hotel data or no results in getAllHotels");
+      // Return D1Result like structure with empty data for consistency
+      return { results: [], success: result?.success || false, meta: result?.meta || {}, error: result?.error || "No data" };
+    }
+
+    const parsedHotels = result.results.map((hotel: any) => {
+      const parsed = {
+        ...hotel,
+        images: this._parseJsonString(hotel.images, []),
+        amenities: this._parseJsonString(hotel.service_amenities, []),
+        // Map other fields for consistency with Hotel type, e.g.:
+        rating: hotel.star_rating,
+        address: hotel.street_address,
+        // city, country would be undefined if not selected/available
+        latitude: hotel.geo_lat,
+        longitude: hotel.geo_lng,
+      };
+      delete parsed.service_amenities;
+      delete parsed.star_rating;
+      delete parsed.street_address;
+      delete parsed.geo_lat;
+      delete parsed.geo_lng;
+      // hotel_extra_images, facilities, policies, meal_plans are not directly on Hotel type for list items usually
+      return parsed;
+    });
+    
+    return { ...result, results: parsedHotels as Hotel[] };
   }
 
   /**

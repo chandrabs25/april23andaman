@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info } from "lucide-react";
 import Link from "next/link";
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import the new component
+import { ImageUploader } from "@/components/ImageUploader"; // Import ImageUploader
 
 // --- Interfaces ---
 interface AuthUser {
@@ -123,60 +124,6 @@ const IncorrectVendorType = () => (
     </div>
 );
 
-// Simple Tag Input Component (For Image URLs - consider replacing with file upload later)
-const TagInput = ({ label, name, value, onChange, placeholder, helperText }: {
-    label: string;
-    name: string;
-    value: string[];
-    onChange: (name: string, value: string[]) => void;
-    placeholder?: string;
-    helperText?: string;
-}) => {
-    const [inputValue, setInputValue] = useState("");
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "," || e.key === "Enter") {
-            e.preventDefault();
-            const newTag = inputValue.trim();
-            if (newTag && !value.includes(newTag)) {
-                onChange(name, [...value, newTag]);
-            }
-            setInputValue("");
-        }
-    };
-
-    const removeTag = (tagToRemove: string) => {
-        onChange(name, value.filter(tag => tag !== tagToRemove));
-    };
-
-    return (
-        <div>
-            <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-            <div className="mt-1 flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-md shadow-sm bg-white">
-                {value.map(tag => (
-                    <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                        {tag}
-                        <button type="button" onClick={() => removeTag(tag)} className="ml-1.5 flex-shrink-0 text-indigo-500 hover:text-indigo-700 focus:outline-none">
-                            <span className="sr-only">Remove {tag}</span>
-                            &times;
-                        </button>
-                    </span>
-                ))}
-                <input
-                    type="text"
-                    id={name}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={placeholder || "Add item and press Enter or comma"}
-                    className="flex-grow px-1 py-0.5 border-none focus:ring-0 sm:text-sm outline-none"
-                />
-            </div>
-            {helperText && <p className="mt-1.5 text-xs text-gray-500">{helperText}</p>}
-        </div>
-    );
-};
-
 // --- Main Add Service Form Component ---
 function AddServiceForm() {
   const router = useRouter();
@@ -216,6 +163,14 @@ function AddServiceForm() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedServiceBaseType = formData.type.split("/")[0];
+  
+  // We need a temporary service ID for image uploads before the service is created
+  // Make it more consistent by using user ID and timestamp
+  const [tempServiceId, setTempServiceId] = useState<string>(() => {
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 10);
+    return `temp-${timestamp}-${randomStr}`;
+  });
 
   // 1. Fetch Vendor Profile
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
@@ -264,6 +219,12 @@ function AddServiceForm() {
 
   const handleArrayChange = (name: string, values: string[]) => {
     setFormData((prev) => ({ ...prev, [name]: values }));
+  };
+
+  // Handler for images uploaded via ImageUploader
+  const handleImagesUploaded = (imageUrls: string[]) => {
+    console.log(`Images uploaded for temp service ID: ${tempServiceId}`, imageUrls);
+    setFormData((prev) => ({ ...prev, images: imageUrls }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -373,7 +334,7 @@ function AddServiceForm() {
 
       <h2 className="text-2xl font-semibold text-gray-800 mb-6">Add New Service</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* --- Basic Information --- */}
         <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
             <legend className="text-lg font-semibold text-gray-700 px-2">Basic Information</legend>
@@ -584,23 +545,40 @@ function AddServiceForm() {
 
         {/* --- Images & Policies --- */}
         <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
-            <legend className="text-lg font-semibold text-gray-700 px-2">Images & Policies</legend>
-            <div className="space-y-6 mt-4">
-                {/* Images */}
-                <TagInput
-                    label="Image URLs"
-                    name="images"
-                    value={formData.images}
-                    onChange={handleArrayChange}
-                    placeholder="Enter image URL and press Enter"
-                    helperText="Add URLs for photos showcasing the service or rental item."
+            <legend className="text-lg font-semibold text-gray-700 px-2">Images</legend>
+            <div className="mt-4">
+                <ImageUploader
+                    label={selectedServiceBaseType === "activity" ? "Activity Images" : "Rental Equipment Images"}
+                    onImagesUploaded={handleImagesUploaded}
+                    existingImages={formData.images}
+                    parentId={tempServiceId}
+                    type="service"
+                    maxImages={8}
+                    helperText={selectedServiceBaseType === "activity" 
+                        ? "Upload photos showcasing your activity (locations, equipment, guests enjoying the activity)"
+                        : "Upload photos of the rental equipment in good condition"}
                 />
-                {/* Cancellation Policy */}
-                <div>
-                    <label htmlFor="cancellation_policy" className="block text-sm font-medium text-gray-700 mb-1">Cancellation Policy</label>
-                    <textarea id="cancellation_policy" name="cancellation_policy" value={formData.cancellation_policy} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Full refund if cancelled 24 hours prior..."></textarea>
-                </div>
             </div>
+        </fieldset>
+
+        {/* --- Policies --- */}
+        <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
+          <legend className="text-lg font-semibold text-gray-700 px-2">Policies</legend>
+          <div className="space-y-6 mt-4">
+            {/* Cancellation Policy */}
+            <div>
+              <label htmlFor="cancellation_policy" className="block text-sm font-medium text-gray-700 mb-1">Cancellation Policy</label>
+              <textarea 
+                id="cancellation_policy" 
+                name="cancellation_policy" 
+                value={formData.cancellation_policy} 
+                onChange={handleChange} 
+                rows={2} 
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                placeholder="e.g., Full refund if cancelled 24 hours prior..."
+              ></textarea>
+            </div>
+          </div>
         </fieldset>
 
         {/* --- Form Actions --- */}

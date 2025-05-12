@@ -23,7 +23,8 @@ import {
   Heart,
   Bell,
   Mail,
-  LucideProps
+  LucideProps,
+  Hotel
 } from 'lucide-react';
 
 // --- Interfaces ---
@@ -100,6 +101,8 @@ const Header = () => {
   // --- Nav Links Data ---
   const navLinks = [
     { name: 'Home', href: '/', icon: <Home size={16} /> },
+    { name: 'Services', href: '/services', icon: <Home size={16} /> },
+    { name: 'Hotels', href: '/hotels', icon: <Hotel size={16} /> },
     { name: 'About', href: '/about', icon: <Info size={16} /> },
     { name: 'Contact', href: '/contact', icon: <Phone size={16} /> },
   ];
