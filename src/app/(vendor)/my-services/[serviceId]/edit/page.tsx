@@ -63,6 +63,13 @@ interface VendorService {
   equipment_provided?: string | string[]; // Could be JSON array string or array itself if parsed from amenities
   safety_requirements?: string;
   guide_required?: boolean;
+  // Transport specific fields
+  vehicle_type?: string;
+  capacity_passengers?: number;
+  route_details?: string;
+  price_per_km?: number;
+  price_per_trip?: number;
+  driver_included?: boolean;
 }
 
 // --- Define Options for Checkbox Groups (Same as Add page) ---
@@ -121,6 +128,13 @@ interface ServiceFormData {
   safety_requirements: string;
   guide_required: boolean;
   general_amenities: string[]; // Use array for CheckboxGroup
+  // Transport Specific Fields
+  vehicle_type: string;
+  capacity_passengers: string;
+  route_details: string;
+  price_per_km: string;
+  price_per_trip: string;
+  driver_included: boolean;
 }
 
 // --- Helper Components (LoadingSpinner, VerificationPending, IncorrectVendorType, TagInput) ---
@@ -248,70 +262,134 @@ function EditServiceForm() {
               amenitiesData = JSON.parse(service.amenities);
           }
       } catch (e) {
-          console.error("Failed to parse service amenities JSON:", service.amenities, e);
+          console.error("Failed to parse amenities JSON:", service.amenities, e);
       }
 
-      const imagesArray = parseJsonArray(service.images, "images");
-      const generalAmenitiesArray = Array.isArray(amenitiesData.general) ? amenitiesData.general : [];
-
-      let availabilityDaysArray: string[] = [];
-      let availabilityNotesText: string = "";
+      // --- Parse Availability Field ---
+      let availabilityDays: string[] = [];
+      let availabilityNotes = "";
+      
       try {
           if (typeof service.availability === "string" && service.availability.trim()) {
-              const parsedAvail = JSON.parse(service.availability);
-              if (parsedAvail && Array.isArray(parsedAvail.days)) {
-                  availabilityDaysArray = parsedAvail.days.filter((d: any) => typeof d === "string");
-              }
-              if (parsedAvail && typeof parsedAvail.notes === "string") {
-                  availabilityNotesText = parsedAvail.notes;
-              }
-          } else if (typeof service.availability === "string") {
-              availabilityNotesText = service.availability;
+              const availabilityData = JSON.parse(service.availability);
+              availabilityDays = Array.isArray(availabilityData.days) ? availabilityData.days : [];
+              availabilityNotes = availabilityData.notes || "";
           }
       } catch (e) {
-          console.warn("Could not parse availability JSON, treating as notes:", service.availability, e);
-          if (typeof service.availability === "string") {
-              availabilityNotesText = service.availability;
+          console.error("Failed to parse availability JSON:", service.availability, e);
+          // Fallback if not JSON - treat entire string as notes
+          if (typeof service.availability === "string" && service.availability.trim()) {
+              availabilityNotes = service.availability;
           }
       }
 
-      const specifics = amenitiesData.specifics || {};
-      const serviceBaseType = service.type.split("/")[0];
-      const rentalSpecifics = serviceBaseType === "rental" ? specifics : {};
-      const activitySpecifics = serviceBaseType === "activity" ? specifics : {};
-
-      let equipmentArray = parseJsonArray(activitySpecifics.equipment, "equipment");
-
-      // --- Populate State ---
-      setFormData({
+      // --- Format Initial Form State ---
+      const formDataInitial: ServiceFormData = {
         name: service.name || "",
         description: service.description || "",
         type: service.type || "",
-        island_id: service.island_id?.toString() || "",
-        price: (typeof service.price === "number" ? service.price.toString() : service.price) || "",
-        availability_days: availabilityDaysArray,
-        availability_notes: availabilityNotesText,
-        images: imagesArray,
+        island_id: service.island_id ? service.island_id.toString() : "",
+        price: service.price ? service.price.toString() : "",
+        availability_days: availabilityDays,
+        availability_notes: availabilityNotes,
+        images: parseJsonArray(typeof service.images === "string" ? service.images : JSON.stringify(service.images), "images"),
         cancellation_policy: service.cancellation_policy || "",
-        // Rental Specific
-        rental_unit: rentalSpecifics.unit || "",
-        quantity_available: rentalSpecifics.quantity?.toString() || "",
-        deposit_required: rentalSpecifics.deposit?.required || false,
-        deposit_amount: rentalSpecifics.deposit?.amount?.toString() || "",
-        age_license_requirement: rentalSpecifics.requirements?.required || false,
-        age_license_details: rentalSpecifics.requirements?.details || "",
-        // Activity Specific
-        duration: activitySpecifics.duration?.value?.toString() || "",
-        duration_unit: activitySpecifics.duration?.unit || "",
-        group_size_min: activitySpecifics.group_size?.min?.toString() || "",
-        group_size_max: activitySpecifics.group_size?.max?.toString() || "",
-        difficulty_level: activitySpecifics.difficulty || "",
-        equipment_provided: equipmentArray,
-        safety_requirements: activitySpecifics.safety || "",
-        guide_required: activitySpecifics.guide || false,
-        // General Amenities
-        general_amenities: generalAmenitiesArray,
-      });
+        
+        // Set blank defaults for all service-specific fields
+        // (They'll only be used if the service type matches)
+        rental_unit: "",
+        quantity_available: "",
+        deposit_required: false,
+        deposit_amount: "",
+        age_license_requirement: false,
+        age_license_details: "",
+        duration: "",
+        duration_unit: "",
+        group_size_min: "",
+        group_size_max: "",
+        difficulty_level: "",
+        equipment_provided: [],
+        safety_requirements: "",
+        guide_required: false,
+        general_amenities: amenitiesData.general || [],
+        
+        // Transport specific fields
+        vehicle_type: "",
+        capacity_passengers: "",
+        route_details: "",
+        price_per_km: "",
+        price_per_trip: "",
+        driver_included: true
+      };
+
+      // Add service-specific fields based on type
+      const serviceBaseType = service.type.split('/')[0];
+      
+      if (serviceBaseType === "rental") {
+          if (amenitiesData.specifics?.rental) {
+              formDataInitial.rental_unit = amenitiesData.specifics.rental.unit || "";
+              formDataInitial.quantity_available = amenitiesData.specifics.rental.quantity_available?.toString() || "";
+              formDataInitial.deposit_required = amenitiesData.specifics.rental.deposit_required || false;
+              formDataInitial.deposit_amount = amenitiesData.specifics.rental.deposit_amount?.toString() || "";
+              formDataInitial.age_license_requirement = amenitiesData.specifics.rental.age_license_requirement || false;
+              formDataInitial.age_license_details = amenitiesData.specifics.rental.age_license_details || "";
+          } else {
+              // Try direct fields (might be stored directly in service table)
+              formDataInitial.rental_unit = service.rental_unit || "";
+              formDataInitial.quantity_available = service.quantity_available?.toString() || "";
+              formDataInitial.deposit_required = !!service.deposit_required;
+              formDataInitial.deposit_amount = service.deposit_amount?.toString() || "";
+              formDataInitial.age_license_requirement = !!service.age_license_requirement;
+              formDataInitial.age_license_details = service.age_license_details || "";
+          }
+      } else if (serviceBaseType === "activity") {
+          if (amenitiesData.specifics?.activity) {
+              formDataInitial.duration = amenitiesData.specifics.activity.duration?.toString() || "";
+              formDataInitial.duration_unit = amenitiesData.specifics.activity.duration_unit || "";
+              formDataInitial.group_size_min = amenitiesData.specifics.activity.group_size_min?.toString() || "";
+              formDataInitial.group_size_max = amenitiesData.specifics.activity.group_size_max?.toString() || "";
+              formDataInitial.difficulty_level = amenitiesData.specifics.activity.difficulty_level || "";
+              formDataInitial.equipment_provided = Array.isArray(amenitiesData.specifics.activity.equipment_provided) 
+                  ? amenitiesData.specifics.activity.equipment_provided 
+                  : [];
+              formDataInitial.safety_requirements = amenitiesData.specifics.activity.safety_requirements || "";
+              formDataInitial.guide_required = amenitiesData.specifics.activity.guide_required || false;
+          } else {
+              // Try direct fields
+              formDataInitial.duration = service.duration?.toString() || "";
+              formDataInitial.duration_unit = service.duration_unit || "";
+              formDataInitial.group_size_min = service.group_size_min?.toString() || "";
+              formDataInitial.group_size_max = service.group_size_max?.toString() || "";
+              formDataInitial.difficulty_level = service.difficulty_level || "";
+              formDataInitial.equipment_provided = parseJsonArray(
+                  typeof service.equipment_provided === "string" 
+                      ? service.equipment_provided 
+                      : JSON.stringify(service.equipment_provided), 
+                  "equipment_provided"
+              );
+              formDataInitial.safety_requirements = service.safety_requirements || "";
+              formDataInitial.guide_required = !!service.guide_required;
+          }
+      } else if (serviceBaseType === "transport") {
+          if (amenitiesData.specifics?.transport) {
+              formDataInitial.vehicle_type = amenitiesData.specifics.transport.vehicle_type || "";
+              formDataInitial.capacity_passengers = amenitiesData.specifics.transport.capacity_passengers?.toString() || "";
+              formDataInitial.route_details = amenitiesData.specifics.transport.route_details || "";
+              formDataInitial.price_per_km = amenitiesData.specifics.transport.price_per_km?.toString() || "";
+              formDataInitial.price_per_trip = amenitiesData.specifics.transport.price_per_trip?.toString() || "";
+              formDataInitial.driver_included = amenitiesData.specifics.transport.driver_included || true;
+          } else {
+              // Try direct fields
+              formDataInitial.vehicle_type = service.vehicle_type || "";
+              formDataInitial.capacity_passengers = service.capacity_passengers?.toString() || "";
+              formDataInitial.route_details = service.route_details || "";
+              formDataInitial.price_per_km = service.price_per_km?.toString() || "";
+              formDataInitial.price_per_trip = service.price_per_trip?.toString() || "";
+              formDataInitial.driver_included = service.driver_included !== undefined ? service.driver_included : true;
+          }
+      }
+
+      setFormData(formDataInitial);
     } else if (serviceStatus === "error") {
         toast({ variant: "destructive", title: "Error Loading Service", description: serviceError?.message || "Could not load service details." });
         router.replace("/my-services");
@@ -380,79 +458,133 @@ function EditServiceForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData) return;
     setIsSubmitting(true);
 
-    // Basic validation
-    if (!formData.type || !formData.island_id || !formData.name.trim() || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
-        toast({ variant: "destructive", title: "Validation Error", description: "Please fill all required fields (*) with valid data." });
-        setIsSubmitting(false);
-        return;
-    }
-    // Add more specific validation based on type
-    if (selectedServiceBaseType === "rental" && (!formData.rental_unit || isNaN(parseInt(formData.quantity_available)) || parseInt(formData.quantity_available) <= 0)) {
-        toast({ variant: "destructive", title: "Validation Error", description: "Please provide valid rental unit and quantity for rentals." });
-        setIsSubmitting(false);
-        return;
-    }
-    if (selectedServiceBaseType === "activity" && (!formData.duration_unit || isNaN(parseInt(formData.duration)) || parseInt(formData.duration) <= 0)) {
-        toast({ variant: "destructive", title: "Validation Error", description: "Please provide valid duration and unit for activities." });
-        setIsSubmitting(false);
-        return;
+    if (!formData) {
+      toast({ variant: "destructive", title: "Error", description: "Form data is not properly initialized." });
+      setIsSubmitting(false);
+      return;
     }
 
-    // --- Data Transformation for API (PUT Request) ---
-    // Structure the payload based on how the backend expects updates
-    // Assuming a nested structure within `amenities` for specifics
-    let specificsPayload: any = {};
-    if (selectedServiceBaseType === "rental") {
-        specificsPayload = {
-            unit: formData.rental_unit,
-            quantity: formData.quantity_available ? parseInt(formData.quantity_available, 10) : null,
-            deposit: {
-                required: formData.deposit_required,
-                amount: formData.deposit_amount ? parseFloat(formData.deposit_amount) : null,
-            },
-            requirements: {
-                required: formData.age_license_requirement,
-                details: formData.age_license_details,
-            },
-        };
-    } else if (selectedServiceBaseType === "activity") {
-        specificsPayload = {
-            duration: {
-                value: formData.duration ? parseInt(formData.duration, 10) : null,
-                unit: formData.duration_unit,
-            },
-            group_size: {
-                min: formData.group_size_min ? parseInt(formData.group_size_min, 10) : null,
-                max: formData.group_size_max ? parseInt(formData.group_size_max, 10) : null,
-            },
-            difficulty: formData.difficulty_level,
-            equipment: formData.equipment_provided, // Send as array
-            safety: formData.safety_requirements,
-            guide: formData.guide_required,
-        };
+    // --- Basic Validation ---
+    if (!formData.name.trim() || !formData.type || !formData.island_id || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+      toast({ variant: "destructive", title: "Validation Error", description: "Please fill all required fields with valid data." });
+      setIsSubmitting(false);
+      return;
     }
 
-    const apiPayload = {
-        name: formData.name,
-        description: formData.description,
-        type: formData.type,
+    // --- Specific Validation Based on Type ---
+    const serviceBaseType = formData.type.split('/')[0];
+    if (serviceBaseType === "rental" && (!formData.rental_unit || isNaN(parseInt(formData.quantity_available)) || parseInt(formData.quantity_available) <= 0)) {
+      toast({ variant: "destructive", title: "Validation Error", description: "Please provide valid rental unit and quantity for rentals." });
+      setIsSubmitting(false);
+      return;
+    }
+    if (serviceBaseType === "activity" && (!formData.duration_unit || isNaN(parseInt(formData.duration)) || parseInt(formData.duration) <= 0)) {
+      toast({ variant: "destructive", title: "Validation Error", description: "Please provide valid duration and unit for activities." });
+      setIsSubmitting(false);
+      return;
+    }
+    if (serviceBaseType === "transport" && (!formData.vehicle_type || !formData.capacity_passengers)) {
+      toast({ variant: "destructive", title: "Validation Error", description: "Please provide vehicle type and capacity for transport services." });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // --- Data Transformation for API ---
+    let apiPayload: any = {
+        ...formData,
         island_id: parseInt(formData.island_id, 10) || null,
         price: parseFloat(formData.price) || 0,
         availability: JSON.stringify({
             days: formData.availability_days,
             notes: formData.availability_notes
         }),
-        images: JSON.stringify(formData.images),
-        cancellation_policy: formData.cancellation_policy,
         amenities: JSON.stringify({
             general: formData.general_amenities,
-            specifics: specificsPayload,
+            specifics: {}
         }),
-        // is_active is usually updated via a separate toggle/endpoint
+        images: JSON.stringify(formData.images)
     };
+
+    delete apiPayload.availability_days;
+    delete apiPayload.availability_notes;
+    delete apiPayload.general_amenities;
+
+    // Based on type, prepare type-specific data correctly
+    if (serviceBaseType === "rental") {
+        apiPayload.amenities = JSON.stringify({
+            general: formData.general_amenities,
+            specifics: {
+                rental: {
+                    unit: formData.rental_unit,
+                    quantity_available: parseInt(formData.quantity_available, 10) || null,
+                    deposit_required: formData.deposit_required,
+                    deposit_amount: formData.deposit_required ? (parseFloat(formData.deposit_amount) || null) : null,
+                    age_license_requirement: formData.age_license_requirement,
+                    age_license_details: formData.age_license_requirement ? formData.age_license_details : ""
+                }
+            }
+        });
+        
+        // Also include direct fields for backward compatibility
+        apiPayload.rental_unit = formData.rental_unit;
+        apiPayload.quantity_available = parseInt(formData.quantity_available, 10) || null;
+        apiPayload.deposit_required = formData.deposit_required;
+        apiPayload.deposit_amount = formData.deposit_required ? (parseFloat(formData.deposit_amount) || null) : null;
+        apiPayload.age_license_requirement = formData.age_license_requirement;
+        apiPayload.age_license_details = formData.age_license_requirement ? formData.age_license_details : "";
+    } 
+    else if (serviceBaseType === "activity") {
+        apiPayload.amenities = JSON.stringify({
+            general: formData.general_amenities,
+            specifics: {
+                activity: {
+                    duration: parseInt(formData.duration, 10) || null,
+                    duration_unit: formData.duration_unit,
+                    group_size_min: parseInt(formData.group_size_min, 10) || null,
+                    group_size_max: parseInt(formData.group_size_max, 10) || null,
+                    difficulty_level: formData.difficulty_level,
+                    equipment_provided: formData.equipment_provided,
+                    safety_requirements: formData.safety_requirements,
+                    guide_required: formData.guide_required
+                }
+            }
+        });
+        
+        // Also include direct fields for backward compatibility
+        apiPayload.duration = parseInt(formData.duration, 10) || null;
+        apiPayload.duration_unit = formData.duration_unit;
+        apiPayload.group_size_min = parseInt(formData.group_size_min, 10) || null;
+        apiPayload.group_size_max = parseInt(formData.group_size_max, 10) || null;
+        apiPayload.difficulty_level = formData.difficulty_level;
+        apiPayload.equipment_provided = JSON.stringify(formData.equipment_provided);
+        apiPayload.safety_requirements = formData.safety_requirements;
+        apiPayload.guide_required = formData.guide_required;
+    }
+    else if (serviceBaseType === "transport") {
+        apiPayload.amenities = JSON.stringify({
+            general: formData.general_amenities,
+            specifics: {
+                transport: {
+                    vehicle_type: formData.vehicle_type,
+                    capacity_passengers: parseInt(formData.capacity_passengers, 10) || null,
+                    route_details: formData.route_details,
+                    price_per_km: parseFloat(formData.price_per_km) || null,
+                    price_per_trip: parseFloat(formData.price_per_trip) || null,
+                    driver_included: formData.driver_included
+                }
+            }
+        });
+        
+        // Also include direct fields for backward compatibility
+        apiPayload.vehicle_type = formData.vehicle_type;
+        apiPayload.capacity_passengers = parseInt(formData.capacity_passengers, 10) || null;
+        apiPayload.route_details = formData.route_details;
+        apiPayload.price_per_km = parseFloat(formData.price_per_km) || null;
+        apiPayload.price_per_trip = parseFloat(formData.price_per_trip) || null;
+        apiPayload.driver_included = formData.driver_included;
+    }
 
     // --- API Call (PUT) ---
     try {
@@ -511,11 +643,39 @@ function EditServiceForm() {
         <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
             <legend className="text-lg font-semibold text-gray-700 px-2">Basic Information</legend>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                {/* Service Type (Readonly) */}
+                {/* Service Type */}
                 <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
-                    <input type="text" id="type" name="type" value={formData.type} readOnly disabled className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 sm:text-sm cursor-not-allowed"/>
-                    <p className="mt-1 text-xs text-gray-500">Service type cannot be changed after creation.</p>
+                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Service Type <span className="text-red-500">*</span></label>
+                    <select 
+                        id="type" 
+                        name="type" 
+                        value={formData?.type || ""}
+                        onChange={handleChange} 
+                        required 
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white"
+                    >
+                        <option value="" disabled>-- Select Type --</option>
+                        <optgroup label="Transport">
+                            <option value="transport/car">Car Transport</option>
+                            <option value="transport/van">Van Transport</option>
+                            <option value="transport/bus">Bus Transport</option>
+                            <option value="transport/ferry">Ferry Transport</option>
+                            <option value="transport/boat">Boat Transport</option>
+                        </optgroup>
+                        <optgroup label="Rentals">
+                          <option value="rental/car">Car Rental</option>
+                          <option value="rental/bike">Bike/Scooter Rental</option>
+                          <option value="rental/boat">Boat Rental</option>
+                          <option value="rental/equipment">Equipment Rental (Surfboard, etc.)</option>
+                        </optgroup>
+                        <optgroup label="Activities">
+                          <option value="activity/tour">Tour (Guided)</option>
+                          <option value="activity/watersport">Watersport (Lesson/Rental)</option>
+                          <option value="activity/hiking">Hiking/Trekking</option>
+                          <option value="activity/cultural">Cultural Experience</option>
+                          <option value="activity/diving">Diving/Snorkeling</option>
+                        </optgroup>
+                    </select>
                 </div>
                 {/* Island */}
                 <div>
@@ -702,7 +862,9 @@ function EditServiceForm() {
             <legend className="text-lg font-semibold text-gray-700 px-2">Images</legend>
             <div className="mt-4">
               <ImageUploader
-                label={formData.type.startsWith("activity") ? "Activity Images" : "Rental Equipment Images"}
+                label={formData.type.startsWith("activity") ? "Activity Images" : 
+                      formData.type.startsWith("transport") ? "Transport Vehicle Images" : 
+                      "Rental Equipment Images"}
                 onImagesUploaded={handleImagesUploaded}
                 existingImages={formData.images}
                 parentId={serviceId}
@@ -710,6 +872,8 @@ function EditServiceForm() {
                 maxImages={8}
                 helperText={formData.type.startsWith("activity") 
                   ? "Upload photos showcasing your activity (locations, equipment, guests enjoying the activity)"
+                  : formData.type.startsWith("transport")
+                  ? "Upload photos of your transport vehicles in good condition"
                   : "Upload photos of the rental equipment in good condition"}
               />
             </div>
@@ -734,6 +898,55 @@ function EditServiceForm() {
               </div>
             </div>
         </fieldset>
+
+        {/* --- Transport Specific Fields --- */}
+        {formData && formData.type.startsWith("transport/") && (
+          <fieldset className="border border-indigo-200 p-6 rounded-lg shadow-sm bg-indigo-50">
+            <legend className="text-lg font-semibold text-indigo-700 px-2">Transport Details</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              {/* Vehicle Type */}
+              <div>
+                <label htmlFor="vehicle_type" className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type <span className="text-red-500">*</span></label>
+                <select id="vehicle_type" name="vehicle_type" value={formData.vehicle_type} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white">
+                  <option value="" disabled>-- Select Vehicle Type --</option>
+                  <option value="Sedan">Sedan</option>
+                  <option value="SUV">SUV</option>
+                  <option value="Minivan">Minivan</option>
+                  <option value="Minibus">Minibus</option>
+                  <option value="Bus">Bus</option>
+                  <option value="Ferry">Ferry</option>
+                  <option value="Speedboat">Speedboat</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              {/* Passenger Capacity */}
+              <div>
+                <label htmlFor="capacity_passengers" className="block text-sm font-medium text-gray-700 mb-1">Passenger Capacity <span className="text-red-500">*</span></label>
+                <input type="number" id="capacity_passengers" name="capacity_passengers" value={formData.capacity_passengers} onChange={handleChange} required min="1" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 4"/>
+              </div>
+              {/* Route Details */}
+              <div className="md:col-span-2">
+                <label htmlFor="route_details" className="block text-sm font-medium text-gray-700 mb-1">Route Details</label>
+                <textarea id="route_details" name="route_details" value={formData.route_details} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Port Blair to Havelock, Airport to Hotels"></textarea>
+                <p className="mt-1 text-xs text-gray-500">Describe the routes or areas where your service operates.</p>
+              </div>
+              {/* Pricing Details */}
+              <div>
+                <label htmlFor="price_per_km" className="block text-sm font-medium text-gray-700 mb-1">Price per KM (INR)</label>
+                <input type="number" id="price_per_km" name="price_per_km" value={formData.price_per_km} onChange={handleChange} min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 15"/>
+              </div>
+              <div>
+                <label htmlFor="price_per_trip" className="block text-sm font-medium text-gray-700 mb-1">Price per Trip (INR)</label>
+                <input type="number" id="price_per_trip" name="price_per_trip" value={formData.price_per_trip} onChange={handleChange} min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 2500"/>
+              </div>
+              {/* Driver Included */}
+              <div className="flex items-center pt-6">
+                <input type="checkbox" id="driver_included" name="driver_included" checked={formData.driver_included} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer" />
+                <label htmlFor="driver_included" className="ml-2 block text-sm text-gray-900 cursor-pointer">Driver Included</label>
+              </div>
+            </div>
+          </fieldset>
+        )}
 
         {/* --- Form Actions --- */}
         <div className="flex justify-end space-x-4 pt-4">

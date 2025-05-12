@@ -93,19 +93,146 @@ const TransportServiceDetailPage = () => {
   const params = useParams();
   const serviceId = params.serviceId as string;
 
+  console.log("🔍 TransportServiceDetailPage: Loading service with ID:", serviceId);
+
   const { data: apiResponse, error, status } = useFetch<SingleServiceResponse>(serviceId ? `/api/services-main/${serviceId}` : null);
 
   const isLoading = status === "loading";
   const fetchError = status === "error" ? error : null;
-  const service = apiResponse?.data as TransportService | undefined;
+  
+  console.log("🔍 TransportServiceDetailPage: API Response:", JSON.stringify(apiResponse));
+  console.log("🔍 TransportServiceDetailPage: Status:", status);
+  console.log("🔍 TransportServiceDetailPage: Error:", fetchError);
+
+  // Get service data and ensure type safety with a fallback
+  let serviceData: any = null;
+  
+  // Handle different response structures
+  if (apiResponse) {
+    if ('data' in apiResponse && apiResponse.data) {
+      // Standard SingleServiceResponse structure
+      serviceData = apiResponse.data;
+    } else if (
+      ('service_category' in apiResponse && apiResponse.service_category) || 
+      ('type' in apiResponse && apiResponse.type)
+    ) {
+      // Direct service object response
+      serviceData = apiResponse;
+    }
+  }
+  
+  console.log("🔍 TransportServiceDetailPage: Service Data:", JSON.stringify(serviceData));
+  
+  // If we have service data from the API, validate it's a transport service or manually add service_category
+  let service: TransportService | undefined = undefined;
+  
+  if (serviceData) {
+    if (serviceData.service_category === "transport") {
+      // Already properly categorized
+      service = serviceData as TransportService;
+    } else if (serviceData.type && typeof serviceData.type === 'string' && serviceData.type.startsWith("transport")) {
+      // Service exists but needs categorization
+      service = {
+        ...serviceData,
+        service_category: "transport"
+      } as TransportService;
+    }
+  }
+  
+  console.log("🔍 TransportServiceDetailPage: Processed Service:", service ? "Valid transport service" : "Invalid or non-transport service");
 
   if (isLoading) return <LoadingState />;
-  if (fetchError || !service || service.service_category !== "transport") {
+  if (fetchError || !service) {
     return <ErrorState message={fetchError?.message || apiResponse?.message || "Transport service not found or invalid type."} />;
   }
 
-  const mainImage = service.images && service.images.length > 0 ? service.images[0] : "/images/placeholder_transport.jpg";
-  const galleryImages = service.images?.slice(1) || [];
+  // Parse amenities to get transport-specific data from specifics
+  const parseAmenities = (service: TransportService) => {
+    let transportSpecifics = null;
+    
+    if (service.amenities) {
+      // If amenities is a string (JSON), try to parse it
+      if (typeof service.amenities === 'string') {
+        try {
+          const amenitiesData = JSON.parse(service.amenities);
+          if (amenitiesData && amenitiesData.specifics && amenitiesData.specifics.transport) {
+            transportSpecifics = amenitiesData.specifics.transport;
+          }
+        } catch (e) {
+          console.error("Failed to parse amenities JSON:", e);
+        }
+      }
+    }
+    
+    return {
+      vehicle_type: transportSpecifics?.vehicle_type || service.vehicle_type,
+      capacity_passengers: transportSpecifics?.capacity_passengers || service.capacity_passengers,
+      route_details: transportSpecifics?.route_details || service.route_details,
+      price_per_km: transportSpecifics?.price_per_km || service.price_per_km,
+      price_per_trip: transportSpecifics?.price_per_trip || service.price_per_trip,
+      driver_included: transportSpecifics?.driver_included !== undefined ? 
+        transportSpecifics.driver_included : service.driver_included,
+      price_details: service.price_details,
+      price_numeric: service.price_numeric
+    };
+  };
+  
+  // Get transport-specific details from amenities or direct fields
+  const transportDetails = parseAmenities(service);
+  
+  // Process and validate images
+  const normalizeImageUrl = (url: string): string => {
+    // Return placeholder if the URL is empty or doesn't look valid
+    if (!url || url.trim() === '' || url === 'null' || url === 'undefined') {
+      return "/images/placeholder_transport.jpg";
+    }
+    
+    // If URL is a full URL, return it, otherwise check and fix relative paths
+    if (url.startsWith('http')) {
+      return url;
+    }
+    
+    // Handle URLs that might be relative but missing leading slash
+    if (!url.startsWith('/')) {
+      return `/images/${url}`;
+    }
+    
+    return url;
+  };
+  
+  // Process main image with fallback
+  const mainImageUrl = service.images && service.images.length > 0 && service.images[0] 
+    ? normalizeImageUrl(service.images[0]) 
+    : "/images/placeholder_transport.jpg";
+  
+  // Process gallery images, filtering out any invalid ones
+  const validGalleryImages = service.images && service.images.length > 1 
+    ? service.images.slice(1)
+        .filter(img => img && img.trim() !== '' && img !== 'null' && img !== 'undefined')
+        .map(img => normalizeImageUrl(img))
+    : [];
+
+  // Get general amenities from amenities field
+  const getGeneralAmenities = (service: TransportService) => {
+    if (Array.isArray(service.amenities)) {
+      return service.amenities;
+    }
+    
+    if (typeof service.amenities === 'string') {
+      try {
+        const amenitiesData = JSON.parse(service.amenities);
+        if (amenitiesData && Array.isArray(amenitiesData.general)) {
+          return amenitiesData.general;
+        }
+      } catch (e) {
+        console.error("Failed to parse amenities JSON for general amenities:", e);
+      }
+    }
+    
+    return [];
+  };
+  
+  const generalAmenities = getGeneralAmenities(service);
 
   return (
     <div className={`bg-gray-50 min-h-screen`}>
@@ -123,7 +250,7 @@ const TransportServiceDetailPage = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1.5">{service.name}</h1>
           <div className="flex flex-wrap items-center text-xs text-gray-600 gap-x-3 gap-y-1">
             <span className="flex items-center"><MapPin size={14} className={`mr-1 text-[${transportColor}]`} /> {service.island_name}</span>
-            {service.vehicle_type && <span className="flex items-center"><Car size={14} className={`mr-1 text-[${transportColor}]`} /> {service.vehicle_type}</span>}
+            {transportDetails.vehicle_type && <span className="flex items-center"><Car size={14} className={`mr-1 text-[${transportColor}]`} /> {transportDetails.vehicle_type}</span>}
             {service.rating !== null && (
               <span className="flex items-center">
                 <Star size={14} className={`mr-1 text-yellow-400 fill-current`} /> {service.rating.toFixed(1)}/5.0
@@ -137,23 +264,44 @@ const TransportServiceDetailPage = () => {
 
         <div className="lg:grid lg:grid-cols-3 lg:gap-8">
           <div className="lg:col-span-2">
-            <div className="mb-5 rounded-lg overflow-hidden shadow-lg">
+            <div className="mb-5 rounded-lg overflow-hidden shadow-lg relative aspect-[16/10]">
               <Image
-                src={mainImage}
+                src={mainImageUrl}
                 alt={`Main image for ${service.name}`}
                 width={700}
                 height={450}
-                className="w-full h-auto object-cover aspect-[16/10]"
-                onError={(e) => (e.currentTarget.src = "/images/placeholder_transport.jpg")}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.log("Main image error, using placeholder");
+                  e.currentTarget.src = "/images/placeholder_transport.jpg";
+                  e.currentTarget.onerror = null; // Prevent infinite loop
+                }}
                 priority
+                unoptimized={true} // Don't use Next.js image optimization
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Proper sizing instructions
+                loading="eager" // Load immediately
               />
             </div>
 
-            {galleryImages.length > 0 && (
+            {validGalleryImages.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 mb-6">
-                {galleryImages.map((img, index) => (
-                  <div key={index} className="rounded-md overflow-hidden shadow aspect-square">
-                    <Image src={img} alt={`${service.name} gallery image ${index + 1}`} width={150} height={150} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = "/images/placeholder_service_thumb.jpg")} />
+                {validGalleryImages.map((img, index) => (
+                  <div key={index} className="rounded-md overflow-hidden shadow aspect-square relative">
+                    <Image 
+                      src={img} 
+                      alt={`${service.name} gallery image ${index + 1}`} 
+                      width={200}
+                      height={200}
+                      className="object-cover h-full w-full"
+                      onError={(e) => {
+                        console.log("Gallery image error, using placeholder");
+                        e.currentTarget.src = "/images/placeholder_service_thumb.jpg";
+                        e.currentTarget.onerror = null; // Prevent infinite loop
+                      }}
+                      unoptimized={true} // Don't use Next.js image optimization
+                      sizes="(max-width: 768px) 50vw, 25vw" // Proper sizing instructions
+                      loading="lazy" // Lazy load gallery images
+                    />
                   </div>
                 ))}
               </div>
@@ -165,22 +313,22 @@ const TransportServiceDetailPage = () => {
               </DetailSection>
 
               <DetailSection title="Transport Details" icon={Car}>
-                <DetailItem label="Vehicle Type" value={service.vehicle_type} icon={Car} highlight />
-                <DetailItem label="Passenger Capacity" value={service.capacity_passengers ? `${service.capacity_passengers} passengers` : null} icon={Users} />
-                <DetailItem label="Route / Service Area" value={service.route_details} icon={RouteIcon} />
-                <DetailItem label="Driver Included" value={service.driver_included ? "Yes" : (service.driver_included === false ? "No" : "N/A")} icon={UserCheck} />
+                <DetailItem label="Vehicle Type" value={transportDetails.vehicle_type} icon={Car} highlight />
+                <DetailItem label="Passenger Capacity" value={transportDetails.capacity_passengers ? `${transportDetails.capacity_passengers} passengers` : null} icon={Users} />
+                <DetailItem label="Route / Service Area" value={transportDetails.route_details} icon={RouteIcon} />
+                <DetailItem label="Driver Included" value={transportDetails.driver_included ? "Yes" : (transportDetails.driver_included === false ? "No" : "N/A")} icon={UserCheck} />
               </DetailSection>
               
               <DetailSection title="Pricing" icon={DollarSign}>
                 <DetailItem label="General Price" value={service.price_details} highlight />
-                {service.price_per_km && <DetailItem label="Price per KM" value={`₹${service.price_per_km.toLocaleString("en-IN")}`} />}
-                {service.price_per_trip && <DetailItem label="Price per Trip" value={`₹${service.price_per_trip.toLocaleString("en-IN")}`} />}
+                {transportDetails.price_per_km && <DetailItem label="Price per KM" value={`₹${transportDetails.price_per_km.toLocaleString("en-IN")}`} />}
+                {transportDetails.price_per_trip && <DetailItem label="Price per Trip" value={`₹${transportDetails.price_per_trip.toLocaleString("en-IN")}`} />}
               </DetailSection>
 
-              {service.amenities && service.amenities.length > 0 && (
+              {generalAmenities.length > 0 && (
                 <DetailSection title="Features & Amenities" icon={CheckCircle}>
                   <ul className="list-disc list-inside text-sm text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-x-3">
-                    {service.amenities.map((item, i) => <li key={i}>{item}</li>)}
+                    {generalAmenities.map((item: string, i: number) => <li key={i}>{item}</li>)}
                   </ul>
                 </DetailSection>
               )}
@@ -195,9 +343,9 @@ const TransportServiceDetailPage = () => {
           <div className="lg:col-span-1 mt-6 lg:mt-0">
             <div className={`sticky top-20 bg-white p-5 rounded-lg shadow-xl border border-gray-200`}>
               <p className="text-xl font-bold text-gray-900 mb-1">
-                {service.price_details ? service.price_details : (service.price_numeric ? `Approx. ₹${service.price_numeric.toLocaleString("en-IN")}`: "Contact for Price")}
+                {transportDetails.price_details ? transportDetails.price_details : (transportDetails.price_numeric ? `Approx. ₹${transportDetails.price_numeric.toLocaleString("en-IN")}`: "Contact for Price")}
               </p>
-              <p className="text-xs text-gray-500 mb-3">{service.price_numeric ? "(indicative price)" : "(may vary based on specific needs)"}</p>
+              <p className="text-xs text-gray-500 mb-3">{transportDetails.price_numeric ? "(indicative price)" : "(may vary based on specific needs)"}</p>
               
               <button
                 type="button"
@@ -207,7 +355,7 @@ const TransportServiceDetailPage = () => {
               >
                 Book This Transport
               </button>
-              <p className="text-xs text-gray-500 mt-2.5 text-center">Secure your ride in advance!</p>
+              <p className="text-xs text-gray-500 mt-2.5 text-center">Check availability and book now!</p>
             </div>
           </div>
         </div>

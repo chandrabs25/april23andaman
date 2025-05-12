@@ -92,19 +92,147 @@ const RentalServiceDetailPage = () => {
   const params = useParams();
   const serviceId = params.serviceId as string;
 
+  console.log("🔍 RentalServiceDetailPage: Loading service with ID:", serviceId);
+
   const { data: apiResponse, error, status } = useFetch<SingleServiceResponse>(serviceId ? `/api/services-main/${serviceId}` : null);
 
   const isLoading = status === "loading";
   const fetchError = status === "error" ? error : null;
-  const service = apiResponse?.data as RentalService | undefined;
+  
+  console.log("🔍 RentalServiceDetailPage: API Response:", JSON.stringify(apiResponse));
+  console.log("🔍 RentalServiceDetailPage: Status:", status);
+  console.log("🔍 RentalServiceDetailPage: Error:", fetchError);
+
+  // Get service data and ensure type safety with a fallback
+  let serviceData: any = null;
+  
+  // Handle different response structures
+  if (apiResponse) {
+    if ('data' in apiResponse && apiResponse.data) {
+      // Standard SingleServiceResponse structure
+      serviceData = apiResponse.data;
+    } else if (
+      ('service_category' in apiResponse && apiResponse.service_category) || 
+      ('type' in apiResponse && apiResponse.type)
+    ) {
+      // Direct service object response
+      serviceData = apiResponse;
+    }
+  }
+  
+  console.log("🔍 RentalServiceDetailPage: Service Data:", JSON.stringify(serviceData));
+  
+  // If we have service data from the API, validate it's a rental service or manually add service_category
+  let service: RentalService | undefined = undefined;
+  
+  if (serviceData) {
+    if (serviceData.service_category === "rental") {
+      // Already properly categorized
+      service = serviceData as RentalService;
+    } else if (serviceData.type && typeof serviceData.type === 'string' && serviceData.type.startsWith("rental")) {
+      // Service exists but needs categorization
+      service = {
+        ...serviceData,
+        service_category: "rental"
+      } as RentalService;
+    }
+  }
+  
+  console.log("🔍 RentalServiceDetailPage: Processed Service:", service ? "Valid rental service" : "Invalid or non-rental service");
 
   if (isLoading) return <LoadingState />;
-  if (fetchError || !service || service.service_category !== "rental") {
+  if (fetchError || !service) {
     return <ErrorState message={fetchError?.message || apiResponse?.message || "Rental service not found or invalid type."} />;
   }
 
-  const mainImage = service.images && service.images.length > 0 ? service.images[0] : "/images/placeholder_rental.jpg";
-  const galleryImages = service.images?.slice(1) || [];
+  // Parse amenities to get rental-specific data from specifics
+  const parseAmenities = (service: RentalService) => {
+    let rentalSpecifics = null;
+    
+    if (service.amenities) {
+      // If amenities is a string (JSON), try to parse it
+      if (typeof service.amenities === 'string') {
+        try {
+          const amenitiesData = JSON.parse(service.amenities);
+          if (amenitiesData && amenitiesData.specifics && amenitiesData.specifics.rental) {
+            rentalSpecifics = amenitiesData.specifics.rental;
+          }
+        } catch (e) {
+          console.error("Failed to parse amenities JSON:", e);
+        }
+      }
+    }
+    
+    return {
+      item_type: rentalSpecifics?.item_type || service.item_type,
+      rental_duration_options: Array.isArray(service.rental_duration_options) ? service.rental_duration_options : [],
+      price_per_hour: rentalSpecifics?.price_per_hour || service.price_per_hour,
+      price_per_day: rentalSpecifics?.price_per_day || service.price_per_day,
+      deposit_amount: rentalSpecifics?.deposit?.amount || service.deposit_amount,
+      pickup_location_options: Array.isArray(service.pickup_location_options) ? service.pickup_location_options : [],
+      rental_terms: rentalSpecifics?.requirements?.details || service.rental_terms,
+      unit: rentalSpecifics?.unit || null,
+      price_details: service.price_details,
+      price_numeric: service.price_numeric
+    };
+  };
+  
+  // Get rental-specific details from amenities or direct fields
+  const rentalDetails = parseAmenities(service);
+
+  // Get general amenities from amenities field
+  const getGeneralAmenities = (service: RentalService) => {
+    if (Array.isArray(service.amenities)) {
+      return service.amenities;
+    }
+    
+    if (typeof service.amenities === 'string') {
+      try {
+        const amenitiesData = JSON.parse(service.amenities);
+        if (amenitiesData && Array.isArray(amenitiesData.general)) {
+          return amenitiesData.general;
+        }
+      } catch (e) {
+        console.error("Failed to parse amenities JSON for general amenities:", e);
+      }
+    }
+    
+    return [];
+  };
+  
+  const generalAmenities = getGeneralAmenities(service);
+  
+  // Process and validate images
+  const normalizeImageUrl = (url: string): string => {
+    // Return placeholder if the URL is empty or doesn't look valid
+    if (!url || url.trim() === '' || url === 'null' || url === 'undefined') {
+      return "/images/placeholder_rental.jpg";
+    }
+    
+    // If URL is a full URL, return it, otherwise check and fix relative paths
+    if (url.startsWith('http')) {
+      return url;
+    }
+    
+    // Handle URLs that might be relative but missing leading slash
+    if (!url.startsWith('/')) {
+      return `/images/${url}`;
+    }
+    
+    return url;
+  };
+  
+  // Process main image with fallback
+  const mainImageUrl = service.images && service.images.length > 0 && service.images[0] 
+    ? normalizeImageUrl(service.images[0]) 
+    : "/images/placeholder_rental.jpg";
+  
+  // Process gallery images, filtering out any invalid ones
+  const validGalleryImages = service.images && service.images.length > 1 
+    ? service.images.slice(1)
+        .filter(img => img && img.trim() !== '' && img !== 'null' && img !== 'undefined')
+        .map(img => normalizeImageUrl(img))
+    : [];
 
   return (
     <div className={`bg-gray-50 min-h-screen`}>
@@ -136,23 +264,44 @@ const RentalServiceDetailPage = () => {
 
         <div className="lg:grid lg:grid-cols-3 lg:gap-8">
           <div className="lg:col-span-2">
-            <div className="mb-5 rounded-lg overflow-hidden shadow-lg">
+            <div className="mb-5 rounded-lg overflow-hidden shadow-lg relative aspect-[16/10]">
               <Image
-                src={mainImage}
+                src={mainImageUrl}
                 alt={`Main image for ${service.name}`}
                 width={700}
                 height={450}
-                className="w-full h-auto object-cover aspect-[16/10]"
-                onError={(e) => (e.currentTarget.src = "/images/placeholder_rental.jpg")}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.log("Main image error, using placeholder");
+                  e.currentTarget.src = "/images/placeholder_rental.jpg";
+                  e.currentTarget.onerror = null; // Prevent infinite loop
+                }}
                 priority
+                unoptimized={true} // Don't use Next.js image optimization
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Proper sizing instructions
+                loading="eager" // Load immediately
               />
             </div>
 
-            {galleryImages.length > 0 && (
+            {validGalleryImages.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 mb-6">
-                {galleryImages.map((img, index) => (
-                  <div key={index} className="rounded-md overflow-hidden shadow aspect-square">
-                    <Image src={img} alt={`${service.name} gallery image ${index + 1}`} width={150} height={150} className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = "/images/placeholder_service_thumb.jpg")} />
+                {validGalleryImages.map((img, index) => (
+                  <div key={index} className="rounded-md overflow-hidden shadow aspect-square relative">
+                    <Image 
+                      src={img} 
+                      alt={`${service.name} gallery image ${index + 1}`}
+                      width={200}
+                      height={200}
+                      className="object-cover h-full w-full"
+                      onError={(e) => {
+                        console.log("Gallery image error, using placeholder");
+                        e.currentTarget.src = "/images/placeholder_service_thumb.jpg";
+                        e.currentTarget.onerror = null; // Prevent infinite loop
+                      }}
+                      unoptimized={true} // Don't use Next.js image optimization
+                      sizes="(max-width: 768px) 50vw, 25vw" // Proper sizing instructions
+                      loading="lazy" // Lazy load gallery images
+                    />
                   </div>
                 ))}
               </div>
@@ -164,33 +313,33 @@ const RentalServiceDetailPage = () => {
               </DetailSection>
 
               <DetailSection title="Rental Details" icon={ShoppingBag}>
-                <DetailItem label="Item Type" value={service.item_type} icon={Tag} highlight />
-                {service.rental_duration_options && service.rental_duration_options.length > 0 && (
-                    <DetailItem label="Duration Options" value={service.rental_duration_options.join(", ")} icon={Clock} />
+                <DetailItem label="Item Type" value={rentalDetails.item_type} icon={Tag} highlight />
+                {rentalDetails.rental_duration_options && rentalDetails.rental_duration_options.length > 0 && (
+                    <DetailItem label="Duration Options" value={rentalDetails.rental_duration_options.join(", ")} icon={Clock} />
                 )}
-                {service.pickup_location_options && service.pickup_location_options.length > 0 && (
-                    <DetailItem label="Pickup Locations" value={service.pickup_location_options.join(", ")} icon={MapPin} />
+                {rentalDetails.pickup_location_options && rentalDetails.pickup_location_options.length > 0 && (
+                    <DetailItem label="Pickup Locations" value={rentalDetails.pickup_location_options.join(", ")} icon={MapPin} />
                 )}
               </DetailSection>
               
               <DetailSection title="Pricing" icon={IndianRupee}>
-                <DetailItem label="General Price" value={service.price_details} highlight />
-                {service.price_per_hour && <DetailItem label="Price per Hour" value={`₹${service.price_per_hour.toLocaleString("en-IN")}`} />}
-                {service.price_per_day && <DetailItem label="Price per Day" value={`₹${service.price_per_day.toLocaleString("en-IN")}`} />}
-                {service.deposit_amount && <DetailItem label="Security Deposit" value={`₹${service.deposit_amount.toLocaleString("en-IN")}`} icon={Archive} />}
+                <DetailItem label="General Price" value={rentalDetails.price_details} highlight />
+                {rentalDetails.price_per_hour && <DetailItem label="Price per Hour" value={`₹${rentalDetails.price_per_hour.toLocaleString("en-IN")}`} />}
+                {rentalDetails.price_per_day && <DetailItem label="Price per Day" value={`₹${rentalDetails.price_per_day.toLocaleString("en-IN")}`} />}
+                {rentalDetails.deposit_amount && <DetailItem label="Security Deposit" value={`₹${rentalDetails.deposit_amount.toLocaleString("en-IN")}`} icon={Archive} />}
               </DetailSection>
 
-              {service.amenities && service.amenities.length > 0 && (
+              {generalAmenities.length > 0 && (
                 <DetailSection title="Features / Included" icon={CheckCircle}>
                   <ul className="list-disc list-inside text-sm text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-x-3">
-                    {service.amenities.map((item, i) => <li key={i}>{item}</li>)}
+                    {generalAmenities.map((item: string, i: number) => <li key={i}>{item}</li>)}
                   </ul>
                 </DetailSection>
               )}
               
-              {service.rental_terms && (
+              {rentalDetails.rental_terms && (
                 <DetailSection title="Rental Terms" icon={ShieldCheck}>
-                    <p className="text-sm text-gray-700 whitespace-pre-line">{service.rental_terms}</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-line">{rentalDetails.rental_terms}</p>
                 </DetailSection>
               )}
 
@@ -204,9 +353,9 @@ const RentalServiceDetailPage = () => {
           <div className="lg:col-span-1 mt-6 lg:mt-0">
             <div className={`sticky top-20 bg-white p-5 rounded-lg shadow-xl border border-gray-200`}>
               <p className="text-xl font-bold text-gray-900 mb-1">
-                {service.price_details ? service.price_details : (service.price_numeric ? `Approx. ₹${service.price_numeric.toLocaleString("en-IN")}`: "Contact for Price")}
+                {rentalDetails.price_details ? rentalDetails.price_details : (rentalDetails.price_numeric ? `Approx. ₹${rentalDetails.price_numeric.toLocaleString("en-IN")}`: "Contact for Price")}
               </p>
-              <p className="text-xs text-gray-500 mb-3">{service.price_numeric ? "(indicative price)" : "(may vary based on specific needs)"}</p>
+              <p className="text-xs text-gray-500 mb-3">{rentalDetails.price_numeric ? "(indicative price)" : "(may vary based on specific needs)"}</p>
               
               <button
                 type="button"

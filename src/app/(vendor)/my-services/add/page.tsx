@@ -94,6 +94,13 @@ interface ServiceFormData {
   equipment_provided: string[]; // Changed from string
   safety_requirements: string;
   guide_required: boolean;
+  // Transport Specific
+  vehicle_type: string;
+  capacity_passengers: string;
+  route_details: string;
+  price_per_km: string;
+  price_per_trip: string;
+  driver_included: boolean;
 }
 
 // --- Helper Components (LoadingSpinner, VerificationPending, IncorrectVendorType) ---
@@ -159,6 +166,12 @@ function AddServiceForm() {
     equipment_provided: [],
     safety_requirements: "",
     guide_required: false,
+    vehicle_type: "",
+    capacity_passengers: "",
+    route_details: "",
+    price_per_km: "",
+    price_per_trip: "",
+    driver_included: true,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -248,6 +261,11 @@ function AddServiceForm() {
         setIsSubmitting(false);
         return;
     }
+    if (selectedServiceBaseType === "transport" && (!formData.vehicle_type || !formData.capacity_passengers)) {
+        toast({ variant: "destructive", title: "Validation Error", description: "Please provide vehicle type and capacity for transport services." });
+        setIsSubmitting(false);
+        return;
+    }
 
     // --- Data Transformation for API ---
     let apiPayload: any = {
@@ -260,6 +278,9 @@ function AddServiceForm() {
         duration: formData.duration ? (parseInt(formData.duration, 10) || null) : null,
         group_size_min: formData.group_size_min ? (parseInt(formData.group_size_min, 10) || null) : null,
         group_size_max: formData.group_size_max ? (parseInt(formData.group_size_max, 10) || null) : null,
+        capacity_passengers: formData.capacity_passengers ? (parseInt(formData.capacity_passengers, 10) || null) : null,
+        price_per_km: formData.price_per_km ? (parseFloat(formData.price_per_km) || null) : null,
+        price_per_trip: formData.price_per_trip ? (parseFloat(formData.price_per_trip) || null) : null,
         availability: JSON.stringify({
             days: formData.availability_days,
             notes: formData.availability_notes
@@ -281,6 +302,12 @@ function AddServiceForm() {
         delete apiPayload.equipment_provided;
         delete apiPayload.safety_requirements;
         delete apiPayload.guide_required;
+        delete apiPayload.vehicle_type;
+        delete apiPayload.capacity_passengers;
+        delete apiPayload.route_details;
+        delete apiPayload.price_per_km;
+        delete apiPayload.price_per_trip;
+        delete apiPayload.driver_included;
     } else if (selectedServiceBaseType === "activity") {
         delete apiPayload.rental_unit;
         delete apiPayload.quantity_available;
@@ -288,6 +315,27 @@ function AddServiceForm() {
         delete apiPayload.deposit_amount;
         delete apiPayload.age_license_requirement;
         delete apiPayload.age_license_details;
+        delete apiPayload.vehicle_type;
+        delete apiPayload.capacity_passengers;
+        delete apiPayload.route_details;
+        delete apiPayload.price_per_km;
+        delete apiPayload.price_per_trip;
+        delete apiPayload.driver_included;
+    } else if (selectedServiceBaseType === "transport") {
+        delete apiPayload.rental_unit;
+        delete apiPayload.quantity_available;
+        delete apiPayload.deposit_required;
+        delete apiPayload.deposit_amount;
+        delete apiPayload.age_license_requirement;
+        delete apiPayload.age_license_details;
+        delete apiPayload.duration;
+        delete apiPayload.duration_unit;
+        delete apiPayload.group_size_min;
+        delete apiPayload.group_size_max;
+        delete apiPayload.difficulty_level;
+        delete apiPayload.equipment_provided;
+        delete apiPayload.safety_requirements;
+        delete apiPayload.guide_required;
     }
 
     // --- API Call ---
@@ -344,6 +392,13 @@ function AddServiceForm() {
                     <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Service Type <span className="text-red-500">*</span></label>
                     <select id="type" name="type" value={formData.type} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white">
                         <option value="" disabled>-- Select Type --</option>
+                        <optgroup label="Transport">
+                            <option value="transport/car">Car Transport</option>
+                            <option value="transport/van">Van Transport</option>
+                            <option value="transport/bus">Bus Transport</option>
+                            <option value="transport/ferry">Ferry Transport</option>
+                            <option value="transport/boat">Boat Transport</option>
+                        </optgroup>
                         <optgroup label="Rentals">
                             <option value="rental/car">Car Rental</option>
                             <option value="rental/bike">Bike/Scooter Rental</option>
@@ -426,6 +481,55 @@ function AddServiceForm() {
                 />
             </div>
         </fieldset>
+
+        {/* --- Transport Specific Fields --- */}
+        {selectedServiceBaseType === "transport" && (
+            <fieldset className="border border-indigo-200 p-6 rounded-lg shadow-sm bg-indigo-50">
+                <legend className="text-lg font-semibold text-indigo-700 px-2">Transport Details</legend>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    {/* Vehicle Type */}
+                    <div>
+                        <label htmlFor="vehicle_type" className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type <span className="text-red-500">*</span></label>
+                        <select id="vehicle_type" name="vehicle_type" value={formData.vehicle_type} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white">
+                            <option value="" disabled>-- Select Vehicle Type --</option>
+                            <option value="Sedan">Sedan</option>
+                            <option value="SUV">SUV</option>
+                            <option value="Minivan">Minivan</option>
+                            <option value="Minibus">Minibus</option>
+                            <option value="Bus">Bus</option>
+                            <option value="Ferry">Ferry</option>
+                            <option value="Speedboat">Speedboat</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    {/* Passenger Capacity */}
+                    <div>
+                        <label htmlFor="capacity_passengers" className="block text-sm font-medium text-gray-700 mb-1">Passenger Capacity <span className="text-red-500">*</span></label>
+                        <input type="number" id="capacity_passengers" name="capacity_passengers" value={formData.capacity_passengers} onChange={handleChange} required min="1" step="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 4"/>
+                    </div>
+                    {/* Route Details */}
+                    <div className="md:col-span-2">
+                        <label htmlFor="route_details" className="block text-sm font-medium text-gray-700 mb-1">Route Details</label>
+                        <textarea id="route_details" name="route_details" value={formData.route_details} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Port Blair to Havelock, Airport to Hotels"></textarea>
+                        <p className="mt-1 text-xs text-gray-500">Describe the routes or areas where your service operates.</p>
+                    </div>
+                    {/* Pricing Details */}
+                    <div>
+                        <label htmlFor="price_per_km" className="block text-sm font-medium text-gray-700 mb-1">Price per KM (INR)</label>
+                        <input type="number" id="price_per_km" name="price_per_km" value={formData.price_per_km} onChange={handleChange} min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 15"/>
+                    </div>
+                    <div>
+                        <label htmlFor="price_per_trip" className="block text-sm font-medium text-gray-700 mb-1">Price per Trip (INR)</label>
+                        <input type="number" id="price_per_trip" name="price_per_trip" value={formData.price_per_trip} onChange={handleChange} min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 2500"/>
+                    </div>
+                    {/* Driver Included */}
+                    <div className="flex items-center pt-6">
+                        <input type="checkbox" id="driver_included" name="driver_included" checked={formData.driver_included} onChange={handleChange} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer" />
+                        <label htmlFor="driver_included" className="ml-2 block text-sm text-gray-900 cursor-pointer">Driver Included</label>
+                    </div>
+                </div>
+            </fieldset>
+        )}
 
         {/* --- Rental Specific Fields --- */}
         {selectedServiceBaseType === "rental" && (
@@ -548,7 +652,9 @@ function AddServiceForm() {
             <legend className="text-lg font-semibold text-gray-700 px-2">Images</legend>
             <div className="mt-4">
                 <ImageUploader
-                    label={selectedServiceBaseType === "activity" ? "Activity Images" : "Rental Equipment Images"}
+                    label={selectedServiceBaseType === "activity" ? "Activity Images" : 
+                           selectedServiceBaseType === "transport" ? "Transport Vehicle Images" : 
+                           "Rental Equipment Images"}
                     onImagesUploaded={handleImagesUploaded}
                     existingImages={formData.images}
                     parentId={tempServiceId}
@@ -556,6 +662,8 @@ function AddServiceForm() {
                     maxImages={8}
                     helperText={selectedServiceBaseType === "activity" 
                         ? "Upload photos showcasing your activity (locations, equipment, guests enjoying the activity)"
+                        : selectedServiceBaseType === "transport"
+                        ? "Upload photos of your transport vehicles in good condition"
                         : "Upload photos of the rental equipment in good condition"}
                 />
             </div>

@@ -79,7 +79,54 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, categoryColor }) => 
     ? service.images[0] 
     : "/images/placeholder_service.jpg";
   const rating = service.rating || null;
-  const priceDisplay = service.price_details || (service.price_numeric ? `${service.price_numeric.toLocaleString("en-IN")} (approx)` : "Price on request");
+  
+  // Parse amenities to get specifics data
+  const getSpecificsData = (service: CategorizedService) => {
+    // Check if amenities has specifics data in a JSON structure
+    if (service.amenities && typeof service.amenities === 'string') {
+      try {
+        const amenitiesData = JSON.parse(service.amenities);
+        if (amenitiesData && amenitiesData.specifics) {
+          return amenitiesData.specifics;
+        }
+      } catch (e) {
+        console.error("Failed to parse amenities JSON:", e);
+      }
+    }
+    return null;
+  };
+
+  // Get price display based on service category and specifics
+  const getPriceDisplay = (service: CategorizedService) => {
+    // First check if price_details is available (direct field)
+    if (service.price_details) {
+      return service.price_details;
+    }
+
+    // Then check for specifics data
+    const specifics = getSpecificsData(service);
+    
+    if (service.service_category === "transport") {
+      const transportSpecifics = specifics?.transport;
+      if (transportSpecifics) {
+        if (transportSpecifics.price_per_trip) {
+          return `₹${transportSpecifics.price_per_trip.toLocaleString("en-IN")} per trip`;
+        } else if (transportSpecifics.price_per_km) {
+          return `₹${transportSpecifics.price_per_km.toLocaleString("en-IN")} per km`;
+        }
+      }
+    } else if (service.service_category === "rental") {
+      const rentalSpecifics = specifics?.rental;
+      if (rentalSpecifics && rentalSpecifics.unit) {
+        return `₹${service.price_numeric?.toLocaleString("en-IN") || ""} ${rentalSpecifics.unit}`;
+      }
+    }
+    
+    // Fallback to price_numeric
+    return service.price_numeric ? `₹${service.price_numeric.toLocaleString("en-IN")} (approx)` : "Price on request";
+  };
+  
+  const priceDisplay = getPriceDisplay(service);
 
   // Handle image error
   const handleImageError = () => {
@@ -95,6 +142,52 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, categoryColor }) => 
   } else if (service.service_category === "activity") {
     detailPath = `/activities/${service.id}`;
   }
+
+  // Get additional display details based on service type
+  const getAdditionalDetails = () => {
+    const specifics = getSpecificsData(service);
+    
+    if (service.service_category === "transport") {
+      const transportSpecifics = specifics?.transport;
+      if (transportSpecifics) {
+        return (
+          <div className="flex items-center text-xs text-gray-500 mb-2">
+            {transportSpecifics.vehicle_type && (
+              <div className="flex items-center mr-3">
+                <Car size={12} className="mr-1 flex-shrink-0" style={{ color: categoryColor }} />
+                <span>{transportSpecifics.vehicle_type}</span>
+              </div>
+            )}
+            {transportSpecifics.capacity_passengers && (
+              <div className="flex items-center">
+                <Users size={12} className="mr-1 flex-shrink-0" style={{ color: categoryColor }} />
+                <span>{transportSpecifics.capacity_passengers} passengers</span>
+              </div>
+            )}
+          </div>
+        );
+      }
+    } else if (service.service_category === "rental") {
+      const rentalSpecifics = specifics?.rental;
+      return (
+        <div className="flex items-center text-xs text-gray-500 mb-2">
+          {service.item_type && (
+            <div className="flex items-center mr-3">
+              <ShoppingBag size={12} className="mr-1 flex-shrink-0" style={{ color: categoryColor }} />
+              <span>{service.item_type}</span>
+            </div>
+          )}
+          {rentalSpecifics?.unit && (
+            <div className="flex items-center">
+              <Clock size={12} className="mr-1 flex-shrink-0" style={{ color: categoryColor }} />
+              <span>{rentalSpecifics.unit}</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] border border-gray-200">
@@ -124,6 +217,8 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, categoryColor }) => 
           {service.provider?.business_name && <span className="mx-1">|</span>}
           {service.provider?.business_name && <span className="line-clamp-1">By: {service.provider.business_name}</span>}
         </div>
+
+        {getAdditionalDetails()}
 
         <p className="text-gray-600 text-xs mb-3 line-clamp-2 flex-grow">
           {service.description || "Reliable service for your travel needs."}
