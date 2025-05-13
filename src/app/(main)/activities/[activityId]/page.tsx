@@ -1,4 +1,3 @@
-// src/app/(main)/activities/[activityId]/page.tsx
 "use client";
 
 import React from "react";
@@ -6,8 +5,9 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useFetch } from "@/hooks/useFetch";
-import type { Activity } from "@/types/activity";
-import type { ActivityService, SingleServiceResponse, BaseService } from "@/types/transport_rental";
+// Assuming Activity type might be different or more specific than ActivityService
+// import type { Activity } from "@/types/activity"; 
+import type { ActivityService, SingleServiceResponse } from "@/types/transport_rental";
 import {
   Loader2,
   AlertTriangle,
@@ -19,21 +19,45 @@ import {
   CalendarDays,
   ShieldCheck,
   Info,
-  Sparkles,
+  Sparkles, // Specific to activities
   CheckCircle,
   XCircle,
   ChevronLeft,
-  Navigation,
-  Sun,
-  Wind,
-  Waves,
-  BarChart3,
-  UserPlus,
-  HardHat,
-  LifeBuoy
+  Navigation, // Specific to activities
+  Sun, // Specific to activities
+  // Wind, // Not used, but keep for lucide-react imports
+  // Waves, // Not used, but keep for lucide-react imports
+  BarChart3, // For difficulty
+  UserPlus, // For guide
+  HardHat, // For safety
+  LifeBuoy, // For equipment
+  Building, // For Provider (added for consistency)
+  ImageOff // For image error placeholder
 } from "lucide-react";
 
-// Extended interface to handle additional fields that are missing from ActivityService
+// --- Import Common Styles (from the shared theme.ts file) ---
+import {
+  primaryButtonBg, // For focus rings on inputs etc.
+  errorBg,
+  errorBorder,
+  errorText,
+  errorIconColor,
+  neutralBgLight,
+  neutralBorderLight,
+  // neutralBg, // For image placeholders etc.
+  neutralBorder,
+  neutralText,
+  neutralTextLight,
+  neutralIconColor,
+  sectionPadding,
+  cardBaseStyle,
+  sectionHeadingStyle, // Replaces local DetailSection title style
+  buttonPrimaryStyle,
+  buttonSecondaryStyle,
+} from "@/styles/theme";
+// --- End Common Styles Import ---
+
+// Extended interface to handle additional fields that might be in serviceData
 interface ExtendedActivityService extends ActivityService {
   location_details?: string | null;
   latitude?: number | null;
@@ -41,28 +65,28 @@ interface ExtendedActivityService extends ActivityService {
   what_to_bring?: string[] | null;
   included_services?: string[] | null;
   not_included_services?: string[] | null;
+  // Ensure all fields from ActivityService are here if not using Omit/Pick
+  guide_required?: boolean;
+  equipment_provided?: string[];
+  safety_requirements?: string;
 }
 
-// --- Color Theme (consistent with activities list page) ---
-const primaryColor = "#F59E0B"; // Amber-600
-const primaryColorDarker = "#D97706"; // Amber-700
-// --- End Color Theme ---
 
-// --- Helper Components ---
+// --- Helper Components (Styled with Imported Theme) ---
 const LoadingState = () => (
-  <div className="container mx-auto px-4 py-12 text-center">
-    <Loader2 className={`h-12 w-12 animate-spin text-[${primaryColor}] mx-auto mb-4`} />
-    <p className={`text-xl font-semibold text-[${primaryColorDarker}]`}>Loading Activity Details...</p>
-    <p className="text-gray-500">Please wait a moment.</p>
+  <div className={`container mx-auto px-4 ${sectionPadding} text-center ${neutralBgLight} rounded-2xl border ${neutralBorderLight}`}>
+    <Loader2 className={`h-12 w-12 animate-spin ${neutralIconColor} mx-auto mb-4`} />
+    <p className={`text-xl font-semibold ${neutralText}`}>Loading Activity Details...</p>
+    <p className={`${neutralTextLight}`}>Please wait a moment.</p>
   </div>
 );
 
 const ErrorState = ({ message }: { message?: string }) => (
-  <div className="container mx-auto px-4 py-12 text-center">
-    <AlertTriangle className={`h-12 w-12 text-red-500 mx-auto mb-4`} />
-    <p className="text-xl font-semibold text-red-600">Could Not Load Activity</p>
-    <p className="text-gray-500">{message || "The activity details could not be retrieved. It might be unavailable or the link may be incorrect."}</p>
-    <Link href="/activities" className={`mt-6 inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[${primaryColor}] hover:bg-[${primaryColorDarker}] transition-colors`}>
+  <div className={`container mx-auto px-4 ${sectionPadding} text-center ${errorBg} rounded-2xl border ${errorBorder}`}>
+    <AlertTriangle className={`h-12 w-12 ${errorIconColor} mx-auto mb-4`} />
+    <p className={`text-xl font-semibold ${errorText}`}>Could Not Load Activity</p>
+    <p className={`${neutralTextLight}`}>{message || "The activity details could not be retrieved. It might be unavailable or the link may be incorrect."}</p>
+    <Link href="/activities" className={`mt-6 ${buttonSecondaryStyle}`}>
       <ChevronLeft size={18} className="mr-2" /> Back to Activities
     </Link>
   </div>
@@ -75,16 +99,18 @@ interface DetailSectionProps {
   className?: string;
 }
 const DetailSection: React.FC<DetailSectionProps> = ({ title, icon: Icon, children, className }) => (
-  <div className={`py-6 border-b border-gray-200 ${className || ""}`}>
-    <h2 className="text-xl font-semibold text-gray-800 mb-3 flex items-center">
-      {Icon && <Icon size={22} className={`mr-3 text-[${primaryColorDarker}]`} />}
+  <div className={`py-5 border-b ${neutralBorderLight} last:border-b-0 ${className || ""}`}>
+    <h2 className={sectionHeadingStyle}> {/* Using imported sectionHeadingStyle */}
+      {Icon && <Icon size={20} className={`mr-2.5 ${neutralIconColor}`} />} {/* Icon color to neutral */}
       {title}
     </h2>
-    <div className="text-gray-700 leading-relaxed prose prose-sm max-w-none">
+    {/* Removed prose for more direct control with Tailwind text colors */}
+    <div className={`text-sm ${neutralTextLight} leading-relaxed space-y-2`}>
       {children}
     </div>
   </div>
 );
+// --- End Helper Components ---
 
 const ActivityDetailsPage = () => {
   const params = useParams();
@@ -92,385 +118,260 @@ const ActivityDetailsPage = () => {
 
   console.log("🔍 ActivityDetailPage: Loading activity with ID:", activityId);
 
-  // Use services-main endpoint which handles all service types consistently
   const { data: apiResponse, error, status } = useFetch<SingleServiceResponse>(activityId ? `/api/services-main/${activityId}` : null);
 
   const isLoading = status === "loading";
   const fetchError = status === "error" ? error : null;
-  
-  console.log("🔍 ActivityDetailPage: API Response:", JSON.stringify(apiResponse));
-  console.log("🔍 ActivityDetailPage: Status:", status);
-  console.log("🔍 ActivityDetailPage: Error:", fetchError);
 
-  // Get activity data with type safety fallback
+  console.log("🔍 ActivityDetailPage: API Response:", JSON.stringify(apiResponse));
+
   let serviceData: any = null;
-  
-  // Handle different response structures
   if (apiResponse) {
-    if ('data' in apiResponse && apiResponse.data) {
-      // Standard response structure
-      serviceData = apiResponse.data;
-    } else if (
-      ('name' in apiResponse) || 
-      ('type' in apiResponse && apiResponse.type)
-    ) {
-      // Direct service object response
-      serviceData = apiResponse;
-    }
+    if ('data' in apiResponse && apiResponse.data) serviceData = apiResponse.data;
+    else if (('name' in apiResponse) || ('type' in apiResponse && apiResponse.type)) serviceData = apiResponse;
   }
-  
+
   console.log("🔍 ActivityDetailPage: Service Data:", JSON.stringify(serviceData));
-  
-  // Check if it's an activity (either by service_category or type field)
+
   let activity: ExtendedActivityService | undefined = undefined;
-  
   if (serviceData) {
-    if (serviceData.service_category === "activity" || 
-        (serviceData.type && typeof serviceData.type === 'string' && serviceData.type.startsWith("activity"))) {
+    if (serviceData.service_category === "activity" ||
+      (serviceData.type && typeof serviceData.type === 'string' && serviceData.type.startsWith("activity"))) {
       activity = serviceData as ExtendedActivityService;
     }
   }
-  
+
   console.log("🔍 ActivityDetailPage: Processed Activity:", activity ? "Valid" : "Invalid or non-activity service");
 
   if (isLoading) return <LoadingState />;
-  if (fetchError || !activity) return <ErrorState message={fetchError?.message || apiResponse?.message || "Activity not found or invalid type."} />;
+  if (fetchError || !activity) return <ErrorState message={fetchError?.message || (apiResponse as any)?.message || "Activity not found or invalid type."} />;
 
-  // Get general amenities (separate from activity-specific details)
-  const getGeneralAmenities = (activity: ExtendedActivityService): string[] => {
-    // If amenities is undefined or null, return empty array
-    if (!activity.amenities) return [];
-    
-    // If amenities is a string, try to parse it as JSON first
-    if (typeof activity.amenities === 'string') {
+  const getGeneralAmenities = (currentActivity: ExtendedActivityService): string[] => {
+    if (!currentActivity.amenities) return [];
+    if (typeof currentActivity.amenities === 'string') {
       try {
-        const amenitiesData = JSON.parse(activity.amenities);
-        
-        // Check if parsed data has general_amenities array
-        if (amenitiesData && typeof amenitiesData === 'object' && 'general_amenities' in amenitiesData && 
-            Array.isArray(amenitiesData.general_amenities)) {
-          return amenitiesData.general_amenities;
+        const amenitiesData = JSON.parse(currentActivity.amenities);
+        if (amenitiesData && typeof amenitiesData === 'object' && 'general_amenities' in amenitiesData && Array.isArray(amenitiesData.general_amenities)) {
+          return amenitiesData.general_amenities.map(String);
         }
-        
-        // Check if parsed data is directly an array
-        if (Array.isArray(amenitiesData)) {
-          return amenitiesData.map(item => String(item));
-        }
-        
-        // If we reach here, no valid array was found in the parsed JSON
-        return [];
+        if (Array.isArray(amenitiesData)) return amenitiesData.map(String);
+        return (currentActivity.amenities as string).split(',').map(item => item.trim()).filter(Boolean);
       } catch (e) {
-        // JSON parsing failed, treat it as comma-separated string
-        // We already checked above that activity.amenities is a string
-        const amenitiesString = activity.amenities as string;
-        return amenitiesString.split(',')
-          .map((item: string) => item.trim())
-          .filter(Boolean);
+        return (currentActivity.amenities as string).split(',').map(item => item.trim()).filter(Boolean);
       }
     }
-    
-    // If amenities is already an array, return it after ensuring all items are strings
-    if (Array.isArray(activity.amenities)) {
-      return activity.amenities.map(item => String(item));
-    }
-    
-    // Fallback for any other type
+    if (Array.isArray(currentActivity.amenities)) return currentActivity.amenities.map(String);
     return [];
   };
 
-  // Process general amenities
   const generalAmenities = getGeneralAmenities(activity);
 
-  // Process and validate images
-  const normalizeImageUrl = (url: string): string => {
-    // Return placeholder if the URL is empty or doesn't look valid
-    if (!url || url.trim() === '' || url === 'null' || url === 'undefined') {
-      return "/images/placeholder_activity_large.jpg";
+  const normalizeImageUrl = (url: string | null | undefined): string => {
+    const placeholder = "/images/placeholder_service.jpg";
+    if (!url || typeof url !== 'string' || url.trim() === "" || ["null", "undefined"].includes(url.toLowerCase())) {
+      return placeholder;
     }
-    
-    // If URL is a full URL, return it, otherwise check and fix relative paths
-    if (url.startsWith('http')) {
-      return url;
-    }
-    
-    // Handle URLs that might be relative but missing leading slash
-    if (!url.startsWith('/')) {
-      return `/images/${url}`;
-    }
-    
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    if (!url.startsWith("/")) return `/images/${url}`;
     return url;
   };
-  
-  // Process main image with fallback
-  const mainImageUrl = activity.images && activity.images.length > 0 && activity.images[0] 
-    ? normalizeImageUrl(activity.images[0]) 
-    : "/images/placeholder_activity_large.jpg";
-  
-  // Process gallery images, filtering out any invalid ones
-  const validGalleryImages = activity.images && activity.images.length > 1 
-    ? activity.images.slice(1)
-        .filter(img => img && img.trim() !== '' && img !== 'null' && img !== 'undefined')
-        .map(img => normalizeImageUrl(img))
-    : [];
 
-  // Format duration properly
+  const mainImageUrl = normalizeImageUrl(activity.images?.[0]);
+  const validGalleryImages = (activity.images ?? []).slice(1).map(normalizeImageUrl).filter(img => img !== "/images/placeholder_service.jpg");
+
   const formattedDuration = activity.duration && activity.duration_unit
     ? `${activity.duration} ${activity.duration_unit}`
-    : activity.duration 
-      ? `${activity.duration} hours` 
-      : null;
+    : activity.duration ? `${activity.duration} hours` : null;
 
   return (
-    <div className={`bg-gray-50 min-h-screen`}>
-      {/* Back to Activities Link */} 
-      <div className={`bg-white shadow-sm py-3 sticky top-0 z-40`}>
-        <div className="container mx-auto px-4">
-            <Link href="/activities" className={`inline-flex items-center text-sm text-[${primaryColorDarker}] hover:text-[${primaryColor}] font-medium`}>
-                <ChevronLeft size={20} className="mr-1" />
-                Back to All Activities
-            </Link>
+    <div className="bg-white min-h-screen"> {/* Base background to white */}
+      {/* Sticky Header */}
+      <div className={`bg-white shadow-sm py-3 sticky top-0 z-40 border-b ${neutralBorderLight}`}>
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <Link href="/activities" className={buttonSecondaryStyle}> {/* Using shared button style */}
+            <ChevronLeft size={18} className="mr-1.5" />
+            Back to Activities
+          </Link>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="container mx-auto px-4 py-8">
-        {/* Header Section */}
+      <div className={`container mx-auto px-4 ${sectionPadding}`}>
+        {/* Service Title and Meta */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{activity.name}</h1>
-          <div className="flex flex-wrap items-center text-sm text-gray-600 gap-x-4 gap-y-1">
-            <span className="flex items-center"><MapPin size={16} className={`mr-1.5 text-[${primaryColor}]`} /> {activity.island_name}</span>
-            {formattedDuration && <span className="flex items-center"><Clock size={16} className={`mr-1.5 text-[${primaryColor}]`} /> {formattedDuration}</span>}
-            {activity.rating !== null && (
+          <h1 className={`text-3xl md:text-4xl font-bold ${neutralText} mb-2`}>{activity.name}</h1>
+          <div className={`flex flex-wrap items-center text-sm ${neutralTextLight} gap-x-4 gap-y-1.5`}>
+            {activity.island_name && <span className="flex items-center"><MapPin size={15} className={`mr-1.5 ${neutralIconColor}`} /> {activity.island_name}</span>}
+            {formattedDuration && <span className="flex items-center"><Clock size={15} className={`mr-1.5 ${neutralIconColor}`} /> {formattedDuration}</span>}
+            {activity.rating !== null && typeof activity.rating === 'number' && (
               <span className="flex items-center">
-                <Star size={16} className={`mr-1 text-yellow-400 fill-current`} /> {activity.rating.toFixed(1)}/5.0
+                <Star size={15} className="mr-1 text-yellow-400 fill-current" /> {activity.rating.toFixed(1)}/5.0
               </span>
             )}
             {activity.difficulty_level && (
               <span className="flex items-center">
-                <BarChart3 size={16} className={`mr-1.5 text-[${primaryColor}]`} /> 
+                <BarChart3 size={15} className={`mr-1.5 ${neutralIconColor}`} />
                 {activity.difficulty_level.charAt(0).toUpperCase() + activity.difficulty_level.slice(1)} Difficulty
               </span>
             )}
           </div>
           {activity.provider?.business_name && (
-             <p className="text-xs text-gray-500 mt-1">Offered by: <span className="font-medium">{activity.provider.business_name}</span></p>
+            <p className={`text-sm ${neutralTextLight} mt-2`}>
+              Offered by: <span className={`font-medium ${neutralText}`}>{activity.provider.business_name}</span>
+            </p>
           )}
         </div>
 
-        {/* Layout: Image Gallery and Booking Sidebar */}
-        <div className="lg:grid lg:grid-cols-3 lg:gap-8">
-          {/* Left Column: Image Gallery & Details */}
+        {/* Layout: Main Content & Sidebar */}
+        <div className="lg:grid lg:grid-cols-3 lg:gap-10">
+          {/* --- Left Column (Images & Details) --- */}
           <div className="lg:col-span-2">
             {/* Main Image */}
-            <div className="mb-6 rounded-xl overflow-hidden shadow-lg relative aspect-[16/10]">
+            <div className={`mb-6 rounded-2xl overflow-hidden shadow-lg relative aspect-[16/10] border ${neutralBorderLight}`}>
               <Image
                 src={mainImageUrl}
                 alt={`Main image for ${activity.name}`}
-                width={800}
-                height={500}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  console.log("Main image error, using placeholder");
-                  e.currentTarget.src = "/images/placeholder_activity_large.jpg";
-                  e.currentTarget.onerror = null; // Prevent infinite loop
-                }}
-                priority
-                unoptimized={true} // Don't use Next.js image optimization
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Proper sizing instructions
-                loading="eager" // Load immediately
+                fill style={{ objectFit: 'cover' }}
+                className="bg-gray-100"
+                onError={(e) => { e.currentTarget.src = "/images/placeholder_service.jpg"; e.currentTarget.onerror = null; }}
+                priority unoptimized={true} sizes="(max-width: 1024px) 100vw, 66vw" loading="eager"
               />
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 pointer-events-none">
+                <ImageOff size={48} className={`${neutralIconColor} opacity-50`} />
+              </div>
             </div>
 
-            {/* Gallery Images (if any) */}
+            {/* Gallery Images */}
             {validGalleryImages.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-8">
                 {validGalleryImages.map((img, index) => (
-                  <div key={index} className="rounded-lg overflow-hidden shadow-md aspect-square relative">
+                  <div key={index} className={`rounded-xl overflow-hidden shadow-md aspect-square relative border ${neutralBorderLight}`}>
                     <Image
-                      src={img}
-                      alt={`${activity.name} gallery image ${index + 1}`}
-                      width={200}
-                      height={200}
-                      className="object-cover h-full w-full"
-                      onError={(e) => {
-                        console.log("Gallery image error, using placeholder");
-                        e.currentTarget.src = "/images/placeholder_activity.jpg";
-                        e.currentTarget.onerror = null; // Prevent infinite loop
-                      }}
-                      unoptimized={true} // Don't use Next.js image optimization
-                      sizes="(max-width: 768px) 50vw, 25vw" // Proper sizing instructions
-                      loading="lazy" // Lazy load gallery images
+                      src={img} alt={`${activity.name} gallery image ${index + 1}`}
+                      fill style={{ objectFit: 'cover' }} className="bg-gray-100"
+                      onError={(e) => { e.currentTarget.src = "/images/placeholder_service.jpg"; e.currentTarget.onerror = null; }}
+                      unoptimized={true} sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw" loading="lazy"
                     />
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 pointer-events-none">
+                      <ImageOff size={32} className={`${neutralIconColor} opacity-50`} />
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Detailed Sections */}
-            <div className="bg-white p-6 rounded-xl shadow-lg">
+            {/* Details Card */}
+            <div className={cardBaseStyle}>
               <DetailSection title="About this Activity" icon={Info}>
                 <p>{activity.description || "Detailed description not available."}</p>
               </DetailSection>
 
-              {/* Activity Specific Details */}
-              <DetailSection title="Activity Details" icon={Sparkles}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <DetailSection title="Activity Highlights" icon={Sparkles}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                   {formattedDuration && (
-                    <div className="flex items-start">
-                      <Clock size={18} className={`mr-2 text-[${primaryColor}] mt-0.5 flex-shrink-0`} />
-                      <div>
-                        <h4 className="font-medium text-gray-800">Duration</h4>
-                        <p className="text-sm text-gray-600">{formattedDuration}</p>
-                      </div>
-                    </div>
+                    <div className="flex items-start"><Clock size={18} className={`mr-2 ${neutralIconColor} mt-0.5 flex-shrink-0`} /><div><h4 className={`font-medium ${neutralText}`}>Duration</h4><p>{formattedDuration}</p></div></div>
                   )}
-                  
                   {(activity.group_size_min || activity.group_size_max) && (
-                    <div className="flex items-start">
-                      <Users size={18} className={`mr-2 text-[${primaryColor}] mt-0.5 flex-shrink-0`} />
-                      <div>
-                        <h4 className="font-medium text-gray-800">Group Size</h4>
-                        <p className="text-sm text-gray-600">
-                          {activity.group_size_min && activity.group_size_max 
-                            ? `${activity.group_size_min} to ${activity.group_size_max} people`
-                            : activity.group_size_min 
-                              ? `Minimum ${activity.group_size_min} people` 
-                              : `Maximum ${activity.group_size_max} people`}
-                        </p>
-                      </div>
-                    </div>
+                    <div className="flex items-start"><Users size={18} className={`mr-2 ${neutralIconColor} mt-0.5 flex-shrink-0`} /><div><h4 className={`font-medium ${neutralText}`}>Group Size</h4><p>{activity.group_size_min && activity.group_size_max ? `${activity.group_size_min} to ${activity.group_size_max}` : activity.group_size_min ? `Min ${activity.group_size_min}` : `Max ${activity.group_size_max}`} people</p></div></div>
                   )}
-                  
                   {activity.difficulty_level && (
-                    <div className="flex items-start">
-                      <BarChart3 size={18} className={`mr-2 text-[${primaryColor}] mt-0.5 flex-shrink-0`} />
-                      <div>
-                        <h4 className="font-medium text-gray-800">Difficulty Level</h4>
-                        <p className="text-sm text-gray-600">{activity.difficulty_level.charAt(0).toUpperCase() + activity.difficulty_level.slice(1)}</p>
-                      </div>
-                    </div>
+                    <div className="flex items-start"><BarChart3 size={18} className={`mr-2 ${neutralIconColor} mt-0.5 flex-shrink-0`} /><div><h4 className={`font-medium ${neutralText}`}>Difficulty</h4><p>{activity.difficulty_level.charAt(0).toUpperCase() + activity.difficulty_level.slice(1)}</p></div></div>
                   )}
-                  
                   {activity.guide_required && (
-                    <div className="flex items-start">
-                      <UserPlus size={18} className={`mr-2 text-[${primaryColor}] mt-0.5 flex-shrink-0`} />
-                      <div>
-                        <h4 className="font-medium text-gray-800">Guide</h4>
-                        <p className="text-sm text-gray-600">Professional guide included</p>
-                      </div>
-                    </div>
+                    <div className="flex items-start"><UserPlus size={18} className={`mr-2 ${neutralIconColor} mt-0.5 flex-shrink-0`} /><div><h4 className={`font-medium ${neutralText}`}>Guide</h4><p>Professional guide included</p></div></div>
                   )}
                 </div>
               </DetailSection>
 
-              {/* Equipment Provided */}
               {activity.equipment_provided && activity.equipment_provided.length > 0 && (
                 <DetailSection title="Equipment Provided" icon={LifeBuoy}>
-                  <ul className="list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                    {activity.equipment_provided.map((item: string, i: number) => <li key={i}>{item}</li>)}
-                  </ul>
+                  <ul className={`list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4 marker:${neutralIconColor}`}>{activity.equipment_provided.map((item, i) => <li key={i}>{item}</li>)}</ul>
                 </DetailSection>
               )}
-
-              {/* Safety Requirements */}
               {activity.safety_requirements && (
-                <DetailSection title="Safety Requirements" icon={HardHat}>
-                  <p>{activity.safety_requirements}</p>
-                </DetailSection>
+                <DetailSection title="Safety First" icon={HardHat}><p>{activity.safety_requirements}</p></DetailSection>
               )}
-
-              {/* General Amenities */}
               {generalAmenities.length > 0 && (
-                <DetailSection title="Amenities & Features" icon={Sparkles}>
-                  <ul className="list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                    {generalAmenities.map((item: string, i: number) => <li key={i}>{item}</li>)}
-                  </ul>
+                <DetailSection title="General Amenities" icon={Sparkles}>
+                  <ul className={`list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4 marker:${neutralIconColor}`}>{generalAmenities.map((item, i) => <li key={i}>{item}</li>)}</ul>
                 </DetailSection>
               )}
-              
               {activity.location_details && (
                 <DetailSection title="Location & Meeting Point" icon={Navigation}>
-                    <p>{activity.location_details || ""}</p>
-                    {/* Basic Map Link - Consider embedding a map later if needed */}
-                    {activity.latitude && activity.longitude && (
-                        <a 
-                            href={`https://www.google.com/maps/search/?api=1&query=${activity.latitude},${activity.longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`mt-2 inline-flex items-center text-sm text-[${primaryColorDarker}] hover:text-[${primaryColor}] font-medium`}
-                        >
-                           View on Map <MapPin size={14} className="ml-1.5"/>
-                        </a>
-                    )}
+                  <p>{activity.location_details}</p>
+                  {activity.latitude && activity.longitude && (
+                    <a href={`https://maps.google.com/?q=${activity.latitude},${activity.longitude}`} target="_blank" rel="noopener noreferrer" className={`mt-2 inline-flex items-center text-sm ${primaryButtonBg} text-white hover:opacity-90 font-medium px-3 py-1.5 rounded-md`}>
+                      View on Map <MapPin size={14} className="ml-1.5" />
+                    </a>
+                  )}
                 </DetailSection>
               )}
-
-              {activity.what_to_bring && Array.isArray(activity.what_to_bring) && activity.what_to_bring.length > 0 && (
+              {activity.what_to_bring && activity.what_to_bring.length > 0 && (
                 <DetailSection title="What to Bring" icon={Sun}>
-                  <ul className="list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                    {activity.what_to_bring.map((item: string, i: number) => <li key={i}>{item}</li>)}
-                  </ul>
+                  <ul className={`list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4 marker:${neutralIconColor}`}>{activity.what_to_bring.map((item, i) => <li key={i}>{item}</li>)}</ul>
                 </DetailSection>
               )}
-
               {activity.included_services && activity.included_services.length > 0 && (
                 <DetailSection title="What's Included" icon={CheckCircle}>
-                  <ul className="list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                    {activity.included_services.map((item: string, i: number) => <li key={i}>{item}</li>)}
-                  </ul>
+                  <ul className={`list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4 marker:${neutralIconColor}`}>{activity.included_services.map((item, i) => <li key={i}>{item}</li>)}</ul>
                 </DetailSection>
               )}
-
               {activity.not_included_services && activity.not_included_services.length > 0 && (
                 <DetailSection title="What's Not Included" icon={XCircle}>
-                  <ul className="list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                    {activity.not_included_services.map((item: string, i: number) => <li key={i}>{item}</li>)}
-                  </ul>
+                  <ul className={`list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-4 marker:${neutralIconColor}`}>{activity.not_included_services.map((item, i) => <li key={i}>{item}</li>)}</ul>
                 </DetailSection>
               )}
-
-              {activity.availability_summary && (
-                <DetailSection title="Availability" icon={CalendarDays}>
+              {activity.availability_summary && (typeof activity.availability_summary === 'string') && ( // Ensure it's a string
+                <DetailSection title="Availability Notes" icon={CalendarDays}>
                   <p>{activity.availability_summary}</p>
                 </DetailSection>
               )}
-
-              {activity.cancellation_policy && (
-                <DetailSection title="Cancellation Policy" icon={ShieldCheck} className="border-b-0 pb-0">
-                  <p>{activity.cancellation_policy}</p>
-                </DetailSection>
-              )}
+              <DetailSection title="Cancellation Policy" icon={ShieldCheck} className="border-b-0 pb-0">
+                <p>{activity.cancellation_policy || "Contact provider for cancellation details."}</p>
+              </DetailSection>
             </div>
           </div>
 
-          {/* Right Column: Booking Sidebar (Sticky) */}
+          {/* --- Right Column (Booking/Provider Sidebar) --- */}
           <div className="lg:col-span-1 mt-8 lg:mt-0">
-            <div className="sticky top-20 bg-white p-6 rounded-xl shadow-xl border border-gray-200">
-              <p className="text-2xl font-bold text-gray-900 mb-1">
-                {activity.price_details ? activity.price_details : (activity.price_numeric ? `₹${activity.price_numeric.toLocaleString("en-IN")}`: "Contact for Price")}
-                <span className="text-sm font-normal text-gray-500 ml-1">per person</span>
+            <div className={`${cardBaseStyle} sticky top-24 shadow-xl`}> {/* Increased shadow for emphasis */}
+              <h3 className={`text-xl font-semibold ${neutralText} mb-1.5`}>Price</h3>
+              <p className={`text-3xl font-bold ${neutralText} mb-0.5`}>
+                {activity.price_numeric ? `₹${activity.price_numeric.toLocaleString("en-IN")}` : (activity.price_details || "Contact")}
               </p>
-              
-              {/* Placeholder for date/time selection and guest count */}
+              <p className={`text-xs ${neutralTextLight} mb-4`}>
+                {activity.price_numeric ? "per person (approx)" : "(contact for details)"}
+              </p>
+
               <div className="my-4 space-y-3">
                 <div>
-                    <label htmlFor="activity-date" className="block text-xs font-medium text-gray-700">Select Date</label>
-                    <input type="date" id="activity-date" name="activity-date" className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-[${primaryColor}] focus:border-[${primaryColor}] sm:text-sm"/>
+                  <label htmlFor="activity-date" className={`block text-xs font-medium ${neutralTextLight} mb-1`}>Select Date</label>
+                  <input type="date" id="activity-date" name="activity-date" className={`mt-1 block w-full py-2 px-3 border ${neutralBorder} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[${primaryButtonBg}] focus:border-[${primaryButtonBg}] text-sm ${neutralText}`} />
                 </div>
                 <div>
-                    <label htmlFor="activity-guests" className="block text-xs font-medium text-gray-700">Number of Guests</label>
-                    <input type="number" id="activity-guests" name="activity-guests" defaultValue="1" min="1" className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-[${primaryColor}] focus:border-[${primaryColor}] sm:text-sm"/>
+                  <label htmlFor="activity-guests" className={`block text-xs font-medium ${neutralTextLight} mb-1`}>Number of Guests</label>
+                  <input type="number" id="activity-guests" name="activity-guests" defaultValue="1" min="1" className={`mt-1 block w-full py-2 px-3 border ${neutralBorder} bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[${primaryButtonBg}] focus:border-[${primaryButtonBg}] text-sm ${neutralText}`} />
                 </div>
               </div>
 
               <button
                 type="button"
-                className={`w-full bg-gradient-to-r from-[${primaryColor}] to-[${primaryColorDarker}] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105`}
+                className={`${buttonPrimaryStyle} w-full`} // Ensure full width
                 onClick={() => alert("Booking functionality to be implemented!")}
               >
                 Book This Activity
               </button>
-              <p className="text-xs text-gray-500 mt-3 text-center">Secure your spot! This activity is popular.</p>
+              <p className={`text-xs ${neutralTextLight} mt-2.5 text-center`}>Secure your spot! This activity is popular.</p>
+
+              {activity.provider && (
+                <div className={`mt-6 pt-6 border-t ${neutralBorderLight}`}>
+                  <h4 className={`text-md font-semibold ${neutralText} mb-2 flex items-center`}>
+                    <Building size={18} className={`mr-2 ${neutralIconColor}`} />
+                    Service Provider
+                  </h4>
+                  <p className={`text-sm font-medium ${neutralText}`}>{activity.provider.business_name}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -480,4 +381,3 @@ const ActivityDetailsPage = () => {
 };
 
 export default ActivityDetailsPage;
-

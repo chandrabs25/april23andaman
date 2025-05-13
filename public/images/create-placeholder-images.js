@@ -20,7 +20,13 @@ const placeholderImages = [
   { name: 'team-3.jpg', color: '#EC4899' },
   { name: 'team-4.jpg', color: '#F97316' },
   { name: 'map.jpg', color: '#94A3B8' },
-  { name: 'placeholder.jpg', color: '#CBD5E1' }
+  { name: 'placeholder.jpg', color: '#CBD5E1' },
+  { name: 'placeholder_service.jpg', color: '#94A3B8' },
+  { name: 'placeholder_transport.jpg', color: '#3B82F6' },
+  { name: 'placeholder_rental.jpg', color: '#F59E0B' },
+  { name: 'placeholder_activity.jpg', color: '#059669' },
+  { name: 'placeholder_activity_large.jpg', color: '#059669' },
+  { name: 'placeholder_service_thumb.jpg', color: '#94A3B8' }
 ];
 
 const fs = require('fs');

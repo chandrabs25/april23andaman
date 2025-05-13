@@ -43,6 +43,8 @@ CREATE TABLE service_providers (
   business_name          TEXT NOT NULL,
   type                   TEXT NOT NULL,
   license_no             TEXT,
+  business_phone         TEXT,
+  business_email         TEXT,
   address                TEXT,
   verified               BOOLEAN DEFAULT FALSE,
   verification_documents TEXT,
