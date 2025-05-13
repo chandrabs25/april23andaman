@@ -11,11 +11,26 @@ import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info } from "lucide-
 import Link from "next/link";
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import the new component
 import { ImageUploader } from "@/components/ImageUploader"; // Import ImageUploader
+import { default as dynamicImport } from 'next/dynamic'; // Import dynamic and alias it
+import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
+
+// Dynamically import MapPicker with ssr: false
+const MapPicker = dynamicImport(() => import('@/components/MapPicker'), {
+  ssr: false,
+  loading: () => <p>Loading map...</p> // Optional loading component
+});
 
 // --- Interfaces ---
 interface AuthUser {
   id: string | number;
   role_id?: number;
+  price_per_km: string;
+  price_per_trip: string;
+  driver_included: boolean;
+  // Location fields
+  street_address: string; // Assuming you might want this too
+  geo_lat: string;
+  geo_lng: string;
 }
 
 interface VendorProfile {
@@ -101,6 +116,10 @@ interface ServiceFormData {
   price_per_km: string;
   price_per_trip: string;
   driver_included: boolean;
+  // Location fields
+  street_address: string; // Assuming you might want this too
+  geo_lat: string;
+  geo_lng: string;
 }
 
 // --- Helper Components (LoadingSpinner, VerificationPending, IncorrectVendorType) ---
@@ -172,19 +191,17 @@ function AddServiceForm() {
     price_per_km: "",
     price_per_trip: "",
     driver_included: true,
+    street_address: "",
+    geo_lat: "",
+    geo_lng: "",
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingDetails, setIsSubmittingDetails] = useState(false);
+  const [isUpdatingWithImages, setIsUpdatingWithImages] = useState(false);
+  const [createdServiceId, setCreatedServiceId] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false); // State for map visibility
   const selectedServiceBaseType = formData.type.split("/")[0];
   
-  // We need a temporary service ID for image uploads before the service is created
-  // Make it more consistent by using user ID and timestamp
-  const [tempServiceId, setTempServiceId] = useState<string>(() => {
-    const timestamp = Date.now();
-    const randomStr = Math.random().toString(36).substring(2, 10);
-    return `temp-${timestamp}-${randomStr}`;
-  });
-
   // 1. Fetch Vendor Profile
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
   const { data: vendorProfile, error: profileError, status: profileStatus } = useFetch<VendorProfile | null>(profileApiUrl);
@@ -234,109 +251,165 @@ function AddServiceForm() {
     setFormData((prev) => ({ ...prev, [name]: values }));
   };
 
+  const handleLocationChange = (lat: number, lng: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      street_address: prev.street_address, // Keep existing street address if any
+      geo_lat: lat.toString(),
+      geo_lng: lng.toString(),
+    }));
+  };
+
   // Handler for images uploaded via ImageUploader
-  const handleImagesUploaded = (imageUrls: string[]) => {
-    console.log(`Images uploaded for temp service ID: ${tempServiceId}`, imageUrls);
-    setFormData((prev) => ({ ...prev, images: imageUrls }));
+  const handleImagesUploaded = async (imageUrls: string[]) => {
+    if (!createdServiceId) {
+      toast({ variant: "destructive", title: "Error", description: "Service ID not available for image upload." });
+      return;
+    }
+    if (imageUrls.length === 0) {
+        toast({ title: "Info", description: "No new images to upload. Service created without new images." });
+        router.push("/my-services"); // Navigate if no images were selected/uploaded
+        return;
+    }
+
+    setIsUpdatingWithImages(true);
+    console.log(`Attempting to associate images with service ID: ${createdServiceId}`, imageUrls);
+
+    try {
+      const response = await fetch(`/api/vendor/my-services/${createdServiceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: JSON.stringify(imageUrls) }), // Send only images
+      });
+      const result: ApiResponse = await response.json();
+
+      if (response.ok && result.success) {
+        toast({ title: "Success", description: "Images associated with the service successfully." });
+        setFormData((prev) => ({ ...prev, images: imageUrls })); // Update local state for consistency
+        router.push("/my-services");
+      } else {
+        throw new Error(result.message || "Failed to associate images with the service.");
+      }
+    } catch (error: any) {
+      console.error("Error associating images:", error);
+      toast({
+        variant: "destructive",
+        title: "Image Association Error",
+        description: error.message || "An unexpected error occurred while associating images.",
+      });
+    } finally {
+      setIsUpdatingWithImages(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    
+    // If service already created, this button should ideally not be active for submitting details again.
+    // Or, it could mean "skip image upload and finish" if designed that way.
+    // For now, this handleSubmit is only for the initial detail submission.
+    if (createdServiceId) {
+        toast({ title: "Info", description: "Service details already submitted. Please upload images or navigate away."});
+        // If no images were uploaded, allow to proceed.
+        if (formData.images.length === 0 && !isUpdatingWithImages) {
+             router.push("/my-services");
+        }
+        return;
+    }
+
+    setIsSubmittingDetails(true);
 
     // Basic validation
     if (!formData.type || !formData.island_id || !formData.name.trim() || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
         toast({ variant: "destructive", title: "Validation Error", description: "Please fill all required fields (*) with valid data." });
-        setIsSubmitting(false);
+        setIsSubmittingDetails(false);
         return;
     }
     // Add more specific validation based on type
     if (selectedServiceBaseType === "rental" && (!formData.rental_unit || isNaN(parseInt(formData.quantity_available)) || parseInt(formData.quantity_available) <= 0)) {
         toast({ variant: "destructive", title: "Validation Error", description: "Please provide valid rental unit and quantity for rentals." });
-        setIsSubmitting(false);
+        setIsSubmittingDetails(false);
         return;
     }
     if (selectedServiceBaseType === "activity" && (!formData.duration_unit || isNaN(parseInt(formData.duration)) || parseInt(formData.duration) <= 0)) {
         toast({ variant: "destructive", title: "Validation Error", description: "Please provide valid duration and unit for activities." });
-        setIsSubmitting(false);
+        setIsSubmittingDetails(false);
         return;
     }
     if (selectedServiceBaseType === "transport" && (!formData.vehicle_type || !formData.capacity_passengers)) {
         toast({ variant: "destructive", title: "Validation Error", description: "Please provide vehicle type and capacity for transport services." });
-        setIsSubmitting(false);
+        setIsSubmittingDetails(false);
         return;
     }
 
     // --- Data Transformation for API ---
+    // Ensure images are NOT part of the initial payload
     let apiPayload: any = {
-        ...formData,
-        service_provider_id: vendorProfile?.id,
-        island_id: parseInt(formData.island_id, 10) || null,
-        price: parseFloat(formData.price) || 0,
-        quantity_available: formData.quantity_available ? (parseInt(formData.quantity_available, 10) || null) : null,
-        deposit_amount: formData.deposit_amount ? (parseFloat(formData.deposit_amount) || null) : null,
-        duration: formData.duration ? (parseInt(formData.duration, 10) || null) : null,
-        group_size_min: formData.group_size_min ? (parseInt(formData.group_size_min, 10) || null) : null,
-        group_size_max: formData.group_size_max ? (parseInt(formData.group_size_max, 10) || null) : null,
-        capacity_passengers: formData.capacity_passengers ? (parseInt(formData.capacity_passengers, 10) || null) : null,
-        price_per_km: formData.price_per_km ? (parseFloat(formData.price_per_km) || null) : null,
-        price_per_trip: formData.price_per_trip ? (parseFloat(formData.price_per_trip) || null) : null,
-        availability: JSON.stringify({
-            days: formData.availability_days,
-            notes: formData.availability_notes
-        }),
-        images: JSON.stringify(formData.images),
-        equipment_provided: JSON.stringify(formData.equipment_provided),
-        general_amenities: JSON.stringify(formData.general_amenities),
-    };
+      // ...formData, // Spread all of formData EXCEPT images
+      name: formData.name,
+      description: formData.description,
+      type: formData.type,
+      island_id: parseInt(formData.island_id, 10) || null,
+      price: parseFloat(formData.price) || 0,
+      cancellation_policy: formData.cancellation_policy,
+      is_active: formData.is_active,
+      availability_days: formData.availability_days, // Keep as array for now, stringify below
+      availability_notes: formData.availability_notes,
+      general_amenities: formData.general_amenities, // Keep as array for now, stringify below
 
+      // Rental Specific (conditionally add these)
+      rental_unit: selectedServiceBaseType === 'rental' ? formData.rental_unit : undefined,
+      quantity_available: selectedServiceBaseType === 'rental' && formData.quantity_available ? (parseInt(formData.quantity_available, 10) || null) : undefined,
+      deposit_required: selectedServiceBaseType === 'rental' ? formData.deposit_required : undefined,
+      deposit_amount: selectedServiceBaseType === 'rental' && formData.deposit_amount ? (parseFloat(formData.deposit_amount) || null) : undefined,
+      age_license_requirement: selectedServiceBaseType === 'rental' ? formData.age_license_requirement : undefined,
+      age_license_details: selectedServiceBaseType === 'rental' ? formData.age_license_details : undefined,
+
+      // Activity Specific (conditionally add these)
+      duration: selectedServiceBaseType === 'activity' && formData.duration ? (parseInt(formData.duration, 10) || null) : undefined,
+      duration_unit: selectedServiceBaseType === 'activity' ? formData.duration_unit : undefined,
+      group_size_min: selectedServiceBaseType === 'activity' && formData.group_size_min ? (parseInt(formData.group_size_min, 10) || null) : undefined,
+      group_size_max: selectedServiceBaseType === 'activity' && formData.group_size_max ? (parseInt(formData.group_size_max, 10) || null) : undefined,
+      difficulty_level: selectedServiceBaseType === 'activity' ? formData.difficulty_level : undefined,
+      equipment_provided: selectedServiceBaseType === 'activity' ? formData.equipment_provided : undefined, // Keep as array, stringify below
+      safety_requirements: selectedServiceBaseType === 'activity' ? formData.safety_requirements : undefined,
+      guide_required: selectedServiceBaseType === 'activity' ? formData.guide_required : undefined,
+      
+      // Transport Specific (conditionally add these)
+      vehicle_type: selectedServiceBaseType === 'transport' ? formData.vehicle_type : undefined,
+      capacity_passengers: selectedServiceBaseType === 'transport' && formData.capacity_passengers ? (parseInt(formData.capacity_passengers, 10) || null) : undefined,
+      route_details: selectedServiceBaseType === 'transport' ? formData.route_details : undefined,
+      price_per_km: selectedServiceBaseType === 'transport' && formData.price_per_km ? (parseFloat(formData.price_per_km) || null) : undefined,
+      price_per_trip: selectedServiceBaseType === 'transport' && formData.price_per_trip ? (parseFloat(formData.price_per_trip) || null) : undefined,
+      driver_included: selectedServiceBaseType === 'transport' ? formData.driver_included : undefined,
+
+      // Common fields to be stringified or processed
+      service_provider_id: vendorProfile?.id,
+      // Location data
+      street_address: formData.street_address,
+      geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
+      geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
+    };
+    
+    // Stringify array fields
+    apiPayload.availability = JSON.stringify({
+        days: formData.availability_days,
+        notes: formData.availability_notes
+    });
+    apiPayload.general_amenities = JSON.stringify(formData.general_amenities);
+    if (selectedServiceBaseType === 'activity' && formData.equipment_provided) {
+        apiPayload.equipment_provided = JSON.stringify(formData.equipment_provided);
+    }
+    
+    // Remove individual fields that are now part of JSON strings or conditionally not included
     delete apiPayload.availability_days;
     delete apiPayload.availability_notes;
+    // Images are intentionally not included here
+    // Other fields are conditionally added/removed based on selectedServiceBaseType
 
-    if (selectedServiceBaseType === "rental") {
-        delete apiPayload.duration;
-        delete apiPayload.duration_unit;
-        delete apiPayload.group_size_min;
-        delete apiPayload.group_size_max;
-        delete apiPayload.difficulty_level;
-        delete apiPayload.equipment_provided;
-        delete apiPayload.safety_requirements;
-        delete apiPayload.guide_required;
-        delete apiPayload.vehicle_type;
-        delete apiPayload.capacity_passengers;
-        delete apiPayload.route_details;
-        delete apiPayload.price_per_km;
-        delete apiPayload.price_per_trip;
-        delete apiPayload.driver_included;
-    } else if (selectedServiceBaseType === "activity") {
-        delete apiPayload.rental_unit;
-        delete apiPayload.quantity_available;
-        delete apiPayload.deposit_required;
-        delete apiPayload.deposit_amount;
-        delete apiPayload.age_license_requirement;
-        delete apiPayload.age_license_details;
-        delete apiPayload.vehicle_type;
-        delete apiPayload.capacity_passengers;
-        delete apiPayload.route_details;
-        delete apiPayload.price_per_km;
-        delete apiPayload.price_per_trip;
-        delete apiPayload.driver_included;
-    } else if (selectedServiceBaseType === "transport") {
-        delete apiPayload.rental_unit;
-        delete apiPayload.quantity_available;
-        delete apiPayload.deposit_required;
-        delete apiPayload.deposit_amount;
-        delete apiPayload.age_license_requirement;
-        delete apiPayload.age_license_details;
-        delete apiPayload.duration;
-        delete apiPayload.duration_unit;
-        delete apiPayload.group_size_min;
-        delete apiPayload.group_size_max;
-        delete apiPayload.difficulty_level;
-        delete apiPayload.equipment_provided;
-        delete apiPayload.safety_requirements;
-        delete apiPayload.guide_required;
-    }
+    // Clean undefined properties from payload
+    Object.keys(apiPayload).forEach(key => apiPayload[key] === undefined && delete apiPayload[key]);
+
 
     // --- API Call ---
     try {
@@ -346,17 +419,18 @@ function AddServiceForm() {
         body: JSON.stringify(apiPayload),
       });
       const result: ApiResponse = await response.json();
-      if (response.ok && result.success) {
-        toast({ title: "Success", description: "Service added successfully." });
-        router.push("/my-services");
+      if (response.ok && result.success && result.data?.id) {
+        toast({ title: "Step 1 Complete", description: "Service details saved. Please upload images." });
+        setCreatedServiceId(result.data.id.toString()); // Save the new service ID
+        // Do not navigate yet, wait for image upload step
       } else {
-        throw new Error(result.message || "Failed to add service");
+        throw new Error(result.message || "Failed to add service details.");
       }
     } catch (error: any) {
-      console.error("Add Service Error:", error);
-      toast({ variant: "destructive", title: "Error", description: error.message || "An unexpected error occurred." });
+      console.error("Add Service Details Error:", error);
+      toast({ variant: "destructive", title: "Error Saving Details", description: error.message || "An unexpected error occurred." });
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingDetails(false);
     }
   };
 
@@ -647,18 +721,91 @@ function AddServiceForm() {
             </fieldset>
         )}
 
+        {/* --- Location --- */}
+        <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
+            <legend className="text-lg font-semibold text-gray-700 px-2">Location (Optional)</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div className="md:col-span-2">
+                    <label htmlFor="street_address" className="block text-sm font-medium text-gray-700 mb-1">Street Address / Meeting Point</label>
+                    <input 
+                        type="text" 
+                        id="street_address" 
+                        name="street_address" 
+                        value={formData.street_address} 
+                        onChange={handleChange} 
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        placeholder="e.g., Near Jetty, Shop No. 5"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="geo_lat" className="block text-sm font-medium text-gray-700 mb-1">Latitude (from map)</label>
+                    <input 
+                        type="text" 
+                        id="geo_lat" 
+                        name="geo_lat" 
+                        value={formData.geo_lat} 
+                        readOnly 
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm"
+                        placeholder="Select on map"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="geo_lng" className="block text-sm font-medium text-gray-700 mb-1">Longitude (from map)</label>
+                    <input 
+                        type="text" 
+                        id="geo_lng" 
+                        name="geo_lng" 
+                        value={formData.geo_lng} 
+                        readOnly 
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm"
+                        placeholder="Select on map"
+                    />
+                </div>
+                <div className="md:col-span-2">
+                  <button 
+                    type="button"
+                    onClick={() => setShowMap(!showMap)}
+                    className="mt-2 mb-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    {showMap ? "Hide Map" : "Select Location on Map"}
+                  </button>
+                  {showMap && (
+                    <div className="mt-2 rounded-lg overflow-hidden shadow-sm border border-gray-200">
+                      <MapPicker 
+                        onLocationChange={handleLocationChange}
+                        initialPosition={
+                          formData.geo_lat && formData.geo_lng
+                            ? { lat: parseFloat(formData.geo_lat), lng: parseFloat(formData.geo_lng) }
+                            : undefined
+                        }
+                        mapHeight="300px"
+                      />
+                      <p className="text-xs text-gray-500 p-2 bg-gray-50">Click on the map or drag the marker. Use search for places.</p>
+                    </div>
+                  )}
+                </div>
+            </div>
+        </fieldset>
+
         {/* --- Images & Policies --- */}
         <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
             <legend className="text-lg font-semibold text-gray-700 px-2">Images</legend>
             <div className="mt-4">
+              {!createdServiceId && (
+                <div className="p-4 bg-gray-100 rounded-md text-center text-gray-600">
+                  <p className="font-medium">Please save service details first to enable image uploads.</p>
+                  <p className="text-sm">After saving, this section will become active.</p>
+                </div>
+              )}
+              {createdServiceId && (
                 <ImageUploader
                     label={selectedServiceBaseType === "activity" ? "Activity Images" : 
                            selectedServiceBaseType === "transport" ? "Transport Vehicle Images" : 
                            "Rental Equipment Images"}
                     onImagesUploaded={handleImagesUploaded}
-                    existingImages={formData.images}
-                    parentId={tempServiceId}
-                    type="service"
+                    existingImages={formData.images} // formData.images will be initially empty, or filled if coming back to this step
+                    parentId={createdServiceId}  // Use the actual service ID
+                    type="service" // Generic type for service images folder structure
                     maxImages={8}
                     helperText={selectedServiceBaseType === "activity" 
                         ? "Upload photos showcasing your activity (locations, equipment, guests enjoying the activity)"
@@ -666,6 +813,7 @@ function AddServiceForm() {
                         ? "Upload photos of your transport vehicles in good condition"
                         : "Upload photos of the rental equipment in good condition"}
                 />
+              )}
             </div>
         </fieldset>
 
@@ -695,14 +843,31 @@ function AddServiceForm() {
             Cancel
           </Link>
           <button
-            type="submit"
-            disabled={isSubmitting || isLoading}
+            type={createdServiceId ? "button" : "submit"}
+            disabled={isSubmittingDetails || isLoading || (!!createdServiceId && isUpdatingWithImages)}
+            onClick={createdServiceId ? (e) => {
+              e.preventDefault(); 
+              if (formData.images.length === 0 && !isUpdatingWithImages) {
+                toast({title: "Finalizing Service", description: "No images selected. Finalizing service creation."}) 
+                router.push("/my-services"); 
+              } else if (isUpdatingWithImages) {
+                toast({title: "Image Upload Pending", description: "Please wait for images to upload and associate."}) 
+              } else {
+                toast({title: "Image Upload Expected", description: "Please upload images, or wait for existing selections to process."}) 
+              }
+            } : undefined}
             className="inline-flex items-center bg-indigo-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
           >
-            {isSubmitting ? (
-              <><Loader2 size={16} className="animate-spin mr-2" /> Adding Service...</>
+            {isSubmittingDetails ? (
+              <><Loader2 size={16} className="animate-spin mr-2" /> Saving Details...</>
+            ) : createdServiceId ? (
+                isUpdatingWithImages ? (
+                    <><Loader2 size={16} className="animate-spin mr-2" /> Associating Images...</>
+                ) : formData.images.length > 0 ?
+                "Images Selected (Auto-associates on upload)" :
+                "Finish & Save Service"
             ) : (
-              "Add Service"
+              "Save Details & Upload Images"
             )}
           </button>
         </div>

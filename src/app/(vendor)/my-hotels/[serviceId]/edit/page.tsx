@@ -2,7 +2,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useFetch } from "@/hooks/useFetch";
@@ -11,6 +11,14 @@ import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info, BedDouble } fr
 import Link from "next/link";
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import CheckboxGroup
 import { ImageUploader } from "@/components/ImageUploader"; // Import ImageUploader
+import { default as dynamicImport } from 'next/dynamic'; // Import dynamic and alias it
+import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
+
+// Dynamically import MapPicker with ssr: false
+const MapPicker = dynamicImport(() => import('@/components/MapPicker'), {
+  ssr: false,
+  loading: () => <p>Loading map...</p> // Optional loading component
+});
 
 // --- Interfaces ---
 interface AuthUser {
@@ -207,6 +215,7 @@ function EditHotelForm() {
 
   const [formData, setFormData] = useState<HotelFormData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showMap, setShowMap] = useState(false); // State for map visibility
 
   // 1. Fetch Vendor Profile
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
@@ -223,7 +232,7 @@ function EditHotelForm() {
   const { data: islands = [], status: islandsStatus } = useFetch<Island[]>("/api/islands");
 
   // --- Utility Function to Safely Parse JSON Array String ---
-  const parseJsonArray = (jsonString: string | null | undefined, fieldName: string): string[] => {
+  const parseJsonArray = useCallback((jsonString: string | null | undefined, fieldName: string): string[] => {
       if (!jsonString || typeof jsonString !== "string" || !jsonString.trim()) {
           return [];
       }
@@ -238,13 +247,14 @@ function EditHotelForm() {
               return [parsed.trim()];
           }
           // Attempt recovery if it's comma-separated legacy string
+          // This check should use jsonString, as parsed might not be a string if it's an array of non-strings
           if (typeof jsonString === "string" && jsonString.includes(",")) {
              return jsonString.split(",").map(s => s.trim()).filter(Boolean);
           }
           return [];
       } catch (e) {
           console.error(`Failed to parse ${fieldName} JSON:`, jsonString, e);
-          // Fallback: treat as comma-separated if parsing fails
+          // Fallback: treat as comma-separated if parsing fails (jsonString is guaranteed to be a string here due to outer checks)
           if (jsonString.includes(",")) {
               return jsonString.split(",").map(s => s.trim()).filter(Boolean);
           }
@@ -254,26 +264,41 @@ function EditHotelForm() {
           }
           return [];
       }
-  };
+  }, []); // Empty dependency array for useCallback
 
   // --- Populate Form Data Effect ---
   useEffect(() => {
     if (hotelStatus === "success" && hotelData) {
       const hotel = hotelData;
+      
+      const facilitiesArray = parseJsonArray(hotel.facilities, "facilities");
+      const mealPlansArray = parseJsonArray(hotel.meal_plans, "meal_plans");
+      
+      let imagesArray: string[] = [];
+      if (Array.isArray(hotel.images)) {
+        imagesArray = hotel.images.every(item => typeof item === 'string') ? hotel.images as string[] : [];
+        console.log("[EditHotelForm] hotel.images is already an array:", hotel.images);
+      } else if (typeof hotel.images === 'string') {
+        imagesArray = parseJsonArray(hotel.images, "images");
+        console.log("[EditHotelForm] Fetched hotel.images string (to be parsed):", hotel.images);
+      } else {
+        console.log("[EditHotelForm] hotel.images is neither an array nor a string:", hotel.images);
+      }
+      console.log("[EditHotelForm] Final imagesArray for formData:", imagesArray);
 
       setFormData({
         name: hotel.name || "",
         description: hotel.description || "",
-        price: (typeof hotel.price === "number" ? hotel.price.toString() : hotel.price) || "",
+        price: hotel.price?.toString() || "", 
         cancellation_policy: hotel.cancellation_policy || "",
-        images: parseJsonArray(hotel.images, "images"),
+        images: imagesArray, 
         island_id: hotel.island_id?.toString() || "",
         star_rating: hotel.star_rating?.toString() || "",
         check_in_time: hotel.check_in_time || "14:00",
         check_out_time: hotel.check_out_time || "12:00",
         total_rooms: hotel.total_rooms?.toString() || "",
-        facilities: parseJsonArray(hotel.facilities, "facilities"),
-        meal_plans: parseJsonArray(hotel.meal_plans, "meal_plans"),
+        facilities: facilitiesArray, 
+        meal_plans: mealPlansArray,   
         pets_allowed: hotel.pets_allowed === 1,
         children_allowed: hotel.children_allowed === 1,
         accessibility_features: hotel.accessibility_features || "",
@@ -288,7 +313,7 @@ function EditHotelForm() {
         toast({ variant: "destructive", title: "Error Loading Hotel", description: hotelError?.message || "Could not load hotel details." });
         router.replace("/my-hotels");
     }
-  }, [hotelStatus, hotelData, hotelError, router]);
+  }, [hotelStatus, hotelData, hotelError, router, parseJsonArray]);
 
   // --- Authorization & Loading Checks ---
   useEffect(() => {
@@ -340,6 +365,18 @@ function EditHotelForm() {
   // Specific handler for CheckboxGroup and TagInput components
   const handleArrayChange = (name: string, values: string[]) => {
     setFormData((prev) => prev ? { ...prev, [name]: values } : null);
+  };
+
+  const handleLocationChange = (lat: number, lng: number) => {
+    setFormData((prev) =>
+      prev
+        ? {
+            ...prev,
+            geo_lat: lat.toString(),
+            geo_lng: lng.toString(),
+          }
+        : null
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -575,26 +612,68 @@ function EditHotelForm() {
           </div>
         </fieldset>
 
-        {/* --- Location --- */}
+        {/* --- Location & Accessibility --- */}
         <fieldset className="border p-4 rounded-md shadow-sm">
-            <legend className="text-lg font-semibold px-2">Location</legend>
+            <legend className="text-lg font-semibold text-gray-700 px-2">Location & Accessibility</legend>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                 {/* Street Address */}
                 <div className="md:col-span-2">
-                    <label htmlFor="street_address" className="block text-sm font-medium text-gray-700">Street Address</label>
-                    <input type="text" id="street_address" name="street_address" value={formData.street_address} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                    <label htmlFor="street_address" className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                    <input type="text" id="street_address" name="street_address" value={formData?.street_address || ""} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                 </div>
-                 {/* Latitude */}
+                {/* Latitude & Longitude - Replaced with Map Picker and read-only inputs */}
                 <div>
-                    <label htmlFor="geo_lat" className="block text-sm font-medium text-gray-700">Latitude</label>
-                    <input type="number" id="geo_lat" name="geo_lat" value={formData.geo_lat} onChange={handleChange} step="any" placeholder="e.g., 12.9716" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                    <p className="mt-1 text-xs text-gray-500 flex items-center"><Info size={12} className="mr-1"/> Optional. Helps with map display.</p>
+                    <label htmlFor="geo_lat" className="block text-sm font-medium text-gray-700 mb-1">Latitude (from map)</label>
+                    <input
+                        type="text"
+                        id="geo_lat"
+                        name="geo_lat"
+                        value={formData?.geo_lat || ""}
+                        readOnly
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm"
+                        placeholder="Select on map"
+                    />
                 </div>
-                 {/* Longitude */}
                 <div>
-                    <label htmlFor="geo_lng" className="block text-sm font-medium text-gray-700">Longitude</label>
-                    <input type="number" id="geo_lng" name="geo_lng" value={formData.geo_lng} onChange={handleChange} step="any" placeholder="e.g., 77.5946" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                     <p className="mt-1 text-xs text-gray-500 flex items-center"><Info size={12} className="mr-1"/> Optional. Helps with map display.</p>
+                    <label htmlFor="geo_lng" className="block text-sm font-medium text-gray-700 mb-1">Longitude (from map)</label>
+                    <input
+                        type="text"
+                        id="geo_lng"
+                        name="geo_lng"
+                        value={formData?.geo_lng || ""}
+                        readOnly
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm"
+                        placeholder="Select on map"
+                    />
+                </div>
+                <div className="md:col-span-2">
+                    <button
+                        type="button"
+                        onClick={() => setShowMap(!showMap)}
+                        className="mt-2 mb-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                        disabled={!formData} // Disable if formData is not yet loaded
+                    >
+                        {showMap ? "Hide Map" : "Select Location on Map"}
+                    </button>
+                    {showMap && formData && (
+                        <div className="mt-2 rounded-lg overflow-hidden shadow-sm border border-gray-200">
+                        <MapPicker
+                            onLocationChange={handleLocationChange}
+                            initialPosition={
+                                formData.geo_lat && formData.geo_lng
+                                ? { lat: parseFloat(formData.geo_lat), lng: parseFloat(formData.geo_lng) }
+                                : undefined // Default center will be used in MapPicker
+                            }
+                            mapHeight="300px"
+                        />
+                        <p className="text-xs text-gray-500 p-2 bg-gray-50">Click on the map or drag the marker to set coordinates. Use search for places.</p>
+                        </div>
+                    )}
+                </div>
+                {/* Accessibility Features */}
+                <div className="md:col-span-2">
+                    <label htmlFor="accessibility_features" className="block text-sm font-medium text-gray-700">Accessibility Features</label>
+                    <textarea id="accessibility_features" name="accessibility_features" value={formData.accessibility_features} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Wheelchair accessible rooms, Ramps..."></textarea>
                 </div>
             </div>
         </fieldset>

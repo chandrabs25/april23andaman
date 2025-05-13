@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DatabaseService } from "@/lib/database";
 import { verifyAuth, requireAuth } from "@/lib/auth";
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import type { CloudflareEnv } from '../../../../../../cloudflare-env';
 
 export const dynamic = "force-dynamic";
+
+// R2 Public Domain - IMPORTANT: Should ideally come from an environment variable
+const R2_PUBLIC_DOMAIN = "pub-861b68dd53c047e0a06b7164e95ccc43.r2.dev"; // REPLACE if different or use env var
+
+let R2_BUCKET_INSTANCE: R2Bucket | null = null;
+
+// Asynchronously initialize R2 bucket instance
+async function initializeR2() {
+  if (R2_BUCKET_INSTANCE) return; // Already initialized
+  try {
+    // @ts-ignore // CloudflareEnv might not be perfectly typed for all bindings initially
+    const ctx = await getCloudflareContext<CloudflareEnv>({ async: true });
+    if (ctx?.env?.IMAGES_BUCKET) {
+      R2_BUCKET_INSTANCE = ctx.env.IMAGES_BUCKET as R2Bucket;
+      console.log("✅ [Hotel Update] R2_BUCKET (IMAGES_BUCKET) obtained via getCloudflareContext.");
+    } else {
+      console.warn("⚠️ [Hotel Update] IMAGES_BUCKET not found via getCloudflareContext. Image deletion from R2 will be skipped.");
+    }
+  } catch (e) {
+    console.warn("⚠️ [Hotel Update] Error getting Cloudflare context for R2. Image deletion from R2 will be skipped:", e);
+  }
+}
+// Initialize R2 when module loads, errors handled, operations will skip if instance not available.
+initializeR2();
 
 interface RouteContext {
   params: {
@@ -162,7 +188,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       description?: string;
       price: number; // Base per-night rate
       cancellation_policy?: any;
-      images?: string | null; // General Hotel Photos (URL)
+      images?: string | null; // General Hotel Photos (JSON string array of URLs)
       island_id: number;
       // is_active is handled by status endpoint
       // Hotel-Specific Fields
@@ -181,6 +207,65 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     }
 
     const body: HotelUpdateBody = await request.json();
+
+    // --- Image Deletion Logic ---
+    if (R2_BUCKET_INSTANCE && body.images !== undefined) { // Only proceed if R2 is available and images field is part of the request
+      const existingHotelService = await db.getServiceById(serviceId); // Fetch current service data
+      let currentImageUrls: string[] = [];
+      if (existingHotelService?.images) {
+        try {
+          currentImageUrls = JSON.parse(existingHotelService.images);
+          if (!Array.isArray(currentImageUrls)) currentImageUrls = [];
+        } catch (e) {
+          console.error(`[Hotel Update ID: ${serviceId}] Error parsing current images JSON:`, existingHotelService.images, e);
+          currentImageUrls = []; // Fallback to empty if parse fails
+        }
+      }
+
+      let newImageUrls: string[] = [];
+      if (body.images) { // body.images is a JSON string or null
+        try {
+          newImageUrls = JSON.parse(body.images);
+          if (!Array.isArray(newImageUrls)) newImageUrls = [];
+        } catch (e) {
+          console.error(`[Hotel Update ID: ${serviceId}] Error parsing new images JSON from body:`, body.images, e);
+          // Potentially return error or handle as empty list
+           return NextResponse.json({ success: false, message: 'Invalid format for new images data.' }, { status: 400 });
+        }
+      }
+      
+      const urlsToDelete = currentImageUrls.filter(url => !newImageUrls.includes(url));
+
+      if (urlsToDelete.length > 0) {
+        console.log(`[Hotel Update ID: ${serviceId}] Attempting to delete ${urlsToDelete.length} images from R2.`);
+        for (const urlToDelete of urlsToDelete) {
+          try {
+            // Extract R2 object key from the full URL
+            // Example URL: https://pub-861b68dd53c047e0a06b7164e95ccc43.r2.dev/images/hotels/1/image.jpg
+            // Key should be: images/hotels/1/image.jpg
+            const urlParts = new URL(urlToDelete); // Use URL constructor for robust parsing
+            if (urlParts.hostname === R2_PUBLIC_DOMAIN) {
+              const r2ObjectKey = urlParts.pathname.substring(1); // Remove leading '/'
+              if (r2ObjectKey) {
+                // @ts-ignore R2Bucket types might not be fully available in all envs
+                await R2_BUCKET_INSTANCE.delete(r2ObjectKey);
+                console.log(`[Hotel Update ID: ${serviceId}] Successfully deleted ${r2ObjectKey} from R2.`);
+              } else {
+                 console.warn(`[Hotel Update ID: ${serviceId}] Could not extract R2 key from URL: ${urlToDelete}`);
+              }
+            } else {
+              console.warn(`[Hotel Update ID: ${serviceId}] URL to delete (${urlToDelete}) does not match R2_PUBLIC_DOMAIN (${R2_PUBLIC_DOMAIN}). Skipping R2 delete.`);
+            }
+          } catch (deleteError) {
+            console.error(`[Hotel Update ID: ${serviceId}] Failed to delete ${urlToDelete} from R2:`, deleteError);
+            // Continue, don't fail the whole update for a single R2 delete error
+          }
+        }
+      }
+    } else if (body.images !== undefined && !R2_BUCKET_INSTANCE) {
+        console.warn(`[Hotel Update ID: ${serviceId}] R2_BUCKET_INSTANCE not available. Skipping deletion of orphaned images from R2.`);
+    }
+    // --- End Image Deletion Logic ---
 
     // Basic validation
      if (
@@ -343,6 +428,45 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
             { status: 403 }
         );
     }
+
+    // --- R2 Image Deletion Logic for Hotel ---
+    if (R2_BUCKET_INSTANCE) {
+      const hotelServiceToDelete = await db.getServiceById(serviceId); // Fetch the service data
+      if (hotelServiceToDelete?.images) {
+        try {
+          const imageUrls: string[] = JSON.parse(hotelServiceToDelete.images);
+          if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+            console.log(`[Hotel Delete ID: ${serviceId}] Attempting to delete ${imageUrls.length} images from R2.`);
+            for (const urlToDelete of imageUrls) {
+              try {
+                const urlParts = new URL(urlToDelete);
+                if (urlParts.hostname === R2_PUBLIC_DOMAIN) {
+                  const r2ObjectKey = urlParts.pathname.substring(1); // Remove leading '/'
+                  if (r2ObjectKey) {
+                    // @ts-ignore R2Bucket types might not be fully available
+                    await R2_BUCKET_INSTANCE.delete(r2ObjectKey);
+                    console.log(`[Hotel Delete ID: ${serviceId}] Successfully deleted ${r2ObjectKey} from R2.`);
+                  } else {
+                    console.warn(`[Hotel Delete ID: ${serviceId}] Could not extract R2 key from URL: ${urlToDelete}`);
+                  }
+                } else {
+                  console.warn(`[Hotel Delete ID: ${serviceId}] URL to delete (${urlToDelete}) does not match R2_PUBLIC_DOMAIN (${R2_PUBLIC_DOMAIN}). Skipping R2 delete.`);
+                }
+              } catch (deleteError) {
+                console.error(`[Hotel Delete ID: ${serviceId}] Failed to delete ${urlToDelete} from R2:`, deleteError);
+                // Continue, don't fail the whole hotel delete for a single R2 image delete error
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`[Hotel Delete ID: ${serviceId}] Error parsing images JSON for R2 deletion:`, hotelServiceToDelete.images, e);
+          // Continue with hotel deletion even if images can't be parsed/deleted
+        }
+      }
+    } else {
+      console.warn(`[Hotel Delete ID: ${serviceId}] R2_BUCKET_INSTANCE not available. Skipping deletion of images from R2.`);
+    }
+    // --- End R2 Image Deletion Logic ---
 
     // Optional: Check for active bookings associated with this hotel/its rooms?
 

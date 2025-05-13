@@ -7,10 +7,10 @@ export interface Room {
   description?: string;
   capacity_adults: number;
   capacity_children?: number; // Optional, defaults to 0
-  price_per_night: number;
+  base_price: number;
   amenities: string[]; // JSON array of strings in DB, parsed in application
   images: string[]; // JSON array of strings (URLs) in DB, parsed in application
-  quantity: number; // Number of such rooms available
+  quantity_available: number;
   created_at?: string; // ISO 8601 date string
   updated_at?: string; // ISO 8601 date string
 }

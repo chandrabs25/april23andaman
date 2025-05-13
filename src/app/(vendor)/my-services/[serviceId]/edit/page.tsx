@@ -11,11 +11,26 @@ import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info } from "lucide-
 import Link from "next/link";
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import the CheckboxGroup component
 import { ImageUploader } from "@/components/ImageUploader"; // Import ImageUploader
+import { default as dynamicImport } from 'next/dynamic'; // Import dynamic and alias it
+import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
+
+// Dynamically import MapPicker with ssr: false
+const MapPicker = dynamicImport(() => import('@/components/MapPicker'), {
+  ssr: false,
+  loading: () => <p>Loading map...</p>,
+});
 
 // --- Interfaces ---
 interface AuthUser {
   id: string | number;
   role_id?: number;
+  price_per_km?: number;
+  price_per_trip?: number;
+  driver_included?: boolean;
+  // Location fields for existing service data
+  street_address?: string | null; 
+  geo_lat?: number | null;
+  geo_lng?: number | null;
 }
 
 interface VendorProfile {
@@ -70,6 +85,10 @@ interface VendorService {
   price_per_km?: number;
   price_per_trip?: number;
   driver_included?: boolean;
+  // Location fields for existing service data
+  street_address?: string | null; 
+  geo_lat?: number | null;
+  geo_lng?: number | null;
 }
 
 // --- Define Options for Checkbox Groups (Same as Add page) ---
@@ -135,6 +154,10 @@ interface ServiceFormData {
   price_per_km: string;
   price_per_trip: string;
   driver_included: boolean;
+  // Location fields for form data
+  street_address: string;
+  geo_lat: string;
+  geo_lng: string;
 }
 
 // --- Helper Components (LoadingSpinner, VerificationPending, IncorrectVendorType, TagInput) ---
@@ -217,6 +240,7 @@ function EditServiceForm() {
   const [formData, setFormData] = useState<ServiceFormData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initialServiceType, setInitialServiceType] = useState<string>("");
+  const [showMap, setShowMap] = useState(false); // State for map visibility
 
   // 1. Fetch Vendor Profile
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
@@ -319,7 +343,11 @@ function EditServiceForm() {
         route_details: "",
         price_per_km: "",
         price_per_trip: "",
-        driver_included: true
+        driver_included: true,
+        // Location fields
+        street_address: service.street_address || "",
+        geo_lat: service.geo_lat?.toString() || "",
+        geo_lng: service.geo_lng?.toString() || "",
       };
 
       // Add service-specific fields based on type
@@ -456,6 +484,18 @@ function EditServiceForm() {
     setFormData((prev) => prev ? { ...prev, [name]: values } : null);
   };
 
+  const handleLocationChange = (lat: number, lng: number) => {
+    setFormData((prev) =>
+      prev
+        ? {
+            ...prev,
+            geo_lat: lat.toString(),
+            geo_lng: lng.toString(),
+          }
+        : null
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -504,7 +544,11 @@ function EditServiceForm() {
             general: formData.general_amenities,
             specifics: {}
         }),
-        images: JSON.stringify(formData.images)
+        images: JSON.stringify(formData.images),
+        // Location data
+        street_address: formData.street_address,
+        geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
+        geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
     };
 
     delete apiPayload.availability_days;
@@ -947,6 +991,73 @@ function EditServiceForm() {
             </div>
           </fieldset>
         )}
+
+        {/* --- Location --- */}
+        <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
+            <legend className="text-lg font-semibold text-gray-700 px-2">Location (Optional)</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div className="md:col-span-2">
+                    <label htmlFor="street_address" className="block text-sm font-medium text-gray-700 mb-1">Street Address / Meeting Point</label>
+                    <input 
+                        type="text" 
+                        id="street_address" 
+                        name="street_address" 
+                        value={formData?.street_address || ""} 
+                        onChange={handleChange} 
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        placeholder="e.g., Near Jetty, Shop No. 5"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="geo_lat" className="block text-sm font-medium text-gray-700 mb-1">Latitude (from map)</label>
+                    <input 
+                        type="text" 
+                        id="geo_lat" 
+                        name="geo_lat" 
+                        value={formData?.geo_lat || ""} 
+                        readOnly 
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm"
+                        placeholder="Select on map"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="geo_lng" className="block text-sm font-medium text-gray-700 mb-1">Longitude (from map)</label>
+                    <input 
+                        type="text" 
+                        id="geo_lng" 
+                        name="geo_lng" 
+                        value={formData?.geo_lng || ""} 
+                        readOnly 
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm"
+                        placeholder="Select on map"
+                    />
+                </div>
+                <div className="md:col-span-2">
+                  <button 
+                    type="button"
+                    onClick={() => setShowMap(!showMap)}
+                    className="mt-2 mb-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                    disabled={!formData} // Disable if formData not loaded
+                  >
+                    {showMap ? "Hide Map" : "Select Location on Map"}
+                  </button>
+                  {showMap && formData && (
+                    <div className="mt-2 rounded-lg overflow-hidden shadow-sm border border-gray-200">
+                      <MapPicker 
+                        onLocationChange={handleLocationChange}
+                        initialPosition={
+                          formData.geo_lat && formData.geo_lng
+                            ? { lat: parseFloat(formData.geo_lat), lng: parseFloat(formData.geo_lng) }
+                            : undefined
+                        }
+                        mapHeight="300px"
+                      />
+                      <p className="text-xs text-gray-500 p-2 bg-gray-50">Click on the map or drag the marker. Use search for places.</p>
+                    </div>
+                  )}
+                </div>
+            </div>
+        </fieldset>
 
         {/* --- Form Actions --- */}
         <div className="flex justify-end space-x-4 pt-4">

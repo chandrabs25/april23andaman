@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
       island_id: Number(body.island_id),
       price: priceBase, // Use validated priceBase
       availability: null, // Hotels usually manage availability via rooms
-      images: body.images ?? null, // Already a string (stringified JSON)
+      images: null, // MODIFIED: Set to null initially, images added in PUT
       amenities: null, // Use hotel-specific fields instead
       cancellation_policy: body.cancellation_policy ?? null, // Directly use the string
       is_active: body.is_active === undefined ? true : body.is_active,

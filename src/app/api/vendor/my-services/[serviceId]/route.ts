@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService } from '@/lib/database';
 import { verifyAuth, requireAuth } from '@/lib/auth';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import type { CloudflareEnv } from '../../../../../../cloudflare-env';
 
 export const dynamic = 'force-dynamic';
+
+// R2 Public Domain - IMPORTANT: Should ideally come from an environment variable
+const R2_PUBLIC_DOMAIN = "pub-861b68dd53c047e0a06b7164e95ccc43.r2.dev"; // REPLACE if different or use env var
+
+let R2_BUCKET_INSTANCE: R2Bucket | null = null;
+
+// Asynchronously initialize R2 bucket instance
+async function initializeR2() {
+  if (R2_BUCKET_INSTANCE) return; // Already initialized
+  try {
+    // @ts-ignore // CloudflareEnv might not be perfectly typed for all bindings initially
+    const ctx = await getCloudflareContext<CloudflareEnv>({ async: true });
+    if (ctx?.env?.IMAGES_BUCKET) {
+      R2_BUCKET_INSTANCE = ctx.env.IMAGES_BUCKET as R2Bucket;
+      console.log("✅ [Service Update] R2_BUCKET (IMAGES_BUCKET) obtained via getCloudflareContext.");
+    } else {
+      console.warn("⚠️ [Service Update] IMAGES_BUCKET not found via getCloudflareContext. Image deletion from R2 will be skipped.");
+    }
+  } catch (e) {
+    console.warn("⚠️ [Service Update] Error getting Cloudflare context for R2. Image deletion from R2 will be skipped:", e);
+  }
+}
+// Initialize R2 when module loads
+initializeR2();
 
 interface RouteContext {
   params: {
@@ -102,13 +128,12 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     if (!isVerified) {
         return NextResponse.json({ success: false, message: 'Vendor account not verified. Cannot update service.' }, { status: 403 });
     }
-    // This endpoint is for non-hotel services.
-    // Fetch the service type to double-check, although provider type check is primary
-    const serviceToUpdate = await db.getServiceById(serviceId);
-    if (!serviceToUpdate) { // Should be caught by isOwner check
+    
+    const serviceToUpdateDetails = await db.getServiceById(serviceId); // Fetch details once
+    if (!serviceToUpdateDetails) { 
         return NextResponse.json({ success: false, message: 'Service not found.' }, { status: 404 });
     }
-    if (isHotel || serviceToUpdate.type === 'hotel') {
+    if (isHotel || serviceToUpdateDetails.type === 'hotel') {
         return NextResponse.json({ success: false, message: 'Hotel vendors should use the hotel management endpoint.' }, { status: 400 });
     }
 
@@ -121,7 +146,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       island_id: number;
       price: number;
       availability?: any;
-      images?: string | null;
+      images?: string | null; // JSON string array of URLs
       cancellation_policy?: any;
       // is_active is handled by the status endpoint
       // Rental Specific (Optional)
@@ -149,6 +174,59 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     if (!body || typeof body !== 'object') {
         return NextResponse.json({ success: false, message: 'Invalid request body format' }, { status: 400 });
     }
+
+    // --- Image Deletion Logic ---
+    if (R2_BUCKET_INSTANCE && body.images !== undefined) { // Only if R2 is available and images field is in request
+      let currentImageUrls: string[] = [];
+      if (serviceToUpdateDetails.images) { // Use already fetched details
+        try {
+          currentImageUrls = JSON.parse(serviceToUpdateDetails.images);
+          if (!Array.isArray(currentImageUrls)) currentImageUrls = [];
+        } catch (e) {
+          console.error(`[Service Update ID: ${serviceId}] Error parsing current images JSON:`, serviceToUpdateDetails.images, e);
+          currentImageUrls = [];
+        }
+      }
+
+      let newImageUrls: string[] = [];
+      if (body.images) { // body.images is a JSON string or null
+        try {
+          newImageUrls = JSON.parse(body.images);
+          if (!Array.isArray(newImageUrls)) newImageUrls = [];
+        } catch (e) {
+          console.error(`[Service Update ID: ${serviceId}] Error parsing new images JSON from body:`, body.images, e);
+          return NextResponse.json({ success: false, message: 'Invalid format for new images data.' }, { status: 400 });
+        }
+      }
+      
+      const urlsToDelete = currentImageUrls.filter(url => !newImageUrls.includes(url));
+
+      if (urlsToDelete.length > 0) {
+        console.log(`[Service Update ID: ${serviceId}] Attempting to delete ${urlsToDelete.length} images from R2.`);
+        for (const urlToDelete of urlsToDelete) {
+          try {
+            const urlParts = new URL(urlToDelete);
+            if (urlParts.hostname === R2_PUBLIC_DOMAIN) {
+              const r2ObjectKey = urlParts.pathname.substring(1);
+              if (r2ObjectKey) {
+                 // @ts-ignore R2Bucket types might not be fully available
+                await R2_BUCKET_INSTANCE.delete(r2ObjectKey);
+                console.log(`[Service Update ID: ${serviceId}] Successfully deleted ${r2ObjectKey} from R2.`);
+              } else {
+                 console.warn(`[Service Update ID: ${serviceId}] Could not extract R2 key from URL: ${urlToDelete}`);
+              }
+            } else {
+              console.warn(`[Service Update ID: ${serviceId}] URL to delete (${urlToDelete}) does not match R2_PUBLIC_DOMAIN (${R2_PUBLIC_DOMAIN}). Skipping R2 delete.`);
+            }
+          } catch (deleteError) {
+            console.error(`[Service Update ID: ${serviceId}] Failed to delete ${urlToDelete} from R2:`, deleteError);
+          }
+        }
+      }
+    } else if (body.images !== undefined && !R2_BUCKET_INSTANCE) {
+        console.warn(`[Service Update ID: ${serviceId}] R2_BUCKET_INSTANCE not available. Skipping deletion of orphaned images from R2.`);
+    }
+    // --- End Image Deletion Logic ---
 
     // Basic validation
     if (!body.name || !body.type || body.price === undefined || body.island_id === undefined) {
@@ -279,11 +357,47 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
         return NextResponse.json({ success: false, message: 'Vendor account not verified. Cannot delete service.' }, { status: 403 });
     }
 
+    // --- R2 Image Deletion Logic for Service ---
+    if (R2_BUCKET_INSTANCE) {
+      const serviceToDelete = await db.getServiceById(serviceId); // Fetch the service data
+      if (serviceToDelete?.images) {
+        try {
+          const imageUrls: string[] = JSON.parse(serviceToDelete.images);
+          if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+            console.log(`[Service Delete ID: ${serviceId}] Attempting to delete ${imageUrls.length} images from R2.`);
+            for (const urlToDelete of imageUrls) {
+              try {
+                const urlParts = new URL(urlToDelete);
+                if (urlParts.hostname === R2_PUBLIC_DOMAIN) {
+                  const r2ObjectKey = urlParts.pathname.substring(1); // Remove leading '/'
+                  if (r2ObjectKey) {
+                    // @ts-ignore R2Bucket types might not be fully available
+                    await R2_BUCKET_INSTANCE.delete(r2ObjectKey);
+                    console.log(`[Service Delete ID: ${serviceId}] Successfully deleted ${r2ObjectKey} from R2.`);
+                  } else {
+                    console.warn(`[Service Delete ID: ${serviceId}] Could not extract R2 key from URL: ${urlToDelete}`);
+                  }
+                } else {
+                  console.warn(`[Service Delete ID: ${serviceId}] URL to delete (${urlToDelete}) does not match R2_PUBLIC_DOMAIN (${R2_PUBLIC_DOMAIN}). Skipping R2 delete.`);
+                }
+              } catch (deleteError) {
+                console.error(`[Service Delete ID: ${serviceId}] Failed to delete ${urlToDelete} from R2:`, deleteError);
+                // Continue, don't fail the whole service delete for a single R2 image delete error
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`[Service Delete ID: ${serviceId}] Error parsing images JSON for R2 deletion:`, serviceToDelete.images, e);
+          // Continue with service deletion even if images can't be parsed/deleted
+        }
+      }
+    } else {
+      console.warn(`[Service Delete ID: ${serviceId}] R2_BUCKET_INSTANCE not available. Skipping deletion of images from R2.`);
+    }
+    // --- End R2 Image Deletion Logic ---
+
     // Optional: Add check for existing bookings before deleting?
     // const existingBookings = await db.checkBookingsForService(serviceId); // Needs implementation in DatabaseService
-    // if (existingBookings > 0) {
-    //     return NextResponse.json({ success: false, message: 'Cannot delete service with active bookings.' }, { status: 400 });
-    // }
 
     const result = await db.deleteService(serviceId);
 

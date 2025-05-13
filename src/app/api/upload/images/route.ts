@@ -1,30 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// Check if we're in Cloudflare environment
-const isCloudflareEnv = process.env.NEXT_RUNTIME === 'edge' || typeof globalThis.caches !== 'undefined';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
+import type { CloudflareEnv } from '../../../../../cloudflare-env'; // Trying one more path adjustment
 
 // When in local development, we'll need filesystem support
 let fsPromises: typeof import('fs/promises') | null = null;
 let path: typeof import('path') | null = null;
 let fs: typeof import('fs') | null = null;
 
-if (!isCloudflareEnv) {
-  // Only import fs modules when not in Cloudflare (i.e., in local development)
-  const importFsPromises = async () => {
+// We'll determine if we are in a Cloudflare environment capable of R2 uploads
+// by successfully retrieving the R2 binding via getCloudflareContext.
+let isCloudflareEnvWithR2 = false;
+let R2_BUCKET_INSTANCE: R2Bucket | null = null;
+
+// Asynchronously initialize environment-specific parts
+async function initializeEnv() {
+  try {
+    const ctx = await getCloudflareContext<CloudflareEnv>({ async: true });
+    if (ctx?.env?.IMAGES_BUCKET) {
+      R2_BUCKET_INSTANCE = ctx.env.IMAGES_BUCKET as R2Bucket;
+      isCloudflareEnvWithR2 = true;
+      console.log("✅ [Image Upload] R2_BUCKET (IMAGES_BUCKET) obtained via getCloudflareContext.");
+    } else {
+      console.warn("⚠️ [Image Upload] IMAGES_BUCKET not found via getCloudflareContext. Falling back to local FS mode.");
+      isCloudflareEnvWithR2 = false;
+    }
+  } catch (e) {
+    console.warn("⚠️ [Image Upload] Error getting Cloudflare context for R2. Falling back to local FS mode:", e);
+    isCloudflareEnvWithR2 = false;
+  }
+
+  if (!isCloudflareEnvWithR2) {
     try {
       fsPromises = await import('fs/promises');
       path = await import('path');
       fs = await import('fs');
+      console.log("✅ [Image Upload] Local filesystem modules loaded.");
     } catch (error) {
-      console.error('Failed to import fs modules:', error);
+      console.error("❌ [Image Upload] Failed to load local filesystem modules:", error);
+      // If these fail, local mode won't work either.
     }
-  };
-  
-  // Call the import function immediately
-  importFsPromises();
+  }
 }
 
+const initializeEnvPromise = initializeEnv(); // Call initialization once when module loads
+
 export async function POST(request: NextRequest) {
+  await initializeEnvPromise; // Ensure initialization is complete before proceeding
+
   try {
     const formData = await request.formData();
     const parentId = formData.get("parentId") as string;
@@ -59,9 +81,9 @@ export async function POST(request: NextRequest) {
     // Array to store image URLs
     const imageUrls: string[] = [];
     
-    // In Cloudflare, use R2 for storage
-    if (isCloudflareEnv) {
-      // Process each file to generate URLs and upload to R2
+    if (isCloudflareEnvWithR2 && R2_BUCKET_INSTANCE) {
+      const R2_BUCKET = R2_BUCKET_INSTANCE; // Use the initialized instance
+      console.log("✅ [Image Upload] Proceeding with R2 upload logic.");
       for (const file of files) {
         try {
           // Create a safe filename
@@ -69,31 +91,35 @@ export async function POST(request: NextRequest) {
           const timestamp = Date.now();
           const fileName = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
           
-          // Generate the full path for R2
-          const r2Path = `${basePathSegment.substring(1)}/${fileName}`;
-          
-          // Note: For actual R2 implementation, you would need to access env.IMAGES_BUCKET
-          // This is a placeholder showing what the code would look like
-          /*
-          // Get R2 binding from environment
-          const { IMAGES_BUCKET } = env;
+          // Generate the full path for R2 (this is the path within the bucket)
+          const r2Path = `${basePathSegment.substring(1)}/${fileName}`; // Example: images/hotels/123/timestamp-image.jpg
           
           // Upload file to R2
           const arrayBuffer = await file.arrayBuffer();
-          await IMAGES_BUCKET.put(r2Path, arrayBuffer, {
+          await R2_BUCKET.put(r2Path, arrayBuffer, {
             httpMetadata: {
               contentType: file.type,
             }
           });
-          */
           
-          // URL is based on R2 path
-          const relativePath = `${basePathSegment}/${fileName}`;
-          imageUrls.push(relativePath);
+          // IMPORTANT: Define your R2 public custom domain here
+          const R2_PUBLIC_DOMAIN = "pub-861b68dd53c047e0a06b7164e95ccc43.r2.dev"; // REPLACE THIS WITH YOUR ACTUAL DOMAIN
+
+          if (R2_PUBLIC_DOMAIN === "pub-861b68dd53c047e0a06b7164e95ccc43.r2.dev") {
+            console.warn("R2_PUBLIC_DOMAIN is set to a custom domain");
+            // Optionally, you could fall back to relative paths or return an error during development if not set
+          }
+
+          const publicUrl = `https://${R2_PUBLIC_DOMAIN}/${r2Path}`;
+          imageUrls.push(publicUrl);
+          console.log(`✅ [Image Upload] Successfully uploaded ${fileName} to R2. URL: ${publicUrl}`);
+
         } catch (fileError) {
-          console.error(`Error processing file ${file.name}:`, fileError);
+          console.error(`❌ [Image Upload] Error processing file ${file.name} for R2 upload:`, fileError);
+          const errorMessage = fileError instanceof Error ? fileError.message : String(fileError);
           return NextResponse.json({ 
-            error: "Failed to process file", 
+            error: "Failed to process file for R2 upload.",
+            details: errorMessage,
             file: file.name
           }, { status: 500 });
         }
@@ -102,16 +128,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         success: true, 
         imageUrls,
-        message: `${files.length} images processed successfully in Cloudflare environment`
+        message: `${files.length} images processed successfully in Cloudflare R2 environment`
       });
     } 
     // In local development, use filesystem
     else {
+      console.log("ℹ️ [Image Upload] Proceeding with local filesystem logic.");
       // Make sure fs modules are available
       if (!fsPromises || !path || !fs) {
+        console.error("❌ [Image Upload] Local filesystem modules not available for local upload.");
         return NextResponse.json({ 
-          error: "File system modules unavailable", 
-          details: "Unable to save files in local development"
+          error: "File system modules unavailable for local development.", 
+          details: "Failed to import fs/path modules."
         }, { status: 500 });
       }
       
@@ -187,11 +215,13 @@ export async function POST(request: NextRequest) {
             // Generate URL path
             const relativePath = `${basePathSegment}/${fileName}`;
             imageUrls.push(relativePath);
+            console.log(`✅ [Image Upload] Successfully saved ${fileName} to local FS. Path: ${relativePath}`);
           } catch (fileError) {
-            console.error(`Error processing file ${file.name}:`, fileError);
+            console.error(`❌ [Image Upload] Error processing file ${file.name} for local save:`, fileError);
+            const errorMessage = fileError instanceof Error ? fileError.message : String(fileError);
             return NextResponse.json({ 
-              error: "Failed to process file", 
-              details: String(fileError),
+              error: "Failed to save file locally.", 
+              details: errorMessage,
               file: file.name
             }, { status: 500 });
           }
@@ -203,15 +233,16 @@ export async function POST(request: NextRequest) {
           message: `${files.length} images saved successfully in local environment`
         });
       } catch (dirError) {
-        console.error("Directory creation error:", dirError);
+        console.error("❌ [Image Upload] Local directory creation/access error:", dirError);
+        const errorMessage = dirError instanceof Error ? dirError.message : String(dirError);
         return NextResponse.json({ 
-          error: "Failed to create directories", 
-          details: String(dirError)
+          error: "Failed to create or access directories for local save.", 
+          details: errorMessage
         }, { status: 500 });
       }
     }
   } catch (error) {
-    console.error("Error processing images:", error);
+    console.error("❌ [Image Upload] General error in POST handler:", error);
     return NextResponse.json(
       { error: "Failed to process images", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }

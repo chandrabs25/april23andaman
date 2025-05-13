@@ -9,8 +9,17 @@ import { useFetch } from "@/hooks/useFetch";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, ArrowLeft, Hotel, Package, Info } from "lucide-react";
 import Link from "next/link";
+import { default as dynamicImport } from 'next/dynamic'; // Import dynamic and alias it
 import { CheckboxGroup } from "@/components/CheckboxGroup"; // Import CheckboxGroup
 import { ImageUploader } from "@/components/ImageUploader"; // Import our new ImageUploader
+// import MapPicker from "@/components/MapPicker"; // Comment out direct import
+import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
+
+// Dynamically import MapPicker with ssr: false
+const MapPicker = dynamicImport(() => import('@/components/MapPicker'), {
+  ssr: false,
+  loading: () => <p>Loading map...</p> // Optional loading component
+});
 
 // --- Interfaces ---
 interface AuthUser {
@@ -35,7 +44,7 @@ interface HotelFormData {
   description: string;
   price: string;
   cancellation_policy: string;
-  images: string[]; // Still use array, but will be populated from ImageUploader
+  images: string[]; // Will store URLs after successful upload and hotel creation
   island_id: string;
   is_active: boolean;
   star_rating: string;
@@ -143,6 +152,10 @@ function AddHotelForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // We need a temporary hotel ID for image uploads before the hotel is created
   const [tempHotelId, setTempHotelId] = useState<string>('temp-' + Date.now());
+  const [createdHotelId, setCreatedHotelId] = useState<string | null>(null);
+  const [isSubmittingDetails, setIsSubmittingDetails] = useState(false);
+  const [isUpdatingWithImages, setIsUpdatingWithImages] = useState(false);
+  const [showMap, setShowMap] = useState(false); // State for map visibility
 
   // 1. Fetch Vendor Profile
   const profileApiUrl = authUser?.id ? `/api/vendors/profile?userId=${authUser.id}` : null;
@@ -198,76 +211,130 @@ function AddHotelForm() {
     setFormData((prev) => ({ ...prev, [name]: values }));
   };
 
+  const handleLocationChange = (lat: number, lng: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      geo_lat: lat.toString(),
+      geo_lng: lng.toString(),
+    }));
+  };
+
   // Handle images uploaded via ImageUploader
-  const handleImagesUploaded = (imageUrls: string[]) => {
+  const handleImagesUploaded = async (imageUrls: string[]) => {
     setFormData((prev) => ({ ...prev, images: imageUrls }));
+
+    if (!createdHotelId) {
+      toast({ variant: "destructive", title: "Error", description: "Hotel ID not found. Cannot associate images." });
+      return;
+    }
+
+    setIsUpdatingWithImages(true);
+    try {
+      const response = await fetch(`/api/vendor/my-hotels/${createdHotelId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: JSON.stringify(imageUrls) }), // Send as stringified JSON
+      });
+      const result: ApiResponse = await response.json();
+
+      if (response.ok && result.success) {
+        toast({ title: "Success", description: "Hotel added and images uploaded successfully!" });
+        router.push("/my-hotels");
+      } else {
+        throw new Error(result.message || "Failed to update hotel with images.");
+      }
+    } catch (error: any) {
+      console.error("Update Hotel with Images Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Image Association Error",
+        description: error.message || "Failed to save images to the hotel. You can add them by editing the hotel.",
+      });
+      router.push(`/my-hotels/${createdHotelId}/edit`); // Redirect to edit page
+    } finally {
+      setIsUpdatingWithImages(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    
+    // If hotel not yet created, create it first
+    if (!createdHotelId) {
+      setIsSubmittingDetails(true);
+      setIsSubmitting(true); // Keep general submitting true
 
-    // Basic validation
-    if (!formData.island_id || !formData.star_rating || !formData.name.trim() || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0 || isNaN(parseInt(formData.total_rooms, 10)) || parseInt(formData.total_rooms, 10) <= 0) {
-        toast({ variant: "destructive", title: "Validation Error", description: "Please fill all required fields (*) with valid data." });
-        setIsSubmitting(false);
-        return;
-    }
+      // Basic validation (copied from original handleSubmit)
+      if (!formData.island_id || !formData.star_rating || !formData.name.trim() || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0 || isNaN(parseInt(formData.total_rooms, 10)) || parseInt(formData.total_rooms, 10) <= 0) {
+          toast({ variant: "destructive", title: "Validation Error", description: "Please fill all required fields (*) with valid data." });
+          setIsSubmittingDetails(false);
+          setIsSubmitting(false);
+          return;
+      }
 
-    // --- Data Transformation ---
-    try {
-        const apiPayload = {
-            service_provider_id: vendorProfile?.id,
-            name: formData.name,
-            description: formData.description,
-            island_id: parseInt(formData.island_id, 10) || null,
-            is_active: formData.is_active,
-            star_rating: parseInt(formData.star_rating, 10) || null,
-            check_in_time: formData.check_in_time || null,
-            check_out_time: formData.check_out_time || null,
-            price_base: parseFloat(formData.price) || 0,
-            total_rooms: parseInt(formData.total_rooms, 10) || null,
-            pets_allowed: formData.pets_allowed,
-            children_allowed: formData.children_allowed,
-            accessibility_features: formData.accessibility_features,
-            street_address: formData.street_address,
-            geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
-            geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
-            cancellation_policy: formData.cancellation_policy,
-            // Pass the image URLs directly
-            images: formData.images.length > 0 ? JSON.stringify(formData.images) : null,
-            facilities: JSON.stringify(formData.facilities),
-            meal_plans: JSON.stringify(formData.meal_plans),
-            temp_hotel_id: tempHotelId, // Pass the temp ID to associate already uploaded images
-        };
+      try {
+          const apiPayload = {
+              service_provider_id: vendorProfile?.id,
+              name: formData.name,
+              description: formData.description,
+              island_id: parseInt(formData.island_id, 10) || null,
+              is_active: formData.is_active,
+              star_rating: parseInt(formData.star_rating, 10) || null,
+              check_in_time: formData.check_in_time || null,
+              check_out_time: formData.check_out_time || null,
+              price_base: parseFloat(formData.price) || 0,
+              total_rooms: parseInt(formData.total_rooms, 10) || null,
+              pets_allowed: formData.pets_allowed,
+              children_allowed: formData.children_allowed,
+              accessibility_features: formData.accessibility_features,
+              street_address: formData.street_address,
+              geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
+              geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
+              cancellation_policy: formData.cancellation_policy,
+              // DO NOT SEND IMAGES OR TEMP ID HERE
+              facilities: JSON.stringify(formData.facilities),
+              meal_plans: JSON.stringify(formData.meal_plans),
+          };
 
-        // --- API Call ---
-        const response = await fetch("/api/vendor/my-hotels", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(apiPayload),
-        });
+          const response = await fetch("/api/vendor/my-hotels", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(apiPayload),
+          });
 
-        const result: ApiResponse = await response.json();
+          const result: ApiResponse = await response.json();
 
-        if (response.ok && result.success) {
-            toast({ title: "Success", description: "Hotel added successfully!" });
-            if (result.data && result.data.service_id) {
-                router.push(`/my-hotels/${result.data.service_id}/edit`);
-            }
-            router.push("/my-hotels"); // Redirect to the hotel list for now
-        } else {
-            throw new Error(result.message || "Failed to add hotel");
-        }
-    } catch (error: any) {
-        console.error("Add Hotel Error:", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: error.message || "An unexpected error occurred.",
-        });
-    } finally {
-        setIsSubmitting(false);
+          const hotelId = result.data?.service_id || result.data?.id;
+          if (response.ok && result.success && hotelId) {
+              setCreatedHotelId(String(hotelId));
+              toast({ title: "Details Saved", description: "Hotel details saved successfully. Now please upload images." });
+              // The form remains, ImageUploader becomes active. User uploads, then handleImagesUploaded is called.
+              // No direct redirection here.
+          } else {
+              throw new Error(result.message || "Failed to add hotel details.");
+          }
+      } catch (error: any) {
+          console.error("Add Hotel Details Error:", error);
+          toast({
+              variant: "destructive",
+              title: "Error Saving Details",
+              description: error.message || "An unexpected error occurred.",
+          });
+      } finally {
+          setIsSubmittingDetails(false);
+          setIsSubmitting(false); // Reset general submitting state
+      }
+    } else {
+      // This case should ideally not be hit if ImageUploader directly calls handleImagesUploaded.
+      // If there are already images in formData.images (e.g. user added more after initial upload)
+      // and createdHotelId exists, it means we are updating images.
+      // However, handleImagesUploaded is the primary way to update images.
+      // This button might act as a "Done" or "Save All" if images are already uploaded via uploader.
+      if (formData.images.length > 0) {
+        await handleImagesUploaded(formData.images);
+      } else {
+        toast({ title: "No Images", description: "Please upload images for the hotel or click cancel."});
+      }
     }
   };
 
@@ -413,15 +480,55 @@ function AddHotelForm() {
                     <label htmlFor="street_address" className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
                     <input type="text" id="street_address" name="street_address" value={formData.street_address} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                 </div>
-                {/* Latitude */}
+                {/* Latitude & Longitude - Replaced with Map Picker and read-only inputs */}
                 <div>
-                    <label htmlFor="geo_lat" className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
-                    <input type="number" id="geo_lat" name="geo_lat" value={formData.geo_lat} onChange={handleChange} step="any" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 11.9138"/>
+                    <label htmlFor="geo_lat" className="block text-sm font-medium text-gray-700 mb-1">Latitude (from map)</label>
+                    <input
+                        type="text"
+                        id="geo_lat"
+                        name="geo_lat"
+                        value={formData.geo_lat}
+                        onChange={handleChange} // Keep onChange for potential manual override, though not primary
+                        readOnly // Primarily set by map
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm"
+                        placeholder="Select on map"
+                    />
                 </div>
-                {/* Longitude */}
                 <div>
-                    <label htmlFor="geo_lng" className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
-                    <input type="number" id="geo_lng" name="geo_lng" value={formData.geo_lng} onChange={handleChange} step="any" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., 79.8145"/>
+                    <label htmlFor="geo_lng" className="block text-sm font-medium text-gray-700 mb-1">Longitude (from map)</label>
+                    <input
+                        type="text"
+                        id="geo_lng"
+                        name="geo_lng"
+                        value={formData.geo_lng}
+                        onChange={handleChange} // Keep onChange for potential manual override
+                        readOnly // Primarily set by map
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 sm:text-sm"
+                        placeholder="Select on map"
+                    />
+                </div>
+                <div className="md:col-span-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowMap(!showMap)}
+                    className="mt-2 mb-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    {showMap ? "Hide Map" : "Select Location on Map"}
+                  </button>
+                  {showMap && (
+                    <div className="mt-2 rounded-lg overflow-hidden shadow-sm border border-gray-200">
+                      <MapPicker
+                        onLocationChange={handleLocationChange}
+                        initialPosition={
+                          formData.geo_lat && formData.geo_lng
+                            ? { lat: parseFloat(formData.geo_lat), lng: parseFloat(formData.geo_lng) }
+                            : undefined // Default center will be used in MapPicker if undefined
+                        }
+                        mapHeight="300px"
+                      />
+                       <p className="text-xs text-gray-500 p-2 bg-gray-50">Click on the map or drag the marker to set coordinates.</p>
+                    </div>
+                  )}
                 </div>
                 {/* Accessibility Features */}
                 <div className="md:col-span-2">
@@ -435,16 +542,22 @@ function AddHotelForm() {
         <fieldset className="border border-gray-200 p-6 rounded-lg shadow-sm">
             <legend className="text-lg font-semibold text-gray-700 px-2">Images</legend>
             <div className="mt-4">
-                {/* Replace TagInput with ImageUploader */}
+              {!createdHotelId ? (
+                <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-md">
+                  <Info size={20} className="mx-auto mb-2" />
+                  Please save hotel details first to enable image uploads.
+                </div>
+              ) : (
                 <ImageUploader
                     label="Hotel Images"
                     onImagesUploaded={handleImagesUploaded}
-                    existingImages={formData.images}
-                    parentId={tempHotelId}
+                    existingImages={formData.images} // These would be images already associated
+                    parentId={createdHotelId} // Use the actual hotel ID
                     type="hotel"
                     maxImages={8}
-                    helperText="Upload photos showcasing your hotel (exterior, lobby, common areas)."
+                    helperText="Upload photos showcasing your hotel. Images are saved as they are uploaded."
                 />
+              )}
             </div>
         </fieldset>
 
@@ -455,13 +568,17 @@ function AddHotelForm() {
           </Link>
           <button
             type="submit"
-            disabled={!!(isSubmitting || isLoading)} // FIX: Ensure boolean | undefined
+            disabled={isSubmittingDetails || isUpdatingWithImages || isLoading || (!!createdHotelId && formData.images.length === 0) }
             className="inline-flex items-center bg-indigo-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
           >
-            {isSubmitting ? (
-              <><Loader2 size={16} className="animate-spin mr-2" /> Adding Hotel...</>
+            {isSubmittingDetails ? (
+              <><Loader2 size={16} className="animate-spin mr-2" /> Saving Details...</>
+            ) : isUpdatingWithImages ? (
+              <><Loader2 size={16} className="animate-spin mr-2" /> Saving Images...</>
+            ) : !createdHotelId ? (
+              "Save Details & Proceed to Images"
             ) : (
-              "Add Hotel"
+              "Finish & Save Hotel" // Or "Update Images" if some are already there
             )}
           </button>
         </div>
