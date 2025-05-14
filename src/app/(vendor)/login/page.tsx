@@ -84,9 +84,9 @@ export default function VendorLoginPage() {
   // --- JSX remains largely the same ---
   return (
     <>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen" style={{ borderRadius: '0.5rem' }}>
         {/* Left side - Login Form */}
-        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 bg-white"> {/* Added bg-white */}
+        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 lg:p-16 bg-white" style={{ borderRadius: '0.5rem' }}> {/* Added bg-white */}
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Vendor Login</h1>
