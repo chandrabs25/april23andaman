@@ -1,19 +1,19 @@
 import React from 'react';
 import Link from 'next/link';
 import { LayoutDashboard, Package, Hotel, CalendarCheck, LogOut } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth'; // Assuming useAuth provides logout
-import { useRouter } from 'next/navigation';
+import { useVendorAuth } from '@/hooks/useVendorAuth'; // Changed to useVendorAuth
+// import { useRouter } from 'next/navigation'; // Removed unused import
 import { toast } from '@/hooks/use-toast'; // Import toast for feedback
 
 const VendorNav = () => {
-    const { logout } = useAuth(); // Changed signOut to logout
-    const router = useRouter();
+    const { logout } = useVendorAuth(); // Changed to useVendorAuth
+    // const router = useRouter(); // Removed unused variable
 
     const handleLogout = async () => {
         try {
-            await logout(); // Changed signOut to logout
+            await logout(); // This logout from useVendorAuth will handle redirection
             toast({ title: "Logged Out", description: "You have been successfully logged out." });
-            router.push('/login'); // Redirect to the sign-in page after logout
+            // router.push('/login'); // No longer needed, useVendorAuth's logout handles it
         } catch (error) {
             console.error("Logout failed:", error);
             toast({ variant: "destructive", title: "Logout Failed", description: "Could not log you out. Please try again." });
