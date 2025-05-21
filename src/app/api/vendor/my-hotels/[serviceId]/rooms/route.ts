@@ -168,27 +168,56 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     const body: RoomTypeCreateBody = await request.json();
 
-    // Basic validation
-    if (!body.room_type_name || body.base_price === undefined || body.max_guests === undefined) {
+    // --- Enhanced Validation and Parsing ---
+    if (!body.room_type_name || typeof body.room_type_name !== 'string' || body.room_type_name.trim() === "") {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Missing required fields (room_type_name, base_price, max_guests)",
-        },
+        { success: false, message: "Room type name is required and must be a non-empty string." },
         { status: 400 }
       );
     }
 
+    const basePrice = Number(body.base_price);
+    if (isNaN(basePrice) || basePrice <= 0) {
+      return NextResponse.json(
+        { success: false, message: "Base price must be a positive number." },
+        { status: 400 }
+      );
+    }
+
+    const maxGuests = Number(body.max_guests);
+    if (isNaN(maxGuests) || maxGuests <= 0) {
+      return NextResponse.json(
+        { success: false, message: "Max guests must be a positive number." },
+        { status: 400 }
+      );
+    }
+
+    let quantityAvailable: number | null = null;
+    if (body.quantity_available !== undefined && body.quantity_available !== null) {
+        const qty = Number(body.quantity_available);
+        if (!isNaN(qty) && qty >= 0) {
+            quantityAvailable = qty;
+        } else {
+            // Optionally, you could return a 400 error here if quantity_available is present but invalid
+            // For now, we'll treat invalid as null, but stricter validation might be desired.
+            // Example: return NextResponse.json({ success: false, message: "Quantity available must be a non-negative number if provided." }, { status: 400 });
+            quantityAvailable = null; // Defaulting to null if present but not a valid non-negative number
+        }
+    }
+
     // Prepare data for database insertion
     const roomTypeData = {
-      hotel_service_id: serviceId, // Link to the parent hotel service
-      room_type_name: body.room_type_name,
-      base_price: Number(body.base_price),
-      max_guests: Number(body.max_guests),
-      quantity_available: body.quantity_available ? Number(body.quantity_available) : null,
-      amenities: body.amenities ? JSON.stringify(body.amenities) : null,
-      images: body.images ?? null,
+      hotel_service_id: serviceId,
+      room_type_name: body.room_type_name.trim(),
+      base_price: basePrice,
+      max_guests: maxGuests,
+      quantity_available: quantityAvailable,
+      amenities: body.amenities ?? null, // Use body.amenities directly as it's already a JSON string from frontend
+      images: body.images ?? null, // Expecting comma-separated string or null from frontend
     };
+
+    // Log the data being sent to the database
+    console.log("Attempting to create room type with data:", JSON.stringify(roomTypeData, null, 2));
 
     // Use the database method to create the room type
     const result = await db.createRoomType(roomTypeData);

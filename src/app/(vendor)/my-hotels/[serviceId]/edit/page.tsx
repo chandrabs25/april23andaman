@@ -44,18 +44,18 @@ interface VendorHotel {
   description: string | null;
   price: number | string; // price_base
   cancellation_policy: string | null;
-  images: string | null; // JSON array string or legacy
+  images: string[]; 
   island_id: number;
   is_active: number;
   star_rating: number;
   check_in_time: string;
   check_out_time: string;
   total_rooms: number | null;
-  facilities: string | null; // JSON array string or legacy
-  meal_plans: string | null; // JSON array string or legacy
+  facilities: string[]; 
+  meal_plans: string[]; 
   pets_allowed: number;
   children_allowed: number;
-  accessibility_features: string | null;
+  accessibility: string | null;
   street_address: string;
   geo_lat: number | null;
   geo_lng: number | null;
@@ -78,7 +78,7 @@ interface HotelFormData {
   meal_plans: string[]; // Use array for CheckboxGroup
   pets_allowed: boolean;
   children_allowed: boolean;
-  accessibility_features: string;
+  accessibility: string;
   street_address: string;
   geo_lat: string;
   geo_lng: string;
@@ -233,37 +233,46 @@ function EditHotelForm() {
 
   // --- Utility Function to Safely Parse JSON Array String ---
   const parseJsonArray = useCallback((jsonString: string | null | undefined, fieldName: string): string[] => {
-      if (!jsonString || typeof jsonString !== "string" || !jsonString.trim()) {
-          return [];
-      }
-      try {
-          const parsed = JSON.parse(jsonString);
-          if (Array.isArray(parsed) && parsed.every(item => typeof item === "string")) {
-              return parsed;
-          }
-          console.warn(`Parsed ${fieldName} data is not an array of strings:`, parsed);
-          // Attempt recovery if it's a single string
-          if (typeof parsed === "string" && parsed.trim()) {
-              return [parsed.trim()];
-          }
-          // Attempt recovery if it's comma-separated legacy string
-          // This check should use jsonString, as parsed might not be a string if it's an array of non-strings
-          if (typeof jsonString === "string" && jsonString.includes(",")) {
-             return jsonString.split(",").map(s => s.trim()).filter(Boolean);
-          }
-          return [];
-      } catch (e) {
-          console.error(`Failed to parse ${fieldName} JSON:`, jsonString, e);
-          // Fallback: treat as comma-separated if parsing fails (jsonString is guaranteed to be a string here due to outer checks)
-          if (jsonString.includes(",")) {
-              return jsonString.split(",").map(s => s.trim()).filter(Boolean);
-          }
-          // Treat as single item if not empty
-          if (jsonString.trim()) {
-              return [jsonString.trim()];
-          }
-          return [];
-      }
+    if (!jsonString || typeof jsonString !== "string" || !jsonString.trim()) {
+        return [];
+    }
+    try {
+        const parsed = JSON.parse(jsonString);
+        if (Array.isArray(parsed)) {
+            // Filter out non-string items and ensure all items are strings
+            return parsed.filter(item => typeof item === "string").map(item => String(item).trim());
+        }
+        // If parsed is a single string, wrap it in an array
+        if (typeof parsed === "string" && parsed.trim()) {
+            return [parsed.trim()];
+        }
+        // If parsed is a number or boolean, convert to string and wrap
+        if (typeof parsed === 'number' || typeof parsed === 'boolean') {
+            const strVal = String(parsed).trim();
+            return strVal ? [strVal] : [];
+        }
+        console.warn(`Parsed ${fieldName} data is not an array or a recognized single string/value:`, parsed);
+        // Fallback for unhandled parsed types: try splitting original string
+        if (jsonString.includes(",")) {
+           return jsonString.split(",").map(s => s.trim()).filter(Boolean);
+        }
+        // If not comma-separated and not empty, treat as a single item array
+        const trimmedOriginal = jsonString.trim();
+        return trimmedOriginal ? [trimmedOriginal] : [];
+
+    } catch (e) {
+        console.warn(`Failed to parse ${fieldName} JSON: "${jsonString}", attempting fallback. Error:`, e);
+        // Fallback: treat as comma-separated if parsing fails
+        if (jsonString.includes(",")) {
+            return jsonString.split(",").map(s => s.trim()).filter(Boolean);
+        }
+        // Treat as single item if not empty and not comma-separated
+        const trimmedOriginal = jsonString.trim();
+        if (trimmedOriginal) {
+            return [trimmedOriginal];
+        }
+        return [];
+    }
   }, []); // Empty dependency array for useCallback
 
   // --- Populate Form Data Effect ---
@@ -271,19 +280,22 @@ function EditHotelForm() {
     if (hotelStatus === "success" && hotelData) {
       const hotel = hotelData;
       
-      const facilitiesArray = parseJsonArray(hotel.facilities, "facilities");
-      const mealPlansArray = parseJsonArray(hotel.meal_plans, "meal_plans");
-      
-      let imagesArray: string[] = [];
-      if (Array.isArray(hotel.images)) {
-        imagesArray = hotel.images.every(item => typeof item === 'string') ? hotel.images as string[] : [];
-        console.log("[EditHotelForm] hotel.images is already an array:", hotel.images);
-      } else if (typeof hotel.images === 'string') {
-        imagesArray = parseJsonArray(hotel.images, "images");
-        console.log("[EditHotelForm] Fetched hotel.images string (to be parsed):", hotel.images);
-      } else {
-        console.log("[EditHotelForm] hotel.images is neither an array nor a string:", hotel.images);
-      }
+      // The backend now consistently returns string arrays for these fields
+      // due to the updated _parseJsonString method in DatabaseService.
+      // The parseJsonArray utility on the frontend is no longer strictly necessary
+      // for these specific fields if the API guarantees the array format.
+      // However, retaining it might offer robustness if other parts of the app
+      // or legacy data sources still provide unparsed strings for these.
+      // For this specific form, if we trust the API to always send arrays,
+      // we can directly use hotel.images, hotel.facilities, hotel.meal_plans.
+
+      // For now, let's assume the API guarantees string[] for these based on recent changes.
+      // If not, the parseJsonArray calls would still be needed here.
+      const imagesArray = Array.isArray(hotel.images) ? hotel.images : parseJsonArray(hotel.images as unknown as string, "images");
+      const facilitiesArray = Array.isArray(hotel.facilities) ? hotel.facilities : parseJsonArray(hotel.facilities as unknown as string, "facilities");
+      const mealPlansArray = Array.isArray(hotel.meal_plans) ? hotel.meal_plans : parseJsonArray(hotel.meal_plans as unknown as string, "meal_plans");
+
+      console.log("[EditHotelForm] Fetched hotel.images from API:", hotel.images);
       console.log("[EditHotelForm] Final imagesArray for formData:", imagesArray);
 
       setFormData({
@@ -301,7 +313,7 @@ function EditHotelForm() {
         meal_plans: mealPlansArray,   
         pets_allowed: hotel.pets_allowed === 1,
         children_allowed: hotel.children_allowed === 1,
-        accessibility_features: hotel.accessibility_features || "",
+        accessibility: hotel.accessibility || "",
         street_address: hotel.street_address || "",
         geo_lat: hotel.geo_lat?.toString() || "",
         geo_lng: hotel.geo_lng?.toString() || "",
@@ -404,7 +416,7 @@ function EditHotelForm() {
           total_rooms: parseInt(formData.total_rooms, 10) || undefined, // Send undefined if not a valid number
           pets_allowed: formData.pets_allowed,
           children_allowed: formData.children_allowed,
-          accessibility_features: formData.accessibility_features,
+          accessibility: formData.accessibility,
           street_address: formData.street_address || "N/A", // Provide default if empty, server expects string
           geo_lat: formData.geo_lat ? parseFloat(formData.geo_lat) : null,
           geo_lng: formData.geo_lng ? parseFloat(formData.geo_lng) : null,
@@ -563,8 +575,8 @@ function EditHotelForm() {
                 </div>
                 {/* Accessibility Features */}
                 <div className="md:col-span-2">
-                    <label htmlFor="accessibility_features" className="block text-sm font-medium text-gray-700">Accessibility Features</label>
-                    <textarea id="accessibility_features" name="accessibility_features" value={formData.accessibility_features} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Wheelchair accessible rooms, Ramps..."></textarea>
+                    <label htmlFor="accessibility" className="block text-sm font-medium text-gray-700">Accessibility Features</label>
+                    <textarea id="accessibility" name="accessibility" value={formData.accessibility} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Wheelchair accessible rooms, Ramps..."></textarea>
                 </div>
             </div>
         </fieldset>
@@ -672,8 +684,8 @@ function EditHotelForm() {
                 </div>
                 {/* Accessibility Features */}
                 <div className="md:col-span-2">
-                    <label htmlFor="accessibility_features" className="block text-sm font-medium text-gray-700">Accessibility Features</label>
-                    <textarea id="accessibility_features" name="accessibility_features" value={formData.accessibility_features} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Wheelchair accessible rooms, Ramps..."></textarea>
+                    <label htmlFor="accessibility" className="block text-sm font-medium text-gray-700">Accessibility Features</label>
+                    <textarea id="accessibility" name="accessibility" value={formData.accessibility} onChange={handleChange} rows={2} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Wheelchair accessible rooms, Ramps..."></textarea>
                 </div>
             </div>
         </fieldset>

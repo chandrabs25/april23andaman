@@ -88,24 +88,40 @@ export async function getDatabase(): Promise<CloudflareEnv['DB']> {
 export class DatabaseService {
 
   // Helper function to safely parse JSON strings
-  private _parseJsonString(jsonString: string | null | undefined, defaultValue: any = []): any {
-    if (jsonString === null || jsonString === undefined) {
-      return defaultValue;
-    }
-    // Added check for empty string, as JSON.parse('') is an error
-    if (typeof jsonString === 'string' && jsonString.trim() === "") {
+  private _parseJsonString(jsonString: string | null | undefined, defaultValue: string[] = []): string[] {
+    if (jsonString === null || jsonString === undefined || typeof jsonString !== 'string' || jsonString.trim() === "") {
       return defaultValue;
     }
     try {
       const parsed = JSON.parse(jsonString);
-      // Ensure it's an array if defaultValue is an array and it's expected, for type safety with .map
-      if (Array.isArray(defaultValue) && !Array.isArray(parsed)) {
-        // console.warn(`Parsed JSON was not an array as expected for: ${jsonString}. Returning default.`);
-        return defaultValue;
+      if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+        return parsed;
       }
-      return parsed;
+      // If parsed is a single string, wrap it in an array
+      if (typeof parsed === 'string' && parsed.trim()) {
+        return [parsed.trim()];
+      }
+      // If it's an array but not of strings, try to convert or return default
+      if (Array.isArray(parsed)) {
+        const stringArray = parsed.map(String).filter(Boolean);
+        return stringArray.length > 0 ? stringArray : defaultValue;
+      }
+      // If it's some other type (number, boolean), convert to string and wrap in array
+      if (parsed !== null && parsed !== undefined) {
+        const strVal = String(parsed).trim();
+        return strVal ? [strVal] : defaultValue;
+      }
+      return defaultValue;
     } catch (e) {
-      // console.warn(`Failed to parse JSON string: "${jsonString}"`, e);
+      // If JSON.parse fails, treat the original string as a single item or comma-separated list
+      if (jsonString.includes(',')) {
+        return jsonString.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      // If not comma-separated, and not empty, treat as a single item array
+      const trimmedString = jsonString.trim();
+      if (trimmedString) {
+        return [trimmedString];
+      }
       return defaultValue;
     }
   }
@@ -853,32 +869,24 @@ export class DatabaseService {
       ...rawHotel,
       images: this._parseJsonString(rawHotel.images, []),
       amenities: this._parseJsonString(rawHotel.service_amenities, []),
-      // Map other fields if names differ or need processing. Example:
+      facilities: this._parseJsonString(rawHotel.facilities, []),
+      meal_plans: this._parseJsonString(rawHotel.meal_plans, []),
       rating: rawHotel.star_rating,
-      address: rawHotel.street_address, // Assuming street_address is the primary address
-      // city and country are not directly in this query, might be undefined or handled elsewhere
+      address: rawHotel.street_address,
       latitude: rawHotel.geo_lat,
       longitude: rawHotel.geo_lng,
-      // Map hotel fields directly to match the Hotel type properties
       check_in_time: rawHotel.check_in_time,
       check_out_time: rawHotel.check_out_time,
       cancellation_policy: rawHotel.cancellation_policy,
-      pets_allowed: rawHotel.pets_allowed === 1,
-      children_allowed: rawHotel.children_allowed === 1,
+      pets_allowed: rawHotel.pets_allowed,
+      children_allowed: rawHotel.children_allowed,
       accessibility: rawHotel.accessibility,
-      facilities: this._parseJsonString(rawHotel.facilities, []),
-      meal_plans: this._parseJsonString(rawHotel.meal_plans, []),
       total_rooms: rawHotel.total_rooms,
-      rooms: rooms, // Attach parsed rooms
+      rooms: rooms,
     };
 
     // Clean up intermediate fields if necessary
     delete parsedHotel.service_amenities;
-    delete parsedHotel.star_rating;
-    delete parsedHotel.street_address;
-    delete parsedHotel.geo_lat;
-    delete parsedHotel.geo_lng;
-    // delete parsedHotel.hotel_extra_images; // if not directly part of Hotel type
 
     return parsedHotel as Hotel; // Cast to the expected Hotel type
   }
@@ -1156,26 +1164,54 @@ export class DatabaseService {
    */
   async createRoomType(roomTypeData: any) {
     const db = await getDatabase();
-    // Map API names to schema names
-    return db
-      .prepare(
-        `INSERT INTO hotel_room_types (
-          service_id, room_type, base_price, max_guests, quantity,
-          amenities, extra_images, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-      )
-      .bind(
-        roomTypeData.hotel_service_id, // API uses hotel_service_id
-        roomTypeData.room_type_name, // API uses room_type_name
-        roomTypeData.base_price,
-        roomTypeData.max_guests,
-        roomTypeData.quantity_available, // API uses quantity_available
-        roomTypeData.amenities, // Expects stringified JSON
-        roomTypeData.images, // API uses images
-        roomTypeData.created_at,
-        roomTypeData.updated_at
-      )
-      .run();
+
+    // Prepare the SQL statement with correct table and column names
+    const stmt = db.prepare(`
+      INSERT INTO hotel_room_types (
+        service_id,       -- Was: hotel_service_id
+        room_type,        -- Was: room_type_name
+        base_price,
+        max_guests,
+        quantity,         -- Was: quantity_available
+        amenities,
+        extra_images      -- Was: images
+      ) VALUES (?, ?, ?, ?, ?, ?, ?);
+    `);
+
+    try {
+      // Logging the data before binding (as it was)
+      console.log("[DB createRoomType] Binding service_id (from hotel_service_id):", roomTypeData.hotel_service_id, typeof roomTypeData.hotel_service_id);
+      console.log("[DB createRoomType] Binding room_type (from room_type_name):", roomTypeData.room_type_name, typeof roomTypeData.room_type_name);
+      console.log("[DB createRoomType] Binding base_price:", roomTypeData.base_price, typeof roomTypeData.base_price);
+      console.log("[DB createRoomType] Binding max_guests:", roomTypeData.max_guests, typeof roomTypeData.max_guests);
+      console.log("[DB createRoomType] Binding quantity (from quantity_available):", roomTypeData.quantity_available, typeof roomTypeData.quantity_available);
+      console.log("[DB createRoomType] Binding amenities:", roomTypeData.amenities, typeof roomTypeData.amenities);
+      console.log("[DB createRoomType] Binding extra_images (from images):", roomTypeData.images, typeof roomTypeData.images);
+
+      const result = await stmt.bind(
+        roomTypeData.hotel_service_id,    // Corresponds to service_id column
+        roomTypeData.room_type_name,      // Corresponds to room_type column
+        roomTypeData.base_price,          // Corresponds to base_price column
+        roomTypeData.max_guests,          // Corresponds to max_guests column
+        roomTypeData.quantity_available,  // Corresponds to quantity column
+        roomTypeData.amenities,           // Corresponds to amenities column
+        roomTypeData.images               // Corresponds to extra_images column
+      ).run();
+
+      if (!result.success) {
+        console.error("DB Error creating room type:", result.error);
+        return { success: false, error: result.error || "Database operation failed at run()" };
+      }
+      if (result.meta?.last_row_id === undefined || result.meta?.last_row_id === null) {
+          console.warn("No last_row_id returned from D1 after room type insert. Result meta:", result.meta);
+          return { success: true, meta: result.meta, error: "No last_row_id returned but insert may have succeeded." };
+      }
+
+      return { success: true, meta: result.meta };
+    } catch (e: any) {
+      console.error("Exception during stmt.bind() or .run() for createRoomType:", e);
+      return { success: false, error: e.message || "Exception during database operation" };
+    }
   }
 
   /**
