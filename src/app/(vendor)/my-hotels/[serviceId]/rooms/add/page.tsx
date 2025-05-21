@@ -190,14 +190,19 @@ function AddRoomForm() {
         return;
     }
 
+    // Robust parsing for quantity_available
+    const rawQty = formData.quantity_available;
+    const parsedQty = parseInt(rawQty, 10);
+    const finalQty = (!rawQty || rawQty.trim() === "" || isNaN(parsedQty)) ? null : parsedQty;
+
     // Prepare API payload
     const payload = {
       room_type_name: formData.room_type_name,
       base_price: parseFloat(formData.base_price),
       max_guests: parseInt(formData.max_guests, 10),
-      quantity_available: formData.quantity_available ? parseInt(formData.quantity_available, 10) : null, // Use null if empty
-      amenities: formData.amenities, // Send as array, server will stringify
-      images: formData.images, // Send array of image URLs
+      quantity_available: finalQty, // Use the robustly parsed value
+      amenities: JSON.stringify(formData.amenities || []),
+      images: (formData.images && formData.images.length > 0) ? formData.images.join(',') : null, // Comma-separated string or null
     };
 
     try {
