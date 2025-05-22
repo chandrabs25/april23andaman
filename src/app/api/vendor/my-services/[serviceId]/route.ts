@@ -145,9 +145,11 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       type: string; // e.g., "rental/car", "activity/trek"
       island_id: number;
       price: number;
-      availability?: any;
+      availability_days?: string[];
+      availability_notes?: string;
+      availability?: string | null; // Expecting already stringified JSON: {"days": [], "notes": ""}
       images?: string | null; // JSON string array of URLs
-      cancellation_policy?: any;
+      cancellation_policy?: string | null; // Expecting plain string
       // is_active is handled by the status endpoint
       // Rental Specific (Optional)
       rental_unit?: 'per hour' | 'per day';
@@ -167,6 +169,17 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       guide_required?: boolean;
       // General Amenities (Optional)
       general_amenities?: string[];
+      // Location fields (NEW)
+      street_address?: string | null;
+      geo_lat?: number | null;
+      geo_lng?: number | null;
+      // Transport Specific (NEW - mirroring ServiceCreateBody)
+      vehicle_type?: string;
+      capacity_passengers?: number;
+      route_details?: string;
+      price_per_km?: number;
+      price_per_trip?: number;
+      driver_included?: boolean;
     }
 
     const body: ServiceUpdateBody = await request.json();
@@ -175,15 +188,113 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
         return NextResponse.json({ success: false, message: 'Invalid request body format' }, { status: 400 });
     }
 
-    // --- Image Deletion Logic ---
-    if (R2_BUCKET_INSTANCE && body.images !== undefined) { // Only if R2 is available and images field is in request
+    // --- Determine if this is an image-only update --- 
+    const isImageOnlyUpdate = body.images !== undefined && 
+                              body.name === undefined && 
+                              body.type === undefined && 
+                              body.price === undefined && 
+                              body.island_id === undefined;
+
+    let serviceDataForUpdate: any;
+    let existingServiceForImageLogic = serviceToUpdateDetails; // Use already fetched details
+
+    if (isImageOnlyUpdate) {
+        console.log(`[Service Update ID: ${serviceId}] Detected image-only update.`);
+        if (!existingServiceForImageLogic) {
+            return NextResponse.json({ success: false, message: 'Service not found for image update.' }, { status: 404 });
+        }
+        // For image-only update, we only care about the images from the body.
+        // Other fields for db.updateService will come from existingServiceForImageLogic
+        serviceDataForUpdate = {
+            name: existingServiceForImageLogic.name,
+            description: existingServiceForImageLogic.description,
+            type: existingServiceForImageLogic.type,
+            island_id: existingServiceForImageLogic.island_id,
+            price: existingServiceForImageLogic.price,
+            availability: existingServiceForImageLogic.availability, // Keep existing if not in body
+            images: body.images, // This is the primary field to update
+            amenities: existingServiceForImageLogic.amenities, // Keep existing if not in body
+            cancellation_policy: existingServiceForImageLogic.cancellation_policy, // Keep existing if not in body
+        };
+    } else {
+        // --- Full update validation --- 
+        if (!body.name || !body.type || body.price === undefined || body.island_id === undefined) {
+            return NextResponse.json({ success: false, message: 'Missing required fields (name, type, price, island_id) for full update.' }, { status: 400 });
+        }
+        if (body.type.startsWith('hotel')) {
+            return NextResponse.json({ success: false, message: 'Invalid type. Use hotel management endpoint for hotels.' }, { status: 400 });
+        }
+
+        // Prepare amenities and other fields for a full update
+        let specificFieldsData: any = {};
+        if (body.type.startsWith('rental/')) {
+            specificFieldsData.rental = {
+                unit: body.rental_unit,
+                quantity: body.quantity_available,
+                deposit: body.deposit_required ? { required: true, amount: body.deposit_amount } : { required: false },
+                requirements: body.age_license_requirement ? { required: true, details: body.age_license_details } : { required: false },
+            };
+        } else if (body.type.startsWith('activity/')) {
+            specificFieldsData.activity = {
+                duration: body.duration ? { value: body.duration, unit: body.duration_unit } : null,
+                group_size: { min: body.group_size_min, max: body.group_size_max },
+                difficulty: body.difficulty_level,
+                equipment: body.equipment_provided,
+                safety: body.safety_requirements,
+                guide: body.guide_required,
+            };
+        } else if (body.type.startsWith('transport/')) {
+            specificFieldsData.transport = {
+                vehicle_type: body.vehicle_type,
+                capacity_passengers: body.capacity_passengers,
+                route_details: body.route_details,
+                price_per_km: body.price_per_km,
+                price_per_trip: body.price_per_trip,
+                driver_included: body.driver_included,
+            };
+        }
+        if (body.street_address || body.geo_lat !== undefined || body.geo_lng !== undefined) {
+            specificFieldsData.location = {
+                street_address: body.street_address || null,
+                geo_lat: body.geo_lat !== undefined ? body.geo_lat : null,
+                geo_lng: body.geo_lng !== undefined ? body.geo_lng : null,
+            };
+        }
+        const amenitiesToStore = {
+            general: body.general_amenities ?? [],
+            specifics: specificFieldsData
+        };
+
+        let availabilityString: string | null = null;
+        if (body.availability_days || body.availability_notes) {
+            availabilityString = JSON.stringify({ days: body.availability_days ?? [], notes: body.availability_notes ?? "" });
+        } else if (body.availability) {
+            availabilityString = body.availability;
+            if (availabilityString) JSON.parse(availabilityString);
+        }
+
+        serviceDataForUpdate = {
+            name: body.name,
+            description: body.description ?? null,
+            type: body.type,
+            island_id: Number(body.island_id),
+            price: Number(body.price),
+            availability: availabilityString, 
+            images: body.images ?? existingServiceForImageLogic?.images ?? null, // Use new images, or keep existing, or null
+            amenities: JSON.stringify(amenitiesToStore), 
+            cancellation_policy: body.cancellation_policy ?? null,
+        };
+    }
+
+    // --- Image Deletion Logic (uses existingServiceForImageLogic) --- 
+    if (R2_BUCKET_INSTANCE && body.images !== undefined) { 
       let currentImageUrls: string[] = [];
-      if (serviceToUpdateDetails.images) { // Use already fetched details
+      if (existingServiceForImageLogic.images) { // Use already fetched details
         try {
-          currentImageUrls = JSON.parse(serviceToUpdateDetails.images);
+          currentImageUrls = JSON.parse(existingServiceForImageLogic.images);
           if (!Array.isArray(currentImageUrls)) currentImageUrls = [];
         } catch (e) {
-          console.error(`[Service Update ID: ${serviceId}] Error parsing current images JSON:`, serviceToUpdateDetails.images, e);
+          console.error(`[Service Update ID: ${serviceId}] Error parsing current images JSON:`, existingServiceForImageLogic.images, e);
           currentImageUrls = [];
         }
       }
@@ -228,84 +339,17 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     }
     // --- End Image Deletion Logic ---
 
-    // Basic validation
-    if (!body.name || !body.type || body.price === undefined || body.island_id === undefined) {
-      return NextResponse.json({ success: false, message: 'Missing required fields (name, type, price, island_id)' }, { status: 400 });
-    }
-    if (body.type.startsWith('hotel')) {
-         return NextResponse.json({ success: false, message: 'Invalid type. Use hotel management endpoint for hotels.' }, { status: 400 });
-    }
+    // Safely stringify JSON fields (This is now part of the 'else' for full update, or handled in image-only part)
+    // let availabilityString: string | null = null;
+    // ... availability string construction ...
+    // let amenitiesString: string | null = null;
+    // ... amenities string construction ... 
+    // let cancellationPolicyString: string | null = null;
+    // ... cancellation policy string construction ...
 
-    // --- Prepare Specific Fields JSON --- (Similar to POST)
-    let specificFieldsData: any = {};
-    if (body.type.startsWith('rental/')) {
-        specificFieldsData = {
-            unit: body.rental_unit,
-            quantity: body.quantity_available,
-            deposit: body.deposit_required ? { required: true, amount: body.deposit_amount } : { required: false },
-            requirements: body.age_license_requirement ? { required: true, details: body.age_license_details } : { required: false },
-        };
-    } else if (body.type.startsWith('activity/')) {
-        specificFieldsData = {
-            duration: body.duration ? { value: body.duration, unit: body.duration_unit } : null,
-            group_size: { min: body.group_size_min, max: body.group_size_max },
-            difficulty: body.difficulty_level,
-            equipment: body.equipment_provided,
-            safety: body.safety_requirements,
-            guide: body.guide_required,
-        };
-    }
-    const amenitiesToStore = {
-        general: body.general_amenities ?? [],
-        specifics: specificFieldsData
-    };
-    // --- End Specific Fields JSON ---
-
-    // Safely stringify JSON fields
-    let availabilityString: string | null = null;
-    try {
-        if (body.availability) {
-            // Optional: Add validation here if needed (e.g., using Zod)
-            availabilityString = JSON.stringify(body.availability);
-        }
-    } catch (e) {
-        console.error(`Service ID ${serviceId}: Failed to stringify availability`, e);
-        return NextResponse.json({ success: false, message: 'Invalid format for availability data.' }, { status: 400 });
-    }
-
-    let amenitiesString: string | null = null;
-    try {
-        // Optional: Add validation here if needed (e.g., using Zod)
-        amenitiesString = JSON.stringify(amenitiesToStore);
-    } catch (e) {
-        console.error(`Service ID ${serviceId}: Failed to stringify amenities`, e);
-        // This might indicate a server-side logic error in creating amenitiesToStore
-        return NextResponse.json({ success: false, message: 'Internal error processing service amenities.' }, { status: 500 });
-    }
-
-    let cancellationPolicyString: string | null = null;
-    try {
-        if (body.cancellation_policy) {
-            // Optional: Add validation here if needed (e.g., using Zod)
-            cancellationPolicyString = JSON.stringify(body.cancellation_policy);
-        }
-    } catch (e) {
-        console.error(`Service ID ${serviceId}: Failed to stringify cancellation_policy`, e);
-        return NextResponse.json({ success: false, message: 'Invalid format for cancellation policy data.' }, { status: 400 });
-    }
-
-    const result = await db.updateService(serviceId, {
-      name: body.name,
-      description: body.description ?? null,
-      type: body.type,
-      island_id: Number(body.island_id),
-      price: Number(body.price),
-      availability: availabilityString, // Use safe string
-      images: body.images ?? null, // Assuming images is already a string or null
-      amenities: amenitiesString, // Use safe string
-      cancellation_policy: cancellationPolicyString, // Use safe string
-      // is_active is not updated here, use status endpoint
-    });
+    // The db.updateService call will now use serviceDataForUpdate which is tailored
+    // for either image-only or full update.
+    const result = await db.updateService(serviceId, serviceDataForUpdate);
 
      if (!result.success) {
         if (result.meta?.changes === 0) {

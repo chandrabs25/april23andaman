@@ -902,7 +902,7 @@ export class DatabaseService {
     return db
       .prepare(`
         SELECT
-          s.id AS service_id, s.name, s.island_id, s.price, s.is_active,
+          s.id AS service_id, s.name, s.island_id, s.price, s.is_active, s.images,
           h.star_rating, h.street_address
         FROM services s
         JOIN hotels h ON s.id = h.service_id
@@ -1284,12 +1284,14 @@ export class DatabaseService {
         s.is_active,
         h.star_rating, h.check_in_time, h.check_out_time, h.facilities, h.policies,
         h.extra_images AS hotel_extra_images, h.total_rooms, h.street_address, h.geo_lat, h.geo_lng,
-        h.meal_plans, h.pets_allowed, h.children_allowed, h.accessibility
+        h.meal_plans, h.pets_allowed, h.children_allowed, h.accessibility,
+        MIN(hrt.base_price) as min_room_price 
         -- Note: city and country are not directly in services or hotels table in this query
         -- They need to be sourced if required by the Hotel type for list items.
       FROM services s
       JOIN hotels h ON s.id = h.service_id
-      WHERE s.type = 'hotel\' AND s.is_active = 1
+      LEFT JOIN hotel_room_types hrt ON s.id = hrt.service_id -- LEFT JOIN to include hotels with no rooms
+      WHERE s.type = 'hotel' AND s.is_active = 1
     `;
     const params: (string | number)[] = [];
 
@@ -1315,6 +1317,17 @@ export class DatabaseService {
     if (conditions.length > 0) {
       query += ' AND (' + conditions.join(' AND ') + ')';
     }
+    
+    // Add GROUP BY for all non-aggregated columns
+    query += `
+      GROUP BY
+        s.id, s.name, s.description, s.type, s.provider_id, s.island_id,
+        s.price, s.availability, s.images, s.amenities, s.cancellation_policy,
+        s.is_active,
+        h.star_rating, h.check_in_time, h.check_out_time, h.facilities, h.policies,
+        h.extra_images, h.total_rooms, h.street_address, h.geo_lat, h.geo_lng,
+        h.meal_plans, h.pets_allowed, h.children_allowed, h.accessibility
+    `;
 
     query += ' ORDER BY s.name ASC LIMIT ? OFFSET ?';
     params.push(limit, offset);

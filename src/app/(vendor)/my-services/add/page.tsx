@@ -396,9 +396,9 @@ function AddServiceForm() {
         days: formData.availability_days,
         notes: formData.availability_notes
     });
-    apiPayload.general_amenities = JSON.stringify(formData.general_amenities);
+    apiPayload.general_amenities = formData.general_amenities;
     if (selectedServiceBaseType === 'activity' && formData.equipment_provided) {
-        apiPayload.equipment_provided = JSON.stringify(formData.equipment_provided);
+        apiPayload.equipment_provided = formData.equipment_provided;
     }
     
     // Remove individual fields that are now part of JSON strings or conditionally not included

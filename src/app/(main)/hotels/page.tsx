@@ -169,6 +169,12 @@ const HotelsPage = () => {
     status: hotelsStatus,
   } = useFetch<Hotel[]>(getHotelsListUrl());
 
+  useEffect(() => {
+    if (hotelsStatus === 'success' && hotelsResponse) {
+      console.log("Hotels Response Received on Frontend:", JSON.stringify(hotelsResponse, null, 2));
+    }
+  }, [hotelsResponse, hotelsStatus]);
+
   const isLoadingHotels = hotelsStatus === 'loading';
   const hotelsList = hotelsResponse || [];
   const totalHotels = hotelsResponse?.length || 0;
@@ -228,8 +234,20 @@ const HotelsPage = () => {
     if (isLoadingSelectedHotel) return <LoadingState message="Loading Hotel Details..." />;
     if (selectedHotelError || !selectedHotel) return <ErrorState message={selectedHotelError?.message || "Hotel details could not be found."} onRetry={() => setRetrySelectedHotelToken(c => c + 1)} />;
 
-    const mainPrice = selectedHotel.rooms && selectedHotel.rooms.length > 0 && typeof selectedHotel.rooms[0].base_price === 'number'
-      ? selectedHotel.rooms[0].base_price.toLocaleString("en-IN")
+    // Calculate the actual minimum room price for the selected hotel
+    let calculatedMinPrice: number | null = null;
+    if (selectedHotel.rooms && selectedHotel.rooms.length > 0) {
+      calculatedMinPrice = selectedHotel.rooms.reduce((min, room) => {
+        const price = Number(room.base_price);
+        if (!isNaN(price) && (min === null || price < min)) {
+          return price;
+        }
+        return min;
+      }, null as number | null);
+    }
+
+    const mainPrice = calculatedMinPrice !== null
+      ? calculatedMinPrice.toLocaleString("en-IN")
       : 'N/A';
 
     const mainImageUrl = normalizeImageUrl(selectedHotel.images?.[0]);

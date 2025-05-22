@@ -49,7 +49,7 @@ interface VendorService {
     is_active: number; // 0 or 1
     amenities?: string | null; // JSON string - not displayed in this card, but part of interface
     description?: string | null; // not displayed in this card, but part of interface
-    // image_url?: string | null; // Optional image for the card, added for consistency if needed later
+    images?: string | null; // Optional images for the card, added for consistency if needed later
 }
 
 interface Island {
@@ -61,6 +61,33 @@ interface ApiResponse {
     success: boolean;
     message?: string;
 }
+
+// --- Helper function to parse JSON array string for images ---
+const parseImageUrls = (jsonString: string | null | undefined): string[] => {
+    if (!jsonString || typeof jsonString !== "string" || !jsonString.trim()) {
+        return [];
+    }
+    try {
+        const parsed = JSON.parse(jsonString);
+        if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+            return parsed.filter(url => url.trim() !== ""); // Filter out empty strings
+        }
+        // Handle case where it might be a single URL string not in an array (legacy or error)
+        if (typeof parsed === 'string' && parsed.trim() !== "") {
+            return [parsed.trim()];
+        }
+        return [];
+    } catch (e) {
+        // If JSON.parse fails, and it's not an array string,
+        // but it is a non-empty string, treat it as a single URL.
+        if (typeof jsonString === 'string' && jsonString.trim() && !jsonString.startsWith('[') && !jsonString.endsWith(']')) {
+            const trimmedString = jsonString.trim();
+            if (trimmedString) return [trimmedString];
+        }
+        console.warn("Failed to parse image URLs:", jsonString, e);
+        return [];
+    }
+};
 
 // --- Helper Components (Styled to match Dashboard) ---
 const LoadingSpinner = ({ text = "Loading..." }: { text?: string }) => (
@@ -120,9 +147,27 @@ const ServiceCard = ({
     isDeleting: number | null;
 }) => {
     const cardAnimation = "animate-fadeInUp"; // Keep entrance animation
+    const imageUrls = parseImageUrls(service.images);
+    const firstImage = imageUrls.length > 0 ? imageUrls[0] : null;
+
     return (
-        <div className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-300 ease-in-out flex flex-col ${cardAnimation}`}> {/* Adjusted rounded corners, shadow, transition */}
-            {/* No image in interface, skip image/placeholder div */}
+        <div className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-300 ease-in-out flex flex-col ${cardAnimation}`}>
+            {firstImage ? (
+                <img 
+                    src={firstImage} 
+                    alt={service.name || "Service image"} 
+                    className="w-full h-48 object-cover" // Added styling for image
+                    onError={(e) => { // Basic error handling: hide if image fails to load
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        // Optionally, replace with a placeholder:
+                        // (e.target as HTMLImageElement).src = '/path/to/placeholder.png'; 
+                    }}
+                />
+            ) : (
+                <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-500">
+                    <Package size={48} /> {/* Placeholder icon */}
+                </div>
+            )}
             <div className="p-5 flex flex-col flex-grow"> {/* Added padding */}
                 <h3 className="text-lg font-semibold text-gray-800 mb-2 truncate" title={service.name}>{service.name}</h3> {/* Styled heading */}
 
@@ -352,7 +397,9 @@ function ServiceListContent() {
                                 islandName={islandsMap.get(service.island_id) || "Unknown Island"}
                                 onToggleActive={handleToggleActive}
                                 onDelete={handleDeleteService}
-                                isToggling={isToggling} isDeleting={null}                            />
+                                isToggling={isToggling}
+                                isDeleting={isDeleting}
+                            />
                         ))}
                     </div>
                 )

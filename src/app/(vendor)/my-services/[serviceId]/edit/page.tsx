@@ -277,50 +277,68 @@ function EditServiceForm() {
   useEffect(() => {
     if (serviceStatus === "success" && serviceData) {
       const service = serviceData;
+      console.log("Service Data Received from API:", JSON.stringify(service, null, 2)); // DEBUG LINE
       setInitialServiceType(service.type); // Store the initial type
 
-      // --- Parse Nested/JSON Fields Safely ---
-      let amenitiesData: { general?: string[]; specifics?: any } = { general: [], specifics: {} };
+      // --- Parse Amenities --- 
+      let parsedGeneralAmenities: string[] = [];
+      let parsedSpecifics: any = {}; // Keep 'any' for flexibility, specific parts will be type-checked later
       try {
           if (typeof service.amenities === "string" && service.amenities.trim()) {
-              amenitiesData = JSON.parse(service.amenities);
+              const rawAmenities = JSON.parse(service.amenities);
+              if (typeof rawAmenities === 'object' && rawAmenities !== null) {
+                  if (Array.isArray(rawAmenities.general) && rawAmenities.general.every((item: any) => typeof item === 'string')) {
+                      parsedGeneralAmenities = rawAmenities.general;
+                  }
+                  if (typeof rawAmenities.specifics === 'object' && rawAmenities.specifics !== null) {
+                      parsedSpecifics = rawAmenities.specifics;
+                  }
+              }
           }
       } catch (e) {
           console.error("Failed to parse amenities JSON:", service.amenities, e);
+          // Defaults are already set: parsedGeneralAmenities = [], parsedSpecifics = {}
       }
 
-      // --- Parse Availability Field ---
-      let availabilityDays: string[] = [];
-      let availabilityNotes = "";
-      
+      // --- Parse Availability --- 
+      let parsedAvailabilityDays: string[] = [];
+      let parsedAvailabilityNotes: string = "";
       try {
           if (typeof service.availability === "string" && service.availability.trim()) {
-              const availabilityData = JSON.parse(service.availability);
-              availabilityDays = Array.isArray(availabilityData.days) ? availabilityData.days : [];
-              availabilityNotes = availabilityData.notes || "";
+              const rawAvailability = JSON.parse(service.availability);
+              if (typeof rawAvailability === 'object' && rawAvailability !== null) {
+                  if (Array.isArray(rawAvailability.days) && rawAvailability.days.every((day: any) => typeof day === 'string')) {
+                      parsedAvailabilityDays = rawAvailability.days;
+                  }
+                  if (typeof rawAvailability.notes === 'string') {
+                      parsedAvailabilityNotes = rawAvailability.notes;
+                  }
+              }
           }
       } catch (e) {
           console.error("Failed to parse availability JSON:", service.availability, e);
-          // Fallback if not JSON - treat entire string as notes
-          if (typeof service.availability === "string" && service.availability.trim()) {
-              availabilityNotes = service.availability;
+          // Fallback for legacy non-JSON availability string (treat as notes)
+          if (typeof service.availability === "string" && service.availability.trim() && !service.availability.startsWith('{') && !service.availability.startsWith('[')) {
+              parsedAvailabilityNotes = service.availability;
           }
+          // Defaults are already set: parsedAvailabilityDays = [], parsedAvailabilityNotes = ""
       }
 
-      // --- Format Initial Form State ---
+      // --- Parse Images --- (using the existing robust parseJsonArray)
+      const imagesArray = parseJsonArray(service.images, "images");
+
+      // --- Format Initial Form State --- 
       const formDataInitial: ServiceFormData = {
         name: service.name || "",
         description: service.description || "",
         type: service.type || "",
         island_id: service.island_id ? service.island_id.toString() : "",
         price: service.price ? service.price.toString() : "",
-        availability_days: availabilityDays,
-        availability_notes: availabilityNotes,
-        images: parseJsonArray(typeof service.images === "string" ? service.images : JSON.stringify(service.images), "images"),
+        availability_days: parsedAvailabilityDays,
+        availability_notes: parsedAvailabilityNotes,
+        images: imagesArray,
         cancellation_policy: service.cancellation_policy || "",
         
-        // Set blank defaults for all service-specific fields
-        // (They'll only be used if the service type matches)
         rental_unit: "",
         quantity_available: "",
         deposit_required: false,
@@ -335,86 +353,48 @@ function EditServiceForm() {
         equipment_provided: [],
         safety_requirements: "",
         guide_required: false,
-        general_amenities: amenitiesData.general || [],
+        general_amenities: parsedGeneralAmenities,
         
-        // Transport specific fields
         vehicle_type: "",
         capacity_passengers: "",
         route_details: "",
         price_per_km: "",
         price_per_trip: "",
         driver_included: true,
-        // Location fields
-        street_address: service.street_address || "",
-        geo_lat: service.geo_lat?.toString() || "",
-        geo_lng: service.geo_lng?.toString() || "",
+        street_address: parsedSpecifics.location?.street_address || service.street_address || "",
+        geo_lat: parsedSpecifics.location?.geo_lat?.toString() || service.geo_lat?.toString() || "",
+        geo_lng: parsedSpecifics.location?.geo_lng?.toString() || service.geo_lng?.toString() || "",
       };
 
-      // Add service-specific fields based on type
+      // Add service-specific fields based on type, using parsedSpecifics
       const serviceBaseType = service.type.split('/')[0];
       
       if (serviceBaseType === "rental") {
-          if (amenitiesData.specifics?.rental) {
-              formDataInitial.rental_unit = amenitiesData.specifics.rental.unit || "";
-              formDataInitial.quantity_available = amenitiesData.specifics.rental.quantity_available?.toString() || "";
-              formDataInitial.deposit_required = amenitiesData.specifics.rental.deposit_required || false;
-              formDataInitial.deposit_amount = amenitiesData.specifics.rental.deposit_amount?.toString() || "";
-              formDataInitial.age_license_requirement = amenitiesData.specifics.rental.age_license_requirement || false;
-              formDataInitial.age_license_details = amenitiesData.specifics.rental.age_license_details || "";
-          } else {
-              // Try direct fields (might be stored directly in service table)
-              formDataInitial.rental_unit = service.rental_unit || "";
-              formDataInitial.quantity_available = service.quantity_available?.toString() || "";
-              formDataInitial.deposit_required = !!service.deposit_required;
-              formDataInitial.deposit_amount = service.deposit_amount?.toString() || "";
-              formDataInitial.age_license_requirement = !!service.age_license_requirement;
-              formDataInitial.age_license_details = service.age_license_details || "";
-          }
+          const rentalSpecifics = parsedSpecifics.rental || {}; // Default to empty object
+          formDataInitial.rental_unit = rentalSpecifics.unit || "";
+          formDataInitial.quantity_available = rentalSpecifics.quantity_available?.toString() || "";
+          formDataInitial.deposit_required = rentalSpecifics.deposit_required || false;
+          formDataInitial.deposit_amount = rentalSpecifics.deposit_amount?.toString() || "";
+          formDataInitial.age_license_requirement = rentalSpecifics.age_license_requirement || false;
+          formDataInitial.age_license_details = rentalSpecifics.age_license_details || "";
       } else if (serviceBaseType === "activity") {
-          if (amenitiesData.specifics?.activity) {
-              formDataInitial.duration = amenitiesData.specifics.activity.duration?.toString() || "";
-              formDataInitial.duration_unit = amenitiesData.specifics.activity.duration_unit || "";
-              formDataInitial.group_size_min = amenitiesData.specifics.activity.group_size_min?.toString() || "";
-              formDataInitial.group_size_max = amenitiesData.specifics.activity.group_size_max?.toString() || "";
-              formDataInitial.difficulty_level = amenitiesData.specifics.activity.difficulty_level || "";
-              formDataInitial.equipment_provided = Array.isArray(amenitiesData.specifics.activity.equipment_provided) 
-                  ? amenitiesData.specifics.activity.equipment_provided 
-                  : [];
-              formDataInitial.safety_requirements = amenitiesData.specifics.activity.safety_requirements || "";
-              formDataInitial.guide_required = amenitiesData.specifics.activity.guide_required || false;
-          } else {
-              // Try direct fields
-              formDataInitial.duration = service.duration?.toString() || "";
-              formDataInitial.duration_unit = service.duration_unit || "";
-              formDataInitial.group_size_min = service.group_size_min?.toString() || "";
-              formDataInitial.group_size_max = service.group_size_max?.toString() || "";
-              formDataInitial.difficulty_level = service.difficulty_level || "";
-              formDataInitial.equipment_provided = parseJsonArray(
-                  typeof service.equipment_provided === "string" 
-                      ? service.equipment_provided 
-                      : JSON.stringify(service.equipment_provided), 
-                  "equipment_provided"
-              );
-              formDataInitial.safety_requirements = service.safety_requirements || "";
-              formDataInitial.guide_required = !!service.guide_required;
-          }
+          const activitySpecifics = parsedSpecifics.activity || {}; // Default to empty object
+          formDataInitial.duration = activitySpecifics.duration?.toString() || "";
+          formDataInitial.duration_unit = activitySpecifics.duration_unit || "";
+          formDataInitial.group_size_min = activitySpecifics.group_size_min?.toString() || "";
+          formDataInitial.group_size_max = activitySpecifics.group_size_max?.toString() || "";
+          formDataInitial.difficulty_level = activitySpecifics.difficulty_level || "";
+          formDataInitial.equipment_provided = Array.isArray(activitySpecifics.equipment_provided) ? activitySpecifics.equipment_provided : [];
+          formDataInitial.safety_requirements = activitySpecifics.safety_requirements || "";
+          formDataInitial.guide_required = activitySpecifics.guide_required || false;
       } else if (serviceBaseType === "transport") {
-          if (amenitiesData.specifics?.transport) {
-              formDataInitial.vehicle_type = amenitiesData.specifics.transport.vehicle_type || "";
-              formDataInitial.capacity_passengers = amenitiesData.specifics.transport.capacity_passengers?.toString() || "";
-              formDataInitial.route_details = amenitiesData.specifics.transport.route_details || "";
-              formDataInitial.price_per_km = amenitiesData.specifics.transport.price_per_km?.toString() || "";
-              formDataInitial.price_per_trip = amenitiesData.specifics.transport.price_per_trip?.toString() || "";
-              formDataInitial.driver_included = amenitiesData.specifics.transport.driver_included || true;
-          } else {
-              // Try direct fields
-              formDataInitial.vehicle_type = service.vehicle_type || "";
-              formDataInitial.capacity_passengers = service.capacity_passengers?.toString() || "";
-              formDataInitial.route_details = service.route_details || "";
-              formDataInitial.price_per_km = service.price_per_km?.toString() || "";
-              formDataInitial.price_per_trip = service.price_per_trip?.toString() || "";
-              formDataInitial.driver_included = service.driver_included !== undefined ? service.driver_included : true;
-          }
+          const transportSpecifics = parsedSpecifics.transport || {}; // Default to empty object
+          formDataInitial.vehicle_type = transportSpecifics.vehicle_type || "";
+          formDataInitial.capacity_passengers = transportSpecifics.capacity_passengers?.toString() || "";
+          formDataInitial.route_details = transportSpecifics.route_details || "";
+          formDataInitial.price_per_km = transportSpecifics.price_per_km?.toString() || "";
+          formDataInitial.price_per_trip = transportSpecifics.price_per_trip?.toString() || "";
+          formDataInitial.driver_included = transportSpecifics.driver_included !== undefined ? transportSpecifics.driver_included : true;
       }
 
       setFormData(formDataInitial);

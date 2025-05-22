@@ -37,9 +37,21 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Process hotels to include a minimal rooms structure for price display
+    const processedHotels = hotelsResult.results.map((hotel: any) => {
+      const { min_room_price, ...restOfHotel } = hotel;
+      const roomsData = min_room_price !== null && min_room_price !== undefined 
+        ? [{ base_price: Number(min_room_price) }] 
+        : []; // Or null, depending on what Hotel type expects for rooms
+      return {
+        ...restOfHotel,
+        rooms: roomsData,
+      };
+    });
     
     const responseData: PaginatedHotelsResponse = {
-        data: hotelsResult.results as Hotel[], // Cast here after ensuring parsing in DB service
+        data: processedHotels as Hotel[], // Cast here after ensuring parsing in DB service
         total: totalHotelsResult.total,
         page: page,
         limit: limit,

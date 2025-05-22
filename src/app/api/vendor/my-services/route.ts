@@ -82,9 +82,9 @@ export async function POST(request: NextRequest) {
       type: string; // e.g., "rental/car", "activity/trek"
       island_id: number;
       price: number;
-      availability?: any; // Keep flexible for now (text/JSON)
+      availability?: string | null; // Expecting already stringified JSON: {"days": [], "notes": ""}
       images?: string | null; // URL(s)
-      cancellation_policy?: any; // Keep flexible (text/JSON)
+      cancellation_policy?: string | null; // Expecting plain string
       is_active?: boolean;
       // Rental Specific (Optional)
       rental_unit?: 'per hour' | 'per day';
@@ -104,6 +104,17 @@ export async function POST(request: NextRequest) {
       guide_required?: boolean;
       // General Amenities (Optional - separate from specific fields)
       general_amenities?: string[]; // e.g., helmet, insurance, GPS, guide, equipment
+      // Location fields (NEW - mirroring PUT handler)
+      street_address?: string | null;
+      geo_lat?: number | null;
+      geo_lng?: number | null;
+      // Transport Specific (NEW - from add/page.tsx)
+      vehicle_type?: string;
+      capacity_passengers?: number;
+      route_details?: string;
+      price_per_km?: number;
+      price_per_trip?: number;
+      driver_included?: boolean;
     }
 
     const body: ServiceCreateBody = await request.json();
@@ -125,20 +136,38 @@ export async function POST(request: NextRequest) {
     // --- Prepare Specific Fields JSON --- (Added as per requirements)
     let specificFieldsData: any = {};
     if (body.type.startsWith('rental/')) {
-        specificFieldsData = {
+        specificFieldsData.rental = { // Nest under 'rental' key
             unit: body.rental_unit,
             quantity: body.quantity_available,
             deposit: body.deposit_required ? { required: true, amount: body.deposit_amount } : { required: false },
             requirements: body.age_license_requirement ? { required: true, details: body.age_license_details } : { required: false },
         };
     } else if (body.type.startsWith('activity/')) {
-        specificFieldsData = {
+        specificFieldsData.activity = { // Nest under 'activity' key
             duration: body.duration ? { value: body.duration, unit: body.duration_unit } : null,
             group_size: { min: body.group_size_min, max: body.group_size_max },
             difficulty: body.difficulty_level,
             equipment: body.equipment_provided,
             safety: body.safety_requirements,
             guide: body.guide_required,
+        };
+    } else if (body.type.startsWith('transport/')) { // Added handling for transport type specifics
+        specificFieldsData.transport = {
+            vehicle_type: body.vehicle_type,
+            capacity_passengers: body.capacity_passengers,
+            route_details: body.route_details,
+            price_per_km: body.price_per_km,
+            price_per_trip: body.price_per_trip,
+            driver_included: body.driver_included,
+        };
+    }
+
+    // Add location to specifics if provided (NEW - mirroring PUT handler)
+    if (body.street_address || body.geo_lat !== undefined || body.geo_lng !== undefined) {
+        specificFieldsData.location = {
+            street_address: body.street_address || null,
+            geo_lat: body.geo_lat !== undefined ? body.geo_lat : null,
+            geo_lng: body.geo_lng !== undefined ? body.geo_lng : null,
         };
     }
 
@@ -153,13 +182,13 @@ export async function POST(request: NextRequest) {
     // Safely stringify JSON fields
     let availabilityString: string | null = null;
     try {
-        if (body.availability) {
-            // Optional: Add validation here if needed (e.g., using Zod)
-            availabilityString = JSON.stringify(body.availability);
-        }
+        // body.availability is already a JSON string from the client, or null
+        availabilityString = body.availability ?? null;
+        // Optional: Validate if it's a valid JSON string if not null
+        if (availabilityString) JSON.parse(availabilityString); 
     } catch (e) {
-        console.error(`Service Creation: Failed to stringify availability`, e);
-        return NextResponse.json({ success: false, message: 'Invalid format for availability data.' }, { status: 400 });
+        console.error(`Service Creation: Failed to parse/validate availability JSON string`, e);
+        return NextResponse.json({ success: false, message: 'Invalid format for availability data (must be a valid JSON string or null).' }, { status: 400 });
     }
 
     let amenitiesString: string | null = null;
@@ -174,13 +203,12 @@ export async function POST(request: NextRequest) {
 
     let cancellationPolicyString: string | null = null;
     try {
-        if (body.cancellation_policy) {
-            // Optional: Add validation here if needed (e.g., using Zod)
-            cancellationPolicyString = JSON.stringify(body.cancellation_policy);
-        }
+        // body.cancellation_policy is expected to be a plain string or null
+        cancellationPolicyString = body.cancellation_policy ?? null;
     } catch (e) {
-        console.error(`Service Creation: Failed to stringify cancellation_policy`, e);
-        return NextResponse.json({ success: false, message: 'Invalid format for cancellation policy data.' }, { status: 400 });
+        // This catch is unlikely for simple assignment but kept for structure
+        console.error(`Service Creation: Error processing cancellation_policy`, e);
+        return NextResponse.json({ success: false, message: 'Internal error processing cancellation policy.' }, { status: 500 });
     }
 
     const result = await db.createService({

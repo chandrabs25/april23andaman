@@ -66,8 +66,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const hotels = result.results ?? [];
-    return NextResponse.json({ success: true, data: hotels });
+    const rawHotels = result.results ?? [];
+
+    // Helper to parse image JSON and get the first URL
+    const getFirstImageUrl = (imagesJsonString: string | null | undefined): string | null => {
+      if (!imagesJsonString) return null;
+      try {
+        const imageUrls = JSON.parse(imagesJsonString);
+        if (Array.isArray(imageUrls) && imageUrls.length > 0 && typeof imageUrls[0] === 'string') {
+          return imageUrls[0];
+        }
+      } catch (e) {
+        console.error("Failed to parse images JSON in API:", imagesJsonString, e);
+        // Optionally, handle non-JSON string if it might be a single URL
+        if (typeof imagesJsonString === 'string' && imagesJsonString.startsWith('http')) {
+            return imagesJsonString;
+        }
+      }
+      return null;
+    };
+
+    const hotelsWithImageUrl = rawHotels.map((hotel: any) => ({
+      ...hotel,
+      image_url: getFirstImageUrl(hotel.images), // hotel.images is from s.images
+      // Remove the raw images field if you don't want to send it to the client
+      // images: undefined, 
+    }));
+
+    return NextResponse.json({ success: true, data: hotelsWithImageUrl });
   } catch (error) {
     console.error("Error fetching vendor hotels:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred";

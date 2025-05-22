@@ -116,21 +116,24 @@ const RoomTypeCard = ({
   isDeleting: number | null;
 }) => {
   const cardAnimation = "animate-fadeInUp";
-  let imageUrls: string[] = [];
-  try {
-    if (room.images) {
-      const parsedImages = JSON.parse(room.images);
-      if (Array.isArray(parsedImages)) {
-        imageUrls = parsedImages;
-      }
-    }
-  } catch (e) {
-    // If not a JSON array, maybe it is a single URL or comma-separated, handle if needed
-    if (typeof room.images === "string" && room.images.startsWith("http")) {
-      imageUrls = [room.images];
-    }
-    console.warn("Could not parse room images string: ", room.images);
-  }
+  // let imageUrls: string[] = []; // Old parsing logic
+  // try {
+  //   if (room.images) {
+  //     const parsedImages = JSON.parse(room.images);
+  //     if (Array.isArray(parsedImages)) {
+  //       imageUrls = parsedImages;
+  //     }
+  //   }
+  // } catch (e) {
+  //   // If not a JSON array, maybe it is a single URL or comma-separated, handle if needed
+  //   if (typeof room.images === "string" && room.images.startsWith("http")) {
+  //     imageUrls = [room.images];
+  //   }
+  //   console.warn("Could not parse room images string: ", room.images);
+  // }
+
+  // New logic: room.images from the API is already expected to be string[] | null due to backend parsing
+  const imageUrls: string[] = Array.isArray(room.images) ? room.images : [];
   const primaryImageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
 
   let amenitiesList: string[] = [];
