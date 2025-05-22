@@ -40,7 +40,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   // Update function signatures to match implementation
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; user: User | null }>;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
   checkAuthState: () => Promise<void>;
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   // Login function
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; user: User | null }> => {
     setIsLoading(true);
     try {
       console.log("Attempting login with:", email);
@@ -109,19 +109,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
          console.log("Login successful:", data.data);
          setUser(data.data);
          setIsLoading(false);
-         return true; // Indicate success
+         return { success: true, user: data.data }; // Indicate success
       } else {
          console.error("Login API failed:", data.message);
          setUser(null); // Clear user on failed login
          setIsLoading(false);
          // Optionally, you could throw new Error(data.message || 'Login failed');
-         return false; // Indicate failure
+         return { success: false, user: null }; // Indicate failure
       }
     } catch (error) {
        console.error("Login fetch error:", error);
        setUser(null);
        setIsLoading(false);
-       return false; // Indicate failure
+       return { success: false, user: null }; // Indicate failure
     }
   }, []); // Dependencies
 

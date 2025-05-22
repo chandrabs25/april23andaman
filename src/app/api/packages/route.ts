@@ -1,10 +1,10 @@
 // Path: src/app/api/packages/route.ts
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server';
-// --- FIX: Import DatabaseService ---
 import { DatabaseService } from '@/lib/database';
+import { requireAuth, verifyAuth } from '@/lib/auth';
 
-// --- Interfaces (Keep these as they define the API contract) ---
+// Define all interfaces for the API
 interface Package {
   id: number;
   name: string;
@@ -17,6 +17,7 @@ interface Package {
   itinerary: string | null;
   included_services: string | null;
   images: string | null;
+  cancellation_policy: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -37,16 +38,42 @@ interface ApiError {
   message: string;
   error?: string;
 }
-// --- End Interfaces ---
 
-// --- FIX: Enhanced GET handler using DatabaseService ---
+interface PackageCategoryPayload {
+  category_name: string;
+  price: number;
+  hotel_details?: string | null;
+  category_description?: string | null;
+  max_pax_included_in_price?: number | null;
+}
+
+interface CreatePackagePayload {
+  name: string;
+  description?: string | null;
+  duration: string;
+  base_price: number;
+  max_people?: number | null;
+  itinerary?: string | object | null;
+  included_services?: string | object | null;
+  images?: string | object | null;
+  cancellation_policy?: string | null;
+  package_categories?: PackageCategoryPayload[];
+}
+
+interface PackageFilters {
+  minPrice?: number;
+  maxPrice?: number;
+  duration?: string;
+  maxPeople?: number;
+}
+
+// GET handler to retrieve packages
 export async function GET(request: NextRequest) {
-  // --- FIX: Instantiate DatabaseService ---
   const dbService = new DatabaseService();
   const searchParams = request.nextUrl.searchParams;
 
   try {
-    // --- Pagination ---
+    // Pagination
     const pageParam = searchParams.get('page') || '1';
     const limitParam = searchParams.get('limit') || '9'; // Default limit
     const page = parseInt(pageParam, 10);
@@ -60,8 +87,8 @@ export async function GET(request: NextRequest) {
     }
     const offset = (page - 1) * limit;
 
-    // --- Filtering ---
-    const filters: { minPrice?: number; maxPrice?: number; duration?: string; maxPeople?: number } = {}; // Use the interface defined in DB service if preferred
+    // Filtering
+    const filters: PackageFilters = {};
     const minPriceParam = searchParams.get('minPrice');
     const maxPriceParam = searchParams.get('maxPrice');
     const durationParam = searchParams.get('duration');
@@ -83,16 +110,12 @@ export async function GET(request: NextRequest) {
       if (!isNaN(maxPeople)) filters.maxPeople = maxPeople;
     }
 
-    // --- Execute Queries using Service ---
-    // Fetch total count with filters
+    // Execute Queries using Service
     const countResult = await dbService.countAllActivePackages(filters);
     const total = countResult?.total ?? 0;
 
-    // Fetch packages for the current page with filters
-    // The service method returns D1Result<Package[]>
     const packagesResult = await dbService.getAllActivePackages(limit, offset, filters);
 
-    // Check D1 result success flag
     if (!packagesResult.success) {
       console.error('Failed to fetch packages from D1:', packagesResult.error);
       throw new Error('Database query failed to fetch packages.');
@@ -101,7 +124,7 @@ export async function GET(request: NextRequest) {
     const packagesData = packagesResult.results || [];
     const totalPages = Math.ceil(total / limit);
 
-    // --- Format Response ---
+    // Format Response
     const responseData: GetPackagesResponse = {
       packages: packagesData,
       pagination: {
@@ -131,34 +154,35 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
-// --- End of FIX ---
 
-// --- FIX: Updated POST handler using DatabaseService ---
-interface CreatePackagePayload {
-  name: string;
-  description?: string | null;
-  duration: string;
-  base_price: number;
-  max_people?: number | null;
-  itinerary?: string | object | null; // Accept object or string
-  included_services?: string | object | null; // Accept object or string
-  images?: string | object | null; // Accept object or string
-}
-
+// POST handler to create a new package
 export async function POST(request: NextRequest) {
-  // --- FIX: Instantiate DatabaseService ---
   const dbService = new DatabaseService();
 
   try {
-    // --- Authentication/Authorization Placeholder ---
-    // TODO: Implement real auth check. Assume user ID 1 for now.
-    // const { user } = await verifyUserAuth(request); // Your auth function
-    const userId = 1; // Placeholder: Replace with actual authenticated user ID
-    // --- End Auth Placeholder ---
+    // Admin check - assuming admin role_id is 1
+    const authResult = await requireAuth(request, [1]);
+    if (authResult) {
+      // If authResult is not null, authentication failed
+      return authResult;
+    }
+
+    // Get authenticated user info from token
+    const { user } = await verifyAuth(request);
+    
+    // Ensure userId exists and is a number
+    if (!user || !user.id) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Unable to identify user from authentication token' 
+      }, { status: 401 });
+    }
+    
+    const userId = Number(user.id);
 
     const body = await request.json() as CreatePackagePayload;
 
-    // --- Validation ---
+    // Validation
     if (!body.name || !body.duration || body.base_price === undefined || body.base_price === null) {
       return NextResponse.json({
         success: false, message: 'Name, duration, and base price are required fields.', data: null
@@ -170,15 +194,37 @@ export async function POST(request: NextRequest) {
     if (body.max_people !== undefined && body.max_people !== null && (typeof body.max_people !== 'number' || body.max_people <= 0)) {
       return NextResponse.json({ success: false, message: 'Max people must be a positive number if provided.' }, { status: 400 });
     }
-    // --- End Validation ---
+    
+    if (body.package_categories && !Array.isArray(body.package_categories)) {
+        return NextResponse.json({ success: false, message: 'Package categories must be an array.'}, { status: 400 });
+    }
+    if (body.package_categories) {
+        for (const category of body.package_categories) {
+            if (!category.category_name || category.price === undefined || category.price === null) {
+                return NextResponse.json({ success: false, message: 'Each package category must have a name and price.'}, { status: 400 });
+            }
+            if (typeof category.price !== 'number' || category.price <= 0) {
+                return NextResponse.json({ success: false, message: 'Category price must be a positive number.'}, { status: 400 });
+            }
+        }
+    }
 
-    // --- Call Service Method ---
-    const result = await dbService.createPackage({
-      ...body, // Spread validated payload
-      created_by: userId // Add the authenticated user ID
-    });
+    const packageDataToCreate = {
+      name: body.name,
+      description: body.description || null,
+      duration: body.duration,
+      base_price: body.base_price,
+      max_people: body.max_people || null,
+      itinerary: typeof body.itinerary === 'object' ? JSON.stringify(body.itinerary) : body.itinerary || null,
+      included_services: typeof body.included_services === 'object' ? JSON.stringify(body.included_services) : body.included_services || null,
+      images: typeof body.images === 'object' ? JSON.stringify(body.images) : body.images || null,
+      cancellation_policy: body.cancellation_policy || null,
+      created_by: userId,
+      package_categories: body.package_categories || [] 
+    };
 
-    // Check D1 result success flag and last_row_id
+    const result = await dbService.createPackage(packageDataToCreate);
+
     if (!result.success || !result.meta?.last_row_id) {
       console.error("Package insert failed using service, D1 result:", result);
       throw new Error('Database operation failed to create package or return ID.');
@@ -187,8 +233,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Package created successfully',
-      data: { id: result.meta.last_row_id } // Return the ID of the created package
-    }, { status: 201 }); // 201 Created
+      data: { id: result.meta.last_row_id } 
+    }, { status: 201 });
 
   } catch (error) {
     console.error('Error creating package:', error);
@@ -196,7 +242,6 @@ export async function POST(request: NextRequest) {
       message: 'Error creating package',
       error: error instanceof Error ? error.message : 'An unknown error occurred'
     };
-    // Optional: Check for specific errors like UNIQUE constraints if needed
     return NextResponse.json({
       success: false,
       ...apiError,
@@ -204,4 +249,3 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 }
-// --- End of FIX ---

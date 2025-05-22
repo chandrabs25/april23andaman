@@ -20,7 +20,7 @@ export const getJwtSecret = (): Uint8Array => {
 
 
 // Define the User structure expected by verifyAuth return and useAuth hook
-interface VerifiedUser {
+export interface VerifiedUser {
     id: string | number;
     email: string;
     role_id?: number; // Changed from role to role_id

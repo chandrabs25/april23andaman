@@ -21,6 +21,7 @@ interface Package {
   itinerary: string | null; // Raw TEXT/JSON string from DB
   included_services: string | null; // Raw TEXT/JSON string from DB
   images: string | null; // Raw TEXT/JSON string from DB
+  cancellation_policy: string | null; // Added from schema
   created_at: string;
   updated_at: string;
 }
@@ -31,8 +32,36 @@ interface PackageFilters {
   maxPrice?: number;
   duration?: string;
   maxPeople?: number;
+  isActive?: boolean;
   // Add other potential filters here if needed
 }
+
+// Interface for creating package categories (similar to API payload but for DB layer)
+interface PackageCategoryDbPayload {
+  package_id?: number; // Will be set after package creation
+  category_name: string;
+  price: number;
+  hotel_details?: string | null;
+  category_description?: string | null;
+  max_pax_included_in_price?: number | null;
+}
+
+interface CreatePackageDbPayload {
+  name: string;
+  description?: string | null;
+  duration: string;
+  base_price: number;
+  max_people?: number | null;
+  created_by: number;
+  itinerary?: string | object | null;
+  included_services?: string | object | null;
+  images?: string | object | null;
+  cancellation_policy?: string | null;
+  package_categories?: Omit<PackageCategoryDbPayload, 'package_id'>[]; // Categories to be created
+}
+
+// Define a custom type for D1Result with error for partial success cases
+type D1ResultWithError = D1Result & { error: string };
 
 // You might have other interfaces for Users, Islands, Services, etc.
 // Define them here or import them if they are defined elsewhere.
@@ -352,6 +381,54 @@ export class DatabaseService {
   }
 
   /**
+   * Retrieves a list of all packages (both active and inactive) with optional filtering and pagination.
+   * Used primarily by admin interfaces.
+   * @param limit Max number of packages to return.
+   * @param offset Number of packages to skip.
+   * @param filters Optional filters for price, duration, maxPeople, isActive.
+   * @returns Promise<D1Result<Package[]>>
+   */
+  async getAllPackages(limit = 10, offset = 0, filters: PackageFilters = {}) {
+    const db = await getDatabase();
+    let query = 'SELECT * FROM packages';
+    const params: (string | number | boolean)[] = [];
+
+    // Build WHERE clause dynamically based on filters
+    const conditions: string[] = [];
+    if (filters.minPrice !== undefined) {
+      conditions.push(`base_price >= ?`);
+      params.push(filters.minPrice);
+    }
+    if (filters.maxPrice !== undefined) {
+      conditions.push(`base_price <= ?`);
+      params.push(filters.maxPrice);
+    }
+    if (filters.duration) {
+      conditions.push(`duration = ?`);
+      params.push(filters.duration);
+    }
+    if (filters.maxPeople !== undefined) {
+      // Filter packages suitable FOR AT LEAST this many people
+      conditions.push(`(max_people IS NULL OR max_people >= ?)`);
+      params.push(filters.maxPeople);
+    }
+    if (filters.isActive !== undefined) {
+      conditions.push(`is_active = ?`);
+      params.push(filters.isActive ? 1 : 0);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND '); // Group filters
+    }
+
+    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    // Return the D1Result object directly
+    return db.prepare(query).bind(...params).all<Package>();
+  }
+
+  /**
    * Counts the total number of active packages, applying optional filters.
    * @param filters Optional filters for price, duration, maxPeople.
    * @returns Promise<{ total: number } | null>
@@ -389,6 +466,48 @@ export class DatabaseService {
   }
 
   /**
+   * Counts the total number of all packages (both active and inactive), applying optional filters.
+   * Used primarily by admin interfaces.
+   * @param filters Optional filters for price, duration, maxPeople, isActive.
+   * @returns Promise<{ total: number } | null>
+   */
+  async countAllPackages(filters: PackageFilters = {}) {
+    const db = await getDatabase();
+    let query = 'SELECT COUNT(*) AS total FROM packages';
+    const params: (string | number | boolean)[] = [];
+
+    // Build WHERE clause dynamically based on filters
+    const conditions: string[] = [];
+    if (filters.minPrice !== undefined) {
+      conditions.push(`base_price >= ?`);
+      params.push(filters.minPrice);
+    }
+    if (filters.maxPrice !== undefined) {
+      conditions.push(`base_price <= ?`);
+      params.push(filters.maxPrice);
+    }
+    if (filters.duration) {
+      conditions.push(`duration = ?`);
+      params.push(filters.duration);
+    }
+    if (filters.maxPeople !== undefined) {
+      conditions.push(`(max_people IS NULL OR max_people >= ?)`);
+      params.push(filters.maxPeople);
+    }
+    if (filters.isActive !== undefined) {
+      conditions.push(`is_active = ?`);
+      params.push(filters.isActive ? 1 : 0);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND '); // Group filters
+    }
+
+    // Use .first() to get the count object
+    return db.prepare(query).bind(...params).first<{ total: number }>();
+  }
+
+  /**
    * Retrieves a single active package by its ID.
    * @param id The ID of the package.
    * @returns Promise<Package | null>
@@ -402,81 +521,246 @@ export class DatabaseService {
   }
 
   /**
+   * Retrieves all categories for a specific package.
+   * @param packageId The ID of the package.
+   * @returns Promise<D1Result<any[]>> - Categories for the package
+   */
+  async getPackageCategories(packageId: number) {
+    const db = await getDatabase();
+    return db
+      .prepare(`
+        SELECT id, package_id, category_name, price, hotel_details, 
+               category_description, max_pax_included_in_price, created_at, updated_at
+        FROM package_categories
+        WHERE package_id = ?
+        ORDER BY price ASC
+      `)
+      .bind(packageId)
+      .all();
+  }
+
+  /**
   * Creates a new package in the database.
   * @param packageData Data for the new package.
   * @returns Promise<D1Result>
   */
-  async createPackage(packageData: {
-    name: string;
-    description?: string | null;
-    duration: string;
-    base_price: number;
-    max_people?: number | null;
-    created_by: number; // Should come from auth context
-    itinerary?: string | object | null; // Can be JSON object or stringified JSON
-    included_services?: string | object | null; // Can be JSON object or stringified JSON
-    images?: string | object | null; // Can be JSON object or stringified JSON
-  }) {
+  async createPackage(packageData: CreatePackageDbPayload): Promise<
+    (D1Result & { meta: { last_row_id: number } }) | 
+    (D1ResultWithError & { meta: { last_row_id: number } }) | 
+    { success: false; error: string; meta: D1Meta | {} }
+  > {
     const db = await getDatabase();
+    // Define emptyMeta with only known D1Meta properties
+    const emptyMeta: D1Meta = { 
+      duration: 0, 
+      last_row_id: 0, 
+      changes: 0,
+      rows_read: 0,
+      rows_written: 0,
+      size_after: 0,
+      changed_db: false
+    };
 
-    // Helper to ensure complex fields are stored as TEXT strings if provided as objects
     const stringifyIfNeeded = (data: any, fieldName: string): string | null => {
       if (data === null || data === undefined) return null;
-      // Only stringify if it's an actual object (not null, not already a string)
+      if (typeof data === 'string') return data.trim() || null;
       if (typeof data === 'object') {
           try {
               return JSON.stringify(data);
           } catch (e) {
-              console.error(`Failed to stringify field '${fieldName}' in createPackage:`, e);
-              // Throw a more specific error or handle as needed. Rethrowing for now.
-              throw new Error(`Invalid format for package field '${fieldName}'.`);
-          }
-      } else {
-          // If it's not an object, just convert to string
-          return String(data);
+          console.warn(`Could not stringify ${fieldName}:`, e);
+          return null;
+        }
+      }
+      return String(data).trim() || null;
+    };
+    
+    const itineraryStr = stringifyIfNeeded(packageData.itinerary, 'itinerary');
+    const includedServicesStr = stringifyIfNeeded(packageData.included_services, 'included_services');
+    const imagesStr = stringifyIfNeeded(packageData.images, 'images');
+
+    const mainPackageInsertStmt = db.prepare(`
+      INSERT INTO packages (
+        name, description, duration, base_price, max_people, created_by,
+        itinerary, included_services, images, cancellation_policy, is_active, 
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).bind(
+      packageData.name,
+      packageData.description ?? null,
+      packageData.duration,
+      packageData.base_price,
+      packageData.max_people ?? null,
+      packageData.created_by,
+      itineraryStr,
+      includedServicesStr,
+      imagesStr,
+      packageData.cancellation_policy ?? null
+    );
+
+    if (!packageData.package_categories || packageData.package_categories.length === 0) {
+      try {
+        const result = await mainPackageInsertStmt.run();
+        if (!result.success || !result.meta?.last_row_id) {
+          const errorMsg = result.error || "Failed to create package or get last_row_id";
+          console.error("D1 Error creating package (no categories):", errorMsg);
+          return { success: false, error: errorMsg, meta: result.meta || emptyMeta };
+        }
+        // Explicitly cast to ensure last_row_id is seen by TS
+        return result as (D1Result & { meta: { last_row_id: number } });
+      } catch (e: any) {
+        console.error("Error creating package (no categories):", e);
+        return { success: false, error: e.message || "Unknown database error", meta: emptyMeta };
       }
     }
 
-    let itineraryString: string | null = null;
-    let includedServicesString: string | null = null;
-    let imagesString: string | null = null;
-
     try {
-        itineraryString = stringifyIfNeeded(packageData.itinerary, 'itinerary');
-        includedServicesString = stringifyIfNeeded(packageData.included_services, 'included_services');
-        imagesString = stringifyIfNeeded(packageData.images, 'images');
-    } catch (e) {
-        // If stringifyIfNeeded throws, catch it here and return an error result
-        // This prevents the error from crashing the DatabaseService call entirely
-        // and allows the API route to handle it gracefully.
-        console.error("Error processing package data for stringification:", e);
-        // Returning a D1Result-like structure indicating failure
-        // Modify based on how your API route expects errors from DBService
-        return { success: false, error: e instanceof Error ? e.message : "Stringification failed", meta: {} } as any; // Cast needed as it doesn't match typical D1Result
-    }
+      const packageResult = await mainPackageInsertStmt.run();
+      if (!packageResult.success || !packageResult.meta?.last_row_id) {
+        const errorMsg = packageResult.error || "Failed to create main package or get last_row_id";
+        console.error("D1 Error creating main package for categories:", errorMsg);
+        return { success: false, error: errorMsg, meta: packageResult.meta || emptyMeta };
+      }
 
-    return db
-      .prepare(`
-        INSERT INTO packages (
-          name, description, duration, base_price, max_people,
-          created_by, itinerary, included_services, images, is_active,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      `) // is_active defaults to 1 (true)
-      .bind(
+      const packageId = packageResult.meta.last_row_id;
+      const categoryStatements = packageData.package_categories.map(cat => {
+        return db.prepare(`
+          INSERT INTO package_categories (
+            package_id, category_name, price, hotel_details, 
+            category_description, max_pax_included_in_price, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `).bind(
+          packageId,
+          cat.category_name,
+          cat.price,
+          cat.hotel_details ?? null,
+          cat.category_description ?? null,
+          cat.max_pax_included_in_price ?? null
+        );
+      });
+
+      if (categoryStatements.length > 0) {
+        const categoryResults = await db.batch(categoryStatements);
+        const allCategoriesSuccessful = categoryResults.every((res: D1Result) => res.success);
+        if (!allCategoriesSuccessful) {
+          console.error("One or more package categories failed to insert for package ID:", packageId, categoryResults);
+          // Return a result that indicates partial success - package created but categories failed
+          // This is a custom type that extends D1Result with an error field
+          return {
+            success: true, // Package was created successfully
+            meta: packageResult.meta, // Include the meta with last_row_id
+            error: "Package created, but some categories failed to insert.",
+            results: [] // D1Result expects a results array
+          } as D1ResultWithError & { meta: { last_row_id: number } };
+        }
+      }
+      return packageResult as (D1Result & { meta: { last_row_id: number } });
+
+    } catch (e: any) {
+      console.error("Error in createPackage with categories:", e);
+      return { success: false, error: e.message || "Unknown database error during package/category creation", meta: emptyMeta };
+    }
+  }
+
+  private async _updatePackageAndCategories(
+    packageId: number,
+    packageData: Omit<CreatePackageDbPayload, 'created_by'> & { is_active?: number }
+  ): Promise<D1Result | D1ResultWithError | { success: false; error: string; meta: D1Meta | {} }> {
+    const db = await getDatabase();
+    const statements: D1PreparedStatement[] = [];
+    const emptyMeta: D1Meta = { 
+      duration: 0, 
+      last_row_id: 0, 
+      changes: 0,
+      rows_read: 0,
+      rows_written: 0,
+      size_after: 0,
+      changed_db: false
+    };
+
+    const stringifyIfNeeded = (data: any, fieldName: string): string | null => {
+        if (data === null || data === undefined) return null;
+        if (typeof data === 'string') return data.trim() || null;
+        if (typeof data === 'object') {
+            try { return JSON.stringify(data); }
+            catch (e) { console.warn(`Could not stringify ${fieldName}:`, e); return null; }
+        }
+        return String(data).trim() || null;
+    };
+
+    const itineraryStr = stringifyIfNeeded(packageData.itinerary, 'itinerary');
+    const includedServicesStr = stringifyIfNeeded(packageData.included_services, 'included_services');
+    const imagesStr = stringifyIfNeeded(packageData.images, 'images');
+
+    const packageUpdateStmt = db.prepare(`
+      UPDATE packages SET
+        name = ?, description = ?, duration = ?, base_price = ?, max_people = ?,
+        itinerary = ?, included_services = ?, images = ?, cancellation_policy = ?,
+        is_active = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
         packageData.name,
         packageData.description ?? null,
         packageData.duration,
         packageData.base_price,
         packageData.max_people ?? null,
-        packageData.created_by, // Pass the authenticated user ID here
-        itineraryString, // Use processed string
-        includedServicesString, // Use processed string
-        imagesString // Use processed string
-      )
-      .run(); // Returns Promise<D1Result>
-  }
+      itineraryStr,
+      includedServicesStr,
+      imagesStr,
+      packageData.cancellation_policy ?? null,
+      packageData.is_active === undefined ? 1 : packageData.is_active, 
+      packageId
+    );
+    statements.push(packageUpdateStmt);
 
+    const deleteCategoriesStmt = db.prepare(`DELETE FROM package_categories WHERE package_id = ?`).bind(packageId);
+    statements.push(deleteCategoriesStmt);
+    
+    if (packageData.package_categories && packageData.package_categories.length > 0) {
+      packageData.package_categories.forEach(cat => {
+        statements.push(
+          db.prepare(`
+            INSERT INTO package_categories (
+              package_id, category_name, price, hotel_details, 
+              category_description, max_pax_included_in_price, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          `).bind(
+            packageId,
+            cat.category_name,
+            cat.price,
+            cat.hotel_details ?? null,
+            cat.category_description ?? null,
+            cat.max_pax_included_in_price ?? null
+          )
+        );
+      });
+    }
+
+    try {
+      const results = await db.batch(statements);
+      const allSuccessful = results.every((res: D1Result) => res.success);
+      if (!allSuccessful) {
+        console.error("Error during batch update of package and categories for package ID:", packageId, results);
+        const firstErrorResult = results.find((res: D1Result) => !res.success);
+        return { success: false, error: (firstErrorResult?.error as string) || "Batch update failed for package and categories", meta: firstErrorResult?.meta || emptyMeta };
+      }
+      // Assuming batch of updates/deletes/inserts returns D1Result for each, sum changes for a meaningful meta
+      const totalChanges = results.reduce((acc: number, r: D1Result) => acc + (r.meta?.changes || 0), 0);
+      // Find the meta from the first operation (package update) or use a generic success meta for batch
+      const representativeMeta = results.length > 0 && results[0].meta ? results[0].meta : emptyMeta;
+      return { success: true, meta: { ...representativeMeta, changes: totalChanges }, results: [] } as D1Result;
+    } catch (e: any) {
+      console.error("Error updating package and categories:", e);
+      return { success: false, error: e.message || "Unknown database error during package/category update", meta: emptyMeta };
+    }
+  }
+  
+  async updatePackage(
+    packageId: number,
+    packageData: Omit<CreatePackageDbPayload, 'created_by'> & { is_active?: number }
+  ): Promise<D1Result | D1ResultWithError | { success: false; error: string; meta: D1Meta | {} }> {
+    return this._updatePackageAndCategories(packageId, packageData);
+  }
 
   // --- Booking Methods ---
   async createBooking(bookingData: {
@@ -959,7 +1243,7 @@ export class DatabaseService {
             service_id, star_rating, check_in_time, check_out_time, facilities, policies,
             extra_images, total_rooms, street_address, geo_lat, geo_lng, meal_plans,
             pets_allowed, children_allowed, accessibility, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         `)
         .bind(
           serviceId,
@@ -976,7 +1260,8 @@ export class DatabaseService {
           hotelData.meal_plans, // Expects stringified JSON
           hotelData.pets_allowed ? 1 : 0,
           hotelData.children_allowed ? 1 : 0,
-          hotelData.accessibility // Corrected field name
+          hotelData.accessibility, // Corrected field name
+          serviceId
         )
         .run();
 
@@ -1402,6 +1687,141 @@ export class DatabaseService {
     }
 
     return db.prepare(query).bind(...params).first<{ total: number }>();
+  }
+
+  // --- Admin Approval Methods ---
+  async approveHotel(serviceId: number): Promise<D1Result> {
+    const db = await getDatabase();
+    return db
+      .prepare('UPDATE services SET is_admin_approved = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND type = \'hotel\'')
+      .bind(serviceId)
+      .run();
+  }
+
+  async approveHotelRoom(roomTypeId: number): Promise<D1Result> {
+    const db = await getDatabase();
+    return db
+      .prepare('UPDATE hotel_room_types SET is_admin_approved = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .bind(roomTypeId)
+      .run();
+  }
+
+  async approveService(serviceId: number): Promise<D1Result> {
+    const db = await getDatabase();
+    // This should not approve hotels through this generic service approval method.
+    // We ensure type is not 'hotel'. If it is, it should be approved via approveHotel.
+    return db
+      .prepare("UPDATE services SET is_admin_approved = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND type != 'hotel'")
+      .bind(serviceId)
+      .run();
+  }
+
+  /**
+   * Rejects a hotel by setting its is_admin_approved flag to 0.
+   * @param serviceId The ID of the hotel service
+   * @param rejectReason Optional reason for rejection that can be stored or communicated
+   * @returns Promise<D1Result>
+   */
+  async rejectHotel(serviceId: number, rejectReason: string = ''): Promise<D1Result> {
+    const db = await getDatabase();
+    return db
+      .prepare('UPDATE services SET is_admin_approved = 0, admin_reject_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND type = \'hotel\'')
+      .bind(rejectReason || null, serviceId)
+      .run();
+  }
+
+  /**
+   * Rejects a hotel room by setting its is_admin_approved flag to 0.
+   * @param roomTypeId The ID of the room type
+   * @param rejectReason Optional reason for rejection that can be stored or communicated
+   * @returns Promise<D1Result>
+   */
+  async rejectHotelRoom(roomTypeId: number, rejectReason: string = ''): Promise<D1Result> {
+    const db = await getDatabase();
+    return db
+      .prepare('UPDATE hotel_room_types SET is_admin_approved = 0, admin_reject_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .bind(rejectReason || null, roomTypeId)
+      .run();
+  }
+
+  /**
+   * Rejects a service by setting its is_admin_approved flag to 0.
+   * @param serviceId The ID of the service
+   * @param rejectReason Optional reason for rejection that can be stored or communicated
+   * @returns Promise<D1Result>
+   */
+  async rejectService(serviceId: number, rejectReason: string = ''): Promise<D1Result> {
+    const db = await getDatabase();
+    // This should not reject hotels through this generic service method.
+    return db
+      .prepare("UPDATE services SET is_admin_approved = 0, admin_reject_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND type != 'hotel'")
+      .bind(rejectReason || null, serviceId)
+      .run();
+  }
+
+  // --- Methods to get unapproved items ---
+  async getUnapprovedHotels(limit: number = 10, offset: number = 0): Promise<D1Result<any[]>> { // Define better type later
+    const db = await getDatabase();
+    return db
+      .prepare(`
+        SELECT s.id, s.name, s.provider_id, h.star_rating, s.created_at 
+        FROM services s 
+        JOIN hotels h ON s.id = h.service_id 
+        WHERE s.type = 'hotel' AND (s.is_admin_approved = 0 OR s.is_admin_approved IS NULL)
+        ORDER BY s.created_at DESC LIMIT ? OFFSET ?
+      `)
+      .bind(limit, offset)
+      .all();
+  }
+
+  async countUnapprovedHotels(): Promise<{ total: number } | null> {
+    const db = await getDatabase();
+    return db
+      .prepare("SELECT COUNT(*) as total FROM services WHERE type = 'hotel' AND (is_admin_approved = 0 OR is_admin_approved IS NULL)")
+      .first<{ total: number }>();
+  }
+
+  async getUnapprovedHotelRooms(limit: number = 10, offset: number = 0): Promise<D1Result<any[]>> { // Define better type later
+    const db = await getDatabase();
+    return db
+      .prepare(`
+        SELECT hr.id, hr.service_id as hotel_service_id, s.name as hotel_name, hr.room_type, hr.base_price as price_per_night, hr.created_at 
+        FROM hotel_room_types hr
+        JOIN services s ON hr.service_id = s.id
+        WHERE (hr.is_admin_approved = 0 OR hr.is_admin_approved IS NULL)
+        ORDER BY hr.created_at DESC LIMIT ? OFFSET ?
+      `)
+      .bind(limit, offset)
+      .all();
+  }
+
+  async countUnapprovedHotelRooms(): Promise<{ total: number } | null> {
+    const db = await getDatabase();
+    return db
+      .prepare("SELECT COUNT(*) as total FROM hotel_room_types WHERE (is_admin_approved = 0 OR is_admin_approved IS NULL)")
+      .first<{ total: number }>();
+  }
+
+  async getUnapprovedServices(limit: number = 10, offset: number = 0): Promise<D1Result<any[]>> { // Define better type later
+    const db = await getDatabase();
+    // Excludes hotels, as they are handled by getUnapprovedHotels
+    return db
+      .prepare(`
+        SELECT id, name, type, provider_id, price, created_at 
+        FROM services 
+        WHERE type != 'hotel' AND (is_admin_approved = 0 OR is_admin_approved IS NULL)
+        ORDER BY created_at DESC LIMIT ? OFFSET ?
+      `)
+      .bind(limit, offset)
+      .all();
+  }
+
+  async countUnapprovedServices(): Promise<{ total: number } | null> {
+    const db = await getDatabase();
+    // Excludes hotels
+    return db
+      .prepare("SELECT COUNT(*) as total FROM services WHERE type != 'hotel' AND (is_admin_approved = 0 OR is_admin_approved IS NULL)")
+      .first<{ total: number }>();
   }
 
 }

@@ -20,14 +20,18 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  const { login, register, isAuthenticated } = useAuth();
+  const { login, register, isAuthenticated, user } = useAuth();
   
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/');
+      if (user?.role_id === 1) {
+        router.push('/admin_dashboard');
+      } else {
+        router.push('/');
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, user]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -38,10 +42,17 @@ export default function SignIn() {
       // Login logic using our custom auth hook
       console.log(`Attempting login for: ${email}`);
       try {
-        const success = await login(email, password);
+        const result = await login(email, password);
         
-        if (success) {
-          router.push('/');
+        if (result.success) {
+          // Check if admin and redirect accordingly
+          if (result.user?.role_id === 1) {
+            console.log("Admin user detected, redirecting to admin dashboard");
+            router.push('/admin_dashboard');
+          } else {
+            console.log("Regular user login, redirecting to home page");
+            router.push('/');
+          }
         } else {
           setError('Invalid email or password.');
           setLoading(false);
