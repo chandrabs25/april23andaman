@@ -69,6 +69,32 @@ type D1ResultWithError = D1Result & { error: string };
 // For brevity, only Package and PackageFilters are explicitly defined here,
 // assuming others are inferred or defined elsewhere.
 
+// --- New Interfaces for getPackageWithCategories ---
+interface ItineraryDay {
+  day_number: number;
+  title: string;
+  description: string;
+}
+
+// Assuming PackageCategoryDbPayload exists and has an 'images' field (string from DB)
+// and other relevant fields. The 'id' field here refers to the primary key of the package_categories table.
+interface PackageCategoryWithParsedImages extends Omit<PackageCategoryDbPayload, 'images' | 'package_id'> {
+  id: number; 
+  package_id: number;
+  images: string[]; // Parsed images
+  // Add other fields from package_categories table as needed by frontend, e.g., created_at, updated_at
+  // For this example, we'll assume they are part of PackageCategoryDbPayload or implicitly spread.
+  created_at?: string; // example
+  updated_at?: string; // example
+}
+
+interface PackageWithCategories extends Omit<Package, 'itinerary' | 'images'> {
+  itinerary: ItineraryDay[];
+  images: string[]; // Parsed main images
+  categories: PackageCategoryWithParsedImages[];
+}
+
+
 // --- Database Connection ---
 
 let _db: CloudflareEnv['DB'] | undefined;
@@ -1827,5 +1853,78 @@ export class DatabaseService {
       .first<{ total: number }>();
   }
 
+  async getPackageWithCategories(packageId: number): Promise<PackageWithCategories | null> {
+    const db = await getDatabase();
+
+    // 1. Fetch Main Package
+    const mainPackageData = await db
+      .prepare('SELECT * FROM packages WHERE id = ? AND is_active = 1')
+      .bind(packageId)
+      .first<Package>();
+
+    if (!mainPackageData) {
+      return null;
+    }
+
+    // 2. Parse Main Package JSON Fields
+    let parsedItinerary: ItineraryDay[] = [];
+    if (mainPackageData.itinerary) {
+      try {
+        const tempItinerary = JSON.parse(mainPackageData.itinerary);
+        // Basic validation
+        if (Array.isArray(tempItinerary) && 
+            (tempItinerary.length === 0 || tempItinerary.every(day => 
+              typeof day === 'object' && day !== null &&
+              'day_number' in day && typeof day.day_number === 'number' &&
+              'title' in day && typeof day.title === 'string' &&
+              'description' in day && typeof day.description === 'string'
+            ))) {
+          parsedItinerary = tempItinerary as ItineraryDay[];
+        } else {
+          console.warn(`Parsed itinerary for package ${packageId} is not in the expected ItineraryDay[] format. Found:`, tempItinerary);
+          // Keep parsedItinerary as empty array
+        }
+      } catch (e) {
+        console.error(`Failed to parse itinerary for package ${packageId}:`, e);
+        // Keep parsedItinerary as empty array
+      }
+    }
+
+    const parsedMainImages: string[] = this._parseJsonString(mainPackageData.images, []);
+
+    // 3. Fetch Associated Categories
+    // Assuming 'package_categories' table has 'id', 'package_id', and 'images' (as TEXT/JSON string)
+    // and other fields compatible with PackageCategoryDbPayload
+    const categoriesResult = await db
+      .prepare('SELECT * FROM package_categories WHERE package_id = ? ORDER BY price ASC')
+      .bind(packageId)
+      .all<any>(); // Use 'any' or a raw DB category type
+
+    const parsedCategories: PackageCategoryWithParsedImages[] = [];
+    if (categoriesResult && categoriesResult.results) {
+      for (const categoryRaw of categoriesResult.results) {
+        // Ensure all fields from PackageCategoryDbPayload (excluding 'images' and 'package_id' if already present)
+        // are mapped correctly. 'id' is the primary key of the category.
+        const { images: rawCatImages, package_id: catPackageId, id: catId, ...restOfCat } = categoryRaw;
+        
+        parsedCategories.push({
+          ...restOfCat, // Spreads fields like category_name, price, hotel_details, etc.
+          id: catId,
+          package_id: catPackageId,
+          images: this._parseJsonString(rawCatImages, []) // Parse images for each category
+        });
+      }
+    }
+    
+    // 4. Construct and Return Result
+    const result: PackageWithCategories = {
+      ...mainPackageData, // Spread all properties from mainPackageData
+      itinerary: parsedItinerary,
+      images: parsedMainImages,
+      categories: parsedCategories,
+    };
+
+    return result;
+  }
 }
 
