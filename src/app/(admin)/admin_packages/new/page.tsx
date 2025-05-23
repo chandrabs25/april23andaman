@@ -14,13 +14,19 @@ interface PackageCategory {
   max_pax_included_in_price: number;
 }
 
+interface ItineraryDay {
+  day_number: number;
+  title: string;
+  description: string;
+}
+
 interface PackageFormData {
   name: string;
   description: string;
   duration: string;
   base_price: number;
   max_people: number;
-  itinerary: string;
+  itinerary: ItineraryDay[];
   included_services: string;
   images: string;
   cancellation_policy: string;
@@ -48,7 +54,7 @@ export default function NewPackagePage() {
     duration: '',
     base_price: 0,
     max_people: 2,
-    itinerary: '',
+    itinerary: [],
     included_services: '',
     images: '',
     cancellation_policy: '',
@@ -125,6 +131,49 @@ export default function NewPackagePage() {
     
     const updatedCategories = formData.package_categories.filter((_, i) => i !== index);
     setFormData(prev => ({ ...prev, package_categories: updatedCategories }));
+  };
+
+  // Handle Itinerary Day Changes
+  const handleItineraryChange = (index: number, field: keyof Omit<ItineraryDay, 'day_number'>, value: string) => {
+    const updatedItinerary = formData.itinerary.map((day, i) => {
+      if (i === index) {
+        return { ...day, [field]: value };
+      }
+      return day;
+    });
+    setFormData(prev => ({ ...prev, itinerary: updatedItinerary }));
+  };
+
+  // Add a new Itinerary Day
+  const handleAddDay = () => {
+    setFormData(prev => {
+      const newDayNumber = prev.itinerary.length + 1;
+      const newDay: ItineraryDay = {
+        day_number: newDayNumber,
+        title: '',
+        description: ''
+      };
+      return { ...prev, itinerary: [...prev.itinerary, newDay] };
+    });
+  };
+
+  // Remove an Itinerary Day
+  const handleRemoveDay = (index: number) => {
+    if (formData.itinerary.length === 1 && index === 0) {
+      // Optionally, provide feedback to the user that at least one day is required
+      // For now, just prevent removal of the last day.
+      // Or, if you want to allow removing the last day and have an empty itinerary:
+      // setFormData(prev => ({ ...prev, itinerary: [] }));
+      // return;
+    }
+
+    const updatedItinerary = formData.itinerary
+      .filter((_, i) => i !== index)
+      .map((day, i) => ({
+        ...day,
+        day_number: i + 1 // Re-calculate day_number
+      }));
+    setFormData(prev => ({ ...prev, itinerary: updatedItinerary }));
   };
 
   // Submit form
@@ -263,19 +312,65 @@ export default function NewPackagePage() {
             </div>
 
             <div className="md:col-span-2">
-              <label htmlFor="itinerary" className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Itinerary
               </label>
-              <textarea
-                id="itinerary"
-                name="itinerary"
-                rows={5}
-                value={formData.itinerary}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Day 1: ... Day 2: ..."
-              ></textarea>
-              <p className="text-sm text-gray-500 mt-1">Enter detailed day-by-day itinerary</p>
+              {formData.itinerary.map((day, index) => (
+                <div key={index} className="mb-4 p-4 border rounded-md space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-md font-semibold">Day {index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDay(index)}
+                      disabled={formData.itinerary.length === 1 && index === 0} // Optional: disable if only one day
+                      className={`text-sm font-medium inline-flex items-center ${
+                        (formData.itinerary.length === 1 && index === 0)
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-red-500 hover:text-red-700'
+                      }`}
+                    >
+                      <MinusIcon className="h-4 w-4 mr-1" />
+                      Remove Day
+                    </button>
+                  </div>
+                  <div>
+                    <label htmlFor={`itinerary_title_${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      id={`itinerary_title_${index}`}
+                      name={`itinerary_title_${index}`}
+                      value={day.title}
+                      onChange={(e) => handleItineraryChange(index, 'title', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={`Title for Day ${index + 1}`}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`itinerary_description_${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      id={`itinerary_description_${index}`}
+                      name={`itinerary_description_${index}`}
+                      value={day.description}
+                      onChange={(e) => handleItineraryChange(index, 'description', e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={`Description for Day ${index + 1}`}
+                    ></textarea>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleAddDay}
+                className="mt-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 inline-flex items-center"
+              >
+                <PlusIcon className="h-4 w-4 mr-1" />
+                Add Day
+              </button>
             </div>
 
             <div className="md:col-span-2">
