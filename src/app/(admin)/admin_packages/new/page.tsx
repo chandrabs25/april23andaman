@@ -101,6 +101,13 @@ export default function NewPackagePage() {
   const handleCategoryChange = (index: number, field: keyof PackageCategory, value: string | number) => {
     const updatedCategories = [...formData.package_categories];
     
+    // Prevent direct update to images field as it's handled by handleCategoryImagesUploaded
+    if (field === 'images') {
+      // Optionally, log a warning or do nothing
+      console.warn("Direct update to 'images' field in handleCategoryChange is not allowed. Use ImageUploader.");
+      return; 
+    }
+
     // Handle number inputs
     if (field === 'price' || field === 'max_pax_included_in_price') {
       updatedCategories[index][field] = typeof value === 'number' ? value : parseFloat(value as string) || 0;
