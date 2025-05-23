@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlusIcon, MinusIcon, ArrowLeftIcon } from 'lucide-react';
+import { ImageUploader } from '@/components/ImageUploader';
 import Link from 'next/link';
 
 // Define types
@@ -12,6 +13,8 @@ interface PackageCategory {
   hotel_details: string;
   category_description: string;
   max_pax_included_in_price: number;
+  images: string[];
+  tempId: string;
 }
 
 interface ItineraryDay {
@@ -28,7 +31,7 @@ interface PackageFormData {
   max_people: number;
   itinerary: ItineraryDay[];
   included_services: string;
-  images: string;
+  images: string[];
   cancellation_policy: string;
   is_active: boolean;
   package_categories: PackageCategory[];
@@ -46,6 +49,7 @@ export default function NewPackagePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tempPackageParentId] = useState<string>('temp-package-' + Date.now());
   
   // Initialize form data
   const [formData, setFormData] = useState<PackageFormData>({
@@ -56,7 +60,7 @@ export default function NewPackagePage() {
     max_people: 2,
     itinerary: [],
     included_services: '',
-    images: '',
+    images: [],
     cancellation_policy: '',
     is_active: true,
     package_categories: [
@@ -65,7 +69,9 @@ export default function NewPackagePage() {
         price: 0,
         hotel_details: '',
         category_description: '',
-        max_pax_included_in_price: 2
+        max_pax_included_in_price: 2,
+        images: [],
+        tempId: `temp-category-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       }
     ]
   });
@@ -117,7 +123,9 @@ export default function NewPackagePage() {
           price: 0,
           hotel_details: '',
           category_description: '',
-          max_pax_included_in_price: 2
+          max_pax_included_in_price: 2,
+          images: [],
+          tempId: `temp-category-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         }
       ]
     }));
@@ -174,6 +182,24 @@ export default function NewPackagePage() {
         day_number: i + 1 // Re-calculate day_number
       }));
     setFormData(prev => ({ ...prev, itinerary: updatedItinerary }));
+  };
+
+  // Handle uploaded image URLs
+  const handlePackageImagesUploaded = (imageUrls: string[]) => {
+    setFormData(prev => ({ ...prev, images: imageUrls }));
+  };
+
+  // Handle uploaded image URLs for a specific category
+  const handleCategoryImagesUploaded = (categoryIndex: number, imageUrls: string[]) => {
+    setFormData(prev => {
+      const updatedCategories = prev.package_categories.map((category, index) => {
+        if (index === categoryIndex) {
+          return { ...category, images: imageUrls };
+        }
+        return category;
+      });
+      return { ...prev, package_categories: updatedCategories };
+    });
   };
 
   // Submit form
@@ -404,19 +430,15 @@ export default function NewPackagePage() {
             </div>
 
             <div className="md:col-span-2">
-              <label htmlFor="images" className="block text-sm font-medium text-gray-700 mb-1">
-                Images
-              </label>
-              <input
-                type="text"
-                id="images"
-                name="images"
-                value={formData.images}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Comma-separated image URLs or JSON array"
+              <ImageUploader
+                label="Package Images"
+                onImagesUploaded={handlePackageImagesUploaded}
+                existingImages={formData.images}
+                parentId={tempPackageParentId} 
+                type="package" 
+                maxImages={5} 
+                helperText="Upload images for the package. (Max 5 images)"
               />
-              <p className="text-sm text-gray-500 mt-1">Enter comma-separated image URLs or a JSON array</p>
             </div>
 
             <div className="flex items-center">
@@ -535,6 +557,17 @@ export default function NewPackagePage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Additional information about this category"
                   ></textarea>
+                </div>
+                <div className="md:col-span-2 mt-4">
+                  <ImageUploader
+                    label="Category Images"
+                    onImagesUploaded={(imageUrls) => handleCategoryImagesUploaded(index, imageUrls)}
+                    existingImages={category.images}
+                    parentId={category.tempId} 
+                    type="package_category"
+                    maxImages={3}
+                    helperText={`Upload images for ${category.category_name || `Category ${index + 1}`}. (Max 3 images)`}
+                  />
                 </div>
               </div>
             </div>

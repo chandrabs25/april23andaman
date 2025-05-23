@@ -44,6 +44,7 @@ interface PackageCategoryDbPayload {
   hotel_details?: string | null;
   category_description?: string | null;
   max_pax_included_in_price?: number | null;
+  images?: string[] | null; // Added images field
 }
 
 interface CreatePackageDbPayload {
@@ -627,15 +628,16 @@ export class DatabaseService {
         return db.prepare(`
           INSERT INTO package_categories (
             package_id, category_name, price, hotel_details, 
-            category_description, max_pax_included_in_price, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            category_description, max_pax_included_in_price, images, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         `).bind(
           packageId,
           cat.category_name,
           cat.price,
           cat.hotel_details ?? null,
           cat.category_description ?? null,
-          cat.max_pax_included_in_price ?? null
+          cat.max_pax_included_in_price ?? null,
+          cat.images ? JSON.stringify(cat.images) : null // Stringify images for DB
         );
       });
 
@@ -722,15 +724,16 @@ export class DatabaseService {
           db.prepare(`
             INSERT INTO package_categories (
               package_id, category_name, price, hotel_details, 
-              category_description, max_pax_included_in_price, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+              category_description, max_pax_included_in_price, images, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           `).bind(
             packageId,
             cat.category_name,
             cat.price,
             cat.hotel_details ?? null,
             cat.category_description ?? null,
-            cat.max_pax_included_in_price ?? null
+            cat.max_pax_included_in_price ?? null,
+            cat.images ? JSON.stringify(cat.images) : null // Stringify images for DB
           )
         );
       });

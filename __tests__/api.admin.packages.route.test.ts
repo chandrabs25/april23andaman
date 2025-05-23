@@ -164,4 +164,72 @@ describe('POST /api/admin/packages', () => {
   // Add more tests:
   // - Test for unauthorized user (if requireAuth/verifyAuth mock is changed to simulate this)
   // - Test for database error during package creation
+
+  it('should correctly process package and category images, passing them as arrays to DatabaseService', async () => {
+    const mainPackageImages = ["/images/packages/temp-main-123/main1.jpg", "/images/packages/temp-main-123/main2.jpg"];
+    const category1Images = ["/images/package_categories/temp-cat-abc/cat1_img1.jpg"];
+    const category2Images = ["/images/package_categories/temp-cat-xyz/cat2_img1.jpg", "/images/package_categories/temp-cat-xyz/cat2_img2.jpg"];
+
+    const requestBody = {
+      name: 'Deluxe Photo Package',
+      description: 'A package with lots of photos.',
+      duration: '5 Days',
+      base_price: 1200,
+      max_people: 2,
+      itinerary: [{ day_number: 1, title: 'Photo Day', description: 'Take photos.' }],
+      included_services: 'Photographer',
+      images: mainPackageImages, // Array of strings for main package
+      cancellation_policy: 'No refunds for photo packages.',
+      is_active: true,
+      package_categories: [
+        { 
+          category_name: 'Category 1 with Photos', 
+          price: 1200, 
+          hotel_details: 'Photo Hotel', 
+          category_description: 'Room with a view for photos',
+          max_pax_included_in_price: 2,
+          images: category1Images, // Array of strings for category images
+        },
+        { 
+          category_name: 'Category 2 with More Photos', 
+          price: 1500, 
+          hotel_details: 'Scenic Hotel', 
+          category_description: 'Better room for more photos',
+          max_pax_included_in_price: 2,
+          images: category2Images, // Array of strings for category images
+        }
+      ],
+    };
+
+    mockRequest = new NextRequest('http://localhost/api/admin/packages', {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const response = await POST(mockRequest);
+    const responseBody = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(responseBody.success).toBe(true);
+    expect(mockDbServiceInstance.createPackage).toHaveBeenCalledTimes(1);
+
+    const createPackageArgs = mockDbServiceInstance.createPackage.mock.calls[0][0];
+
+    // Main package images are stringified by the route handler
+    expect(createPackageArgs.images).toBe(JSON.stringify(mainPackageImages));
+
+    // Package category images are passed as arrays to the dbService,
+    // and dbService itself handles stringifying them.
+    expect(Array.isArray(createPackageArgs.package_categories)).toBe(true);
+    expect(createPackageArgs.package_categories.length).toBe(2);
+
+    expect(createPackageArgs.package_categories[0].images).toEqual(category1Images);
+    expect(createPackageArgs.package_categories[1].images).toEqual(category2Images);
+    
+    // Check other fields to ensure they are passed correctly
+    expect(createPackageArgs.name).toBe(requestBody.name);
+    expect(createPackageArgs.package_categories[0].category_name).toBe(requestBody.package_categories[0].category_name);
+    expect(createPackageArgs.package_categories[1].category_name).toBe(requestBody.package_categories[1].category_name);
+  });
 });

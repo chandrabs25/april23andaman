@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const parentId = formData.get("parentId") as string;
-    const type = formData.get("type") as "hotel" | "room" | "service";
+    const type = formData.get("type") as "hotel" | "room" | "service" | "package" | "package_category";
     
     if (!parentId || !type) {
       return NextResponse.json({ error: "Missing parentId or type" }, { status: 400 });
@@ -74,8 +74,18 @@ export async function POST(request: NextRequest) {
       basePathSegment = `/images/hotels/${urlDirName}`;
     } else if (type === "room") {
       basePathSegment = `/images/hotels/${urlDirName}/rooms`;
-    } else { // service
+    } else if (type === "package") {
+      basePathSegment = `/images/packages/${urlDirName}`;
+    } else if (type === "package_category") {
+      basePathSegment = `/images/package_categories/${urlDirName}`;
+    } else if (type === "service") {
       basePathSegment = `/images/services/${urlDirName}`;
+    } else {
+      // This case should ideally not be reached if type validation is strict
+      // or type is one of the allowed string literals.
+      // However, to be safe, handle unknown types.
+      console.error(`❌ [Image Upload] Unknown type specified: ${type}`);
+      return NextResponse.json({ error: "Invalid upload type specified" }, { status: 400 });
     }
     
     // Array to store image URLs
@@ -180,19 +190,42 @@ export async function POST(request: NextRequest) {
           } else {
             targetDir = hotelDir;
           }
-        } else { // service
+        } else if (type === "package") { // New condition for local FS
+          const packagesDir = path.join(imagesDir, "packages");
+          if (!fs.existsSync(packagesDir)) {
+            await fsPromises.mkdir(packagesDir, { recursive: true });
+          }
+          const dirName = isTempId ? "temp" : parentId.toString();
+          targetDir = path.join(packagesDir, dirName);
+          if (!fs.existsSync(targetDir)) {
+            await fsPromises.mkdir(targetDir, { recursive: true });
+          }
+        } else if (type === "package_category") {
+          const packageCategoriesDir = path.join(imagesDir, "package_categories");
+          if (!fs.existsSync(packageCategoriesDir)) {
+            await fsPromises.mkdir(packageCategoriesDir, { recursive: true });
+          }
+          const dirName = isTempId ? "temp" : parentId.toString();
+          targetDir = path.join(packageCategoriesDir, dirName);
+          if (!fs.existsSync(targetDir)) {
+            await fsPromises.mkdir(targetDir, { recursive: true });
+          }
+        } else if (type === "service") {
           const servicesDir = path.join(imagesDir, "services");
           if (!fs.existsSync(servicesDir)) {
             await fsPromises.mkdir(servicesDir, { recursive: true });
           }
-          
-          // Use temp dir for temporary IDs
           const dirName = isTempId ? "temp" : parentId.toString();
-          
           targetDir = path.join(servicesDir, dirName);
           if (!fs.existsSync(targetDir)) {
             await fsPromises.mkdir(targetDir, { recursive: true });
           }
+        } else {
+          // This part of the code should not be reached if basePathSegment was set correctly
+          // and an error was returned for invalid types.
+          // However, as a safeguard for local dev:
+          console.error(`❌ [Image Upload] Local FS: Unhandled type for directory creation: ${type}`);
+          return NextResponse.json({ error: "Local FS: Invalid type for directory creation" }, { status: 500 });
         }
         
         // Process each file
